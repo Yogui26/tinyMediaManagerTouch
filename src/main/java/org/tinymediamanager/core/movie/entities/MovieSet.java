@@ -114,7 +114,7 @@ public class MovieSet extends MediaEntity {
     // link with movies
     for (UUID uuid : movieIds) {
       Movie movie = MovieModuleManager.getInstance().getMovieList().lookupMovie(uuid);
-      if (movie != null && movie.getMovieSet() == this) {
+      if (movie != null && movie.getMovieSets().contains(this)) {
         movies.add(movie);
       }
     }
@@ -363,11 +363,6 @@ public class MovieSet extends MediaEntity {
     // clean images files
     if (doCleanup) {
       MovieSetArtworkHelper.cleanMovieSetArtworkInMovieFolder(movie);
-    }
-
-    if (movie.getMovieSet() != null) {
-      movie.setMovieSet(null);
-      movie.saveToDb();
     }
 
     synchronized (movies) {
