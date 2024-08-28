@@ -32,6 +32,7 @@ import java.awt.KeyboardFocusManager;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -93,7 +94,6 @@ import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.ScraperType;
-import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
@@ -419,10 +419,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), POSTER,
                 movieList.getDefaultArtworkScrapers(), lblPoster, MediaType.MOVIE);
 
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
-            MediaArtwork.PosterSizes posterSize = MovieModuleManager.getInstance().getSettings().getImagePosterSize();
-            dialog.setImageSizeFilter(posterSize.getWidth(), posterSize.getHeight());
-
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
             }
@@ -571,10 +567,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             dialog.bindExtraFanarts(extrafanarts);
             dialog.bindExtraThumbs(extrathumbs);
 
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
-            MediaArtwork.FanartSizes fanartSizes = MovieModuleManager.getInstance().getSettings().getImageFanartSize();
-            dialog.setImageSizeFilter(fanartSizes.getWidth(), fanartSizes.getHeight());
-
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
             }
@@ -648,7 +640,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details2"), details2Panel);
 
       details2Panel.setLayout(new MigLayout("", "[][150lp:n][20lp:50lp][][50lp:100lp][20lp:n][grow][300lp:300lp,grow]",
-          "[][][][][75lp][][75lp][pref!][20lp:n][100lp:150lp,grow][][grow]"));
+          "[][][][][][75lp][pref!][75lp][pref!][20lp:n][100lp:150lp,grow][][grow]"));
       {
         JLabel lblDateAdded = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
         details2Panel.add(lblDateAdded, "cell 0 0,alignx right");
@@ -675,7 +667,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         details2Panel.add(lblIds, "flowy,cell 6 0 1 3,alignx right,aligny top");
 
         JScrollPane scrollPaneIds = new JScrollPane();
-        details2Panel.add(scrollPaneIds, "cell 7 0 1 8,growx");
+        details2Panel.add(scrollPaneIds, "cell 7 0 1 7,growx");
 
         tableIds = new MediaIdTable(ids, ScraperType.MOVIE);
         tableIds.configureScrollPane(scrollPaneIds);
@@ -721,7 +713,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         details2Panel.add(scrollPaneMovieSet, "cell 1 4 4 1,grow");
 
         cbMovieSet = new JComboBox();
-        details2Panel.add(cbMovieSet, "cell 1 5 4 1,growx,wmin 0");
+        details2Panel.add(cbMovieSet, "cell 1 5 4 1, growx, wmin 0");
       }
       {
         JLabel lblShowlinkT = new TmmLabel(TmmResourceBundle.getString("metatag.showlink"));
@@ -733,14 +725,14 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         details2Panel.add(scrollPaneShowlink, "cell 1 6 4 1,grow");
 
         cbShowlink = new JComboBox();
-        details2Panel.add(cbShowlink, "cell 1 7 4 1,growx,wmin 0");
+        details2Panel.add(cbShowlink, "cell 1 7 4 1, growx, wmin 0");
       }
       {
         JLabel lblGenres = new TmmLabel(TmmResourceBundle.getString("metatag.genre"));
-        details2Panel.add(lblGenres, "flowy,cell 0 9,alignx right,aligny top");
+        details2Panel.add(lblGenres, "flowy,cell 0 8,alignx right,aligny top");
 
         JScrollPane scrollPaneGenres = new JScrollPane();
-        details2Panel.add(scrollPaneGenres, "cell 1 9 4 1,grow");
+        details2Panel.add(scrollPaneGenres, "cell 1 8 4 1,grow");
 
         listGenres = new JList();
         scrollPaneGenres.setViewportView(listGenres);
@@ -749,26 +741,26 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         InputMap im = cbGenres.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbGenres.getActionMap().put(enterAction, new AddGenreAction());
-        details2Panel.add(cbGenres, "cell 1 10 4 1,growx,wmin 0");
+        details2Panel.add(cbGenres, "cell 1 9 4 1,growx,wmin 0");
 
         JButton btnAddGenre = new SquareIconButton(new AddGenreAction());
-        details2Panel.add(btnAddGenre, "cell 0 9,alignx right,aligny top");
+        details2Panel.add(btnAddGenre, "cell 0 8,alignx right,aligny top");
 
         JButton btnRemoveGenre = new SquareIconButton(new RemoveGenreAction());
-        details2Panel.add(btnRemoveGenre, "cell 0 9,alignx right,aligny top");
+        details2Panel.add(btnRemoveGenre, "cell 0 8,alignx right,aligny top");
 
         JButton btnMoveGenreUp = new SquareIconButton(new MoveGenreUpAction());
-        details2Panel.add(btnMoveGenreUp, "cell 0 9,alignx right,aligny top");
+        details2Panel.add(btnMoveGenreUp, "cell 0 8,alignx right,aligny top");
 
         JButton btnMoveGenreDown = new SquareIconButton(new MoveGenreDownAction());
-        details2Panel.add(btnMoveGenreDown, "cell 0 9,alignx right,aligny top");
+        details2Panel.add(btnMoveGenreDown, "cell 0 8,alignx right,aligny top");
       }
       {
         JLabel lblTags = new TmmLabel(TmmResourceBundle.getString("metatag.tags"));
-        details2Panel.add(lblTags, "flowy,cell 6 9,alignx right,aligny top");
+        details2Panel.add(lblTags, "flowy,cell 6 8,alignx right,aligny top");
 
         JScrollPane scrollPaneTags = new JScrollPane();
-        details2Panel.add(scrollPaneTags, "cell 7 9,grow");
+        details2Panel.add(scrollPaneTags, "cell 7 8,grow");
 
         listTags = new JList();
         scrollPaneTags.setViewportView(listTags);
@@ -777,19 +769,19 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         InputMap im = cbTags.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbTags.getActionMap().put(enterAction, new AddTagAction());
-        details2Panel.add(cbTags, "cell 7 10,growx,wmin 0");
+        details2Panel.add(cbTags, "cell 7 9,growx,wmin 0");
 
         JButton btnAddTag = new SquareIconButton(new AddTagAction());
-        details2Panel.add(btnAddTag, "cell 6 9,alignx right,aligny top");
+        details2Panel.add(btnAddTag, "cell 6 8,alignx right,aligny top");
 
         JButton btnRemoveTag = new SquareIconButton(new RemoveTagAction());
-        details2Panel.add(btnRemoveTag, "cell 6 9,alignx right,aligny top");
+        details2Panel.add(btnRemoveTag, "cell 6 8,alignx right,aligny top");
 
         JButton btnMoveTagUp = new SquareIconButton(new MoveTagUpAction());
-        details2Panel.add(btnMoveTagUp, "cell 6 9,alignx right,aligny top");
+        details2Panel.add(btnMoveTagUp, "cell 6 8,alignx right,aligny top");
 
         JButton btnMoveTagDown = new SquareIconButton(new MoveTagDownAction());
-        details2Panel.add(btnMoveTagDown, "cell 6 9,alignx right,aligny top");
+        details2Panel.add(btnMoveTagDown, "cell 6 8,alignx right,aligny top");
 
         JButton btnAddMovieSet = new SquareIconButton(new AddMovieSetAction());
         details2Panel.add(btnAddMovieSet, "cell 0 4,alignx right");
@@ -804,10 +796,10 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         details2Panel.add(btnMoveMovieSetDown, "cell 0 4,alignx right");
 
         JButton btnAddShowlink = new SquareIconButton(new AddShowlinkAction());
-        details2Panel.add(btnAddShowlink, "cell 0 6,alignx right");
+        details2Panel.add(btnAddShowlink, "cell 0 5,alignx right");
 
         JButton btnRemoveShowlink = new SquareIconButton(new RemoveShowlinkAction());
-        details2Panel.add(btnRemoveShowlink, "cell 0 6,alignx right");
+        details2Panel.add(btnRemoveShowlink, "cell 0 5,alignx right");
       }
     }
 
@@ -951,8 +943,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), KEYART,
                 movieList.getDefaultArtworkScrapers(), lblKeyart, MediaType.MOVIE);
 
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
-
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
             }
@@ -989,8 +979,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), CLEARLOGO,
                 movieList.getDefaultArtworkScrapers(), lblClearlogo, MediaType.MOVIE);
 
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
-
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
             }
@@ -1026,8 +1014,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           public void mouseClicked(MouseEvent e) {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), CLEARART,
                 movieList.getDefaultArtworkScrapers(), lblClearart, MediaType.MOVIE);
-
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
 
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
@@ -1066,8 +1052,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), BANNER,
                 movieList.getDefaultArtworkScrapers(), lblBanner, MediaType.MOVIE);
 
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
-
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
             }
@@ -1103,8 +1087,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           public void mouseClicked(MouseEvent e) {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), THUMB,
                 movieList.getDefaultArtworkScrapers(), lblThumb, MediaType.MOVIE);
-
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
 
             dialog.bindExtraThumbs(extrathumbs);
 
@@ -1143,8 +1125,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           public void mouseClicked(MouseEvent e) {
             ImageChooserDialog dialog = new ImageChooserDialog(MovieEditorDialog.this, createIdsForImageChooser(), DISC,
                 movieList.getDefaultArtworkScrapers(), lblDisc, MediaType.MOVIE);
-
-            dialog.setImageLanguageFilter(MovieModuleManager.getInstance().getSettings().getImageScraperLanguages());
 
             if (Settings.getInstance().isImageChooserUseEntityFolder()) {
               dialog.setOpenFolderPath(movieToEdit.getPathNIO().toAbsolutePath().toString());
@@ -1275,7 +1255,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
       JButton okButton = new JButton(new ChangeMovieAction());
       okButton.addActionListener(e -> mediaFilesPanel.cancelTask());
-      getRootPane().registerKeyboardAction(new ChangeMovieAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK),
+      getRootPane().registerKeyboardAction(new ChangeMovieAction(), KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK),
           JComponent.WHEN_IN_FOCUSED_WINDOW);
       addButton(okButton);
     }
@@ -2205,13 +2185,13 @@ public class MovieEditorDialog extends AbstractEditorDialog {
   }
 
   protected BindingGroup initDataBindings() {
-    JListBinding jListBinding = SwingBindings.createJListBinding(UpdateStrategy.READ, genres, listGenres);
+    JListBinding<MediaGenres, List<MediaGenres>, JList> jListBinding = SwingBindings.createJListBinding(UpdateStrategy.READ, genres, listGenres);
     jListBinding.bind();
     //
-    JListBinding jListBinding_1 = SwingBindings.createJListBinding(UpdateStrategy.READ, tags, listTags);
+    JListBinding<String, List<String>, JList> jListBinding_1 = SwingBindings.createJListBinding(UpdateStrategy.READ, tags, listTags);
     jListBinding_1.bind();
     //
-    JListBinding jListBinding_2 = SwingBindings.createJListBinding(UpdateStrategy.READ, showlinks, listShowlink);
+    JListBinding<String, List<String>, JList> jListBinding_2 = SwingBindings.createJListBinding(UpdateStrategy.READ, showlinks, listShowlink);
     jListBinding_2.bind();
     //
     JListBinding jListBinding_3 = SwingBindings.createJListBinding(UpdateStrategy.READ, movieSets, listMovieSets);
