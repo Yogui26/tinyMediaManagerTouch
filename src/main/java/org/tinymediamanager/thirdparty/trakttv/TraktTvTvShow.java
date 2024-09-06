@@ -355,9 +355,11 @@ class TraktTvTvShow {
       syncShow.seasons
           .removeAll(syncShow.seasons.stream().filter(season -> season.episodes == null || season.episodes.isEmpty()).collect(Collectors.toList()));
     }
-    if (syncShow.seasons != null && !syncShow.seasons.isEmpty()) {
-      syncItems.shows(syncShow);
+    if (syncShow.seasons != null && syncShow.seasons.isEmpty()) {
+      syncShow.seasons = null;
     }
+    syncItems.shows(syncShow);
+    // }
 
     if (!syncEpisodes.isEmpty()) {
       syncItems.episodes(syncEpisodes);
@@ -594,6 +596,17 @@ class TraktTvTvShow {
 
   private List<TvShow> getTmmTvShowForTraktShow(List<TvShow> tmmTvShows, Show traktShow) {
     return tmmTvShows.stream().filter(tvShow -> matches(tvShow, traktShow)).collect(Collectors.toList());
+  }
+
+  private RatedShow getRatedShowForTmmTvShow(TvShow tmmTvShow, List<RatedShow> ratedShows) {
+    RatedShow ret = null;
+    for (RatedShow ratedShow : ratedShows) {
+      if (matches(tmmTvShow, ratedShow.show)) {
+        ret = ratedShow;
+        break;
+      }
+    }
+    return ret;
   }
 
   private boolean matches(TvShow tmmShow, Show traktShow) {
@@ -840,6 +853,19 @@ class TraktTvTvShow {
       return null;
     }
 
+    SyncShow syncShow = new SyncShow().id(ids);
+
+    // compare, if show rating has been changed, to not send same value...
+    boolean showRatingChanged = false;
+    RatedShow ratedShow = getRatedShowForTmmTvShow(tmmShow, showsInTrakt);
+    if (ratedShow.rating != Rating.fromValue(Math.round(tmmShow.getUserRating().getRating()))) {
+      showRatingChanged = true;
+    }
+    if (showRatingChanged) {
+      // only set show rating when changed
+      syncShow.rating = Rating.fromValue(Math.round(tmmShow.getUserRating().getRating()));
+    }
+
     // search for all seasons/episodes of this show
     List<SyncSeason> syncSeasons = new ArrayList<>();
     for (TvShowSeason tmmSeason : tmmShow.getSeasons()) {
@@ -893,10 +919,14 @@ class TraktTvTvShow {
     }
 
     if (!syncSeasonsDelta.isEmpty()) {
-      return new SyncShow().id(ids).seasons(syncSeasons);
+      syncShow.seasons = syncSeasons;
+      return syncShow;
     }
 
-    // if nothing added, do NOT send an empty show (to add all)
+    // no season/episode changed. return show object ONLY when rating changed...
+    if (showRatingChanged) {
+      return syncShow;
+    }
     return null;
   }
 
@@ -942,8 +972,10 @@ class TraktTvTvShow {
       syncEpisode.id(ids);
     }
 
-    syncEpisode.number(episode.getEpisode());
-    syncEpisode.season(episode.getSeason());
+    // unneeded for Trakt as it always uses IDs
+    // furthermore dangerous, since we have episode groups!
+    // syncEpisode.number(episode.getEpisode()); use at least "aired"
+    // syncEpisode.season(episode.getSeason());
 
     // also sync mediainfo
     syncEpisode.mediaType(getMediaType(episode.getMediaInfoSource()));
