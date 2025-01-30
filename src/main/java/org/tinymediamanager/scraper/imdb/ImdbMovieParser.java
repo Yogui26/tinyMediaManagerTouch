@@ -160,7 +160,7 @@ public class ImdbMovieParser extends ImdbParser {
             doc = futureKeywords.get();
             if (doc != null) {
               parseKeywordsPage(doc, options, md2);
-              md.setTags(md2.getTags());// overwrite all
+              md2.getTags().forEach(md::addTag);
             }
           }
         }

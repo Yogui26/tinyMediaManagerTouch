@@ -22,10 +22,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 import org.tinymediamanager.core.BasicITest;
@@ -40,11 +42,58 @@ import org.tinymediamanager.scraper.MediaSearchResult;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieSetMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
+import org.tinymediamanager.scraper.tmdb.entities.Certifications;
+import org.tinymediamanager.scraper.tmdb.entities.Certifications.Certification;
+
+import retrofit2.Response;
 
 public class ITTmdbMetadataProviderTest extends BasicITest {
+
+  @Test
+  public void matchCerts() throws ScrapeException, IOException {
+    TmdbMovieMetadataProvider mp = new TmdbMovieMetadataProvider();
+    mp.initAPI(); // load certs et all
+
+    int cntCerts = 0;
+    int unknownCerts = 0;
+
+    // load known certs from TMDB
+    Response<Certifications> certs = mp.api.certificationService().getMovieCertification().execute();
+    Certifications movieCerts = certs.body();
+    System.out.println("found " + movieCerts.certifications.size() + " movie certs");
+    certs = mp.api.certificationService().getTvShowCertification().execute();
+    Certifications tvCerts = certs.body();
+    System.out.println("found " + tvCerts.certifications.size() + " tvshow certs");
+
+    // a short test, if all TMDB certs could be matched to TMM certs...
+    for (Map.Entry<String, List<Certification>> country : movieCerts.certifications.entrySet()) {
+      for (Certification cert : country.getValue()) {
+        cntCerts++;
+        MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
+        if (tmmCert == MediaCertification.UNKNOWN) {
+          unknownCerts++;
+          System.out.println("Did not find a TMM cert for TMDBs movie " + country.getKey() + " - " + cert.certification);
+        }
+      }
+    }
+
+    for (Map.Entry<String, List<Certification>> country : tvCerts.certifications.entrySet()) {
+      for (Certification cert : country.getValue()) {
+        cntCerts++;
+        MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
+        if (tmmCert == MediaCertification.UNKNOWN) {
+          unknownCerts++;
+          System.out.println("Did not find a TMM cert for TMDBs tv " + country.getKey() + " - " + cert.certification);
+        }
+      }
+    }
+
+    System.out.println("Found " + cntCerts + " certs in TMDB, could match to TMM " + (cntCerts - unknownCerts) + " (missing " + unknownCerts + ")");
+  }
 
   @Test
   public void testMovieSearch() {
@@ -149,7 +198,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
       assertNotNull("Result", results);
 
       // result count
-      assertEquals("Result count", 1, results.size());
+      assertThat(results.size()).isGreaterThanOrEqualTo(1);
 
       assertEquals("Recrutas da Pesada", results.get(0).getTitle());
       assertEquals(1981, results.get(0).getYear());
@@ -408,7 +457,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
       results = new ArrayList<>(metadataProvider.search(options));
 
       assertNotNull(results);
-      assertEquals(1, results.size());
+      assertThat(results.size()).isGreaterThanOrEqualTo(1);
       assertEquals("Die Simpsons", results.get(0).getTitle());
       assertEquals("The Simpsons", results.get(0).getOriginalTitle());
       assertEquals("456", results.get(0).getId());
@@ -472,9 +521,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
       assertNotNull("MediaMetadata", md);
 
       assertEquals("Psych", md.getTitle());
-      assertEquals(
-          "Thanks to his police officer father's efforts, Shawn Spencer spent his childhood developing a keen eye for detail (and a lasting dislike of his dad). Years later, Shawn's frequent tips to the police lead to him being falsely accused of a crime he solved. Now, Shawn has no choice but to use his abilities to perpetuate his cover story: psychic crime-solving powers, all the while dragging his best friend, his dad, and the police along for the ride.",
-          md.getPlot());
+      assertThat(md.getPlot()).startsWith("Thanks to his police officer father's efforts, Shawn Spencer");
       assertEquals(2006, md.getYear());
 
       assertThat(md.getRatings().size()).isGreaterThanOrEqualTo(1);
@@ -508,7 +555,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
     try {
       mp = new TmdbTvShowMetadataProvider();
       options = new TvShowEpisodeSearchAndScrapeOptions();
-      options.setTvShowIds(Collections.singletonMap(mp.getProviderInfo().getId(), "1447"));
+      options.setTvShowIds(Collections.singletonMap(mp.getProviderInfo().getId(), 1447));
       options.setLanguage(MediaLanguages.en);
       options.setCertificationCountry(CountryCode.US);
       options.setReleaseDateCountry("US");

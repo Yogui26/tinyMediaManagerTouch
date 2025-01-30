@@ -1,3 +1,7 @@
+Version 5.1.2
+=======================
+
+
 Version 5.1.1
 =======================
 + [Tools] added enhanced management of external tools like FFmpeg/yt-dlp:
@@ -13,14 +17,17 @@ x [TVDB] fixed scraping of episode original title #2810
 x [TVDB] fixed scraping of more alternative episode groups #2820
 x [TVDB] fixed translations for alternative orderings #2811
 x [TVDB] register as trailer provider
+x [IMDB] refactor search; use fallback search
 x [hd-trailers] invalidate most links, since all outdated
 x [UI] fixed adding of new genres/tags via [+] button
 x [UI] fixed updating the TV show tree when changing an episode to uncategorized
 x [UI] do not remove scraping presets for episode thumbs #2807
 x [FFmpeg] avoid crash when only 1 artwork is generated #2832
+x [Scrapers] strip whitespaces from scraper config values (especially usernames, passwords, API keys)
 x [Scrapers] parse crew job/role information
 x [UDS] ignore AKA titles if found #2816
-x [renamer] also normalize apostrophes when ASCII replacement is used #2799
+x [Renamer] also normalize apostrophes when ASCII replacement is used #2799
+x [Unwanted files] prevent removing the whole entity by using weird regular expressions
 
 
 Version 5.1

@@ -25,15 +25,24 @@ public class ContentRating {
   @SerializedName("name")
   public String  name        = null;
 
+  /**
+   * ISO3 char
+   */
   @SerializedName("country")
   public String  country     = null;
 
+  @SerializedName("cdescription")
+  public String  description = null;
+
+  /**
+   * movie or episode
+   */
   @SerializedName("contentType")
   public String  contentType = null;
 
   @SerializedName("order")
   public Integer order       = null;
 
-  @SerializedName("fullName")
-  public String  fullName    = null;
+  @SerializedName("fullname")
+  public String  fullname    = null;
 }
