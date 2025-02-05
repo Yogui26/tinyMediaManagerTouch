@@ -4,6 +4,10 @@ Version 5.1.2
   You can extract your cookies from a browser and pass them to yt-dlp. More infos at #2841 and on our homepage
 + [Exporter] the copyArtwork renderer will fall back to the image cache if the original image is not available
 x [UI] always show the buy license link inside the UnlockDialog #2834
+x [MediaInfo] upgraded to 24.12
+x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
+x [IMDB] fix scraping with "best match" - didn't find anything
+x [Trakt.tv] Free users get quite limited now - expose more errors to GUI #2844
 
 
 Version 5.1.1
