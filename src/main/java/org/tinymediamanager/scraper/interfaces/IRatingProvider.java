@@ -27,7 +27,7 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
  * 
  * @author Manuel Laggner
  */
-public interface IRatingProvider {
+public interface IRatingProvider extends IMediaProvider {
   /**
    * get the supported {@link MediaRating}s for the given IDs
    * 

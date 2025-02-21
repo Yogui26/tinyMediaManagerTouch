@@ -20,6 +20,7 @@ import java.util.Date;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
 import org.tinymediamanager.scraper.mdblist.entities.MdbMediaEntity;
+import org.tinymediamanager.scraper.mdblist.entities.MdbSearchResults;
 import org.tinymediamanager.scraper.mdblist.services.MdbListService;
 
 import com.google.gson.GsonBuilder;
@@ -106,4 +107,26 @@ public class MdbListController {
   public Call<MdbMediaEntity> getMediaEntity(String mediaProvider, MediaType mediaType, String mediaId) {
     return getService().getMdbMediaEntity(mediaProvider, getMediaTypeForQuery(mediaType), mediaId);
   }
+
+  /**
+   * Gets the whole MDBList entity, with all ratings etc...
+   * 
+   * @param mediaProvider
+   *          like imdb/tmdb/tvdb
+   * @param mediaType
+   *          movie or show
+   * @param mediaId
+   *          the scraper ID
+   * @param appendToResponse
+   *          keyword, review
+   * @return
+   */
+  public Call<MdbMediaEntity> getMediaEntity(String mediaProvider, MediaType mediaType, String mediaId, String appendToResponse) {
+    return getService().getMdbMediaEntity(mediaProvider, getMediaTypeForQuery(mediaType), mediaId, appendToResponse);
+  }
+
+  public Call<MdbSearchResults> search(MediaType mediaType, String query) {
+    return getService().search(getMediaTypeForQuery(mediaType), query);
+  }
+
 }

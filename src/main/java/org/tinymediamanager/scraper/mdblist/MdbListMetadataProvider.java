@@ -16,24 +16,35 @@
 package org.tinymediamanager.scraper.mdblist;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.FeatureNotEnabledException;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.entities.MediaGenres;
 import org.tinymediamanager.core.entities.MediaRating;
+import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaProviderInfo;
+import org.tinymediamanager.scraper.MediaSearchAndScrapeOptions;
+import org.tinymediamanager.scraper.MediaSearchResult;
+import org.tinymediamanager.scraper.entities.MediaArtwork;
+import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
+import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaType;
+import org.tinymediamanager.scraper.exceptions.HttpException;
 import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
-import org.tinymediamanager.scraper.interfaces.IRatingProvider;
+import org.tinymediamanager.scraper.mdblist.entities.MdbIdName;
+import org.tinymediamanager.scraper.mdblist.entities.MdbIdTitle;
 import org.tinymediamanager.scraper.mdblist.entities.MdbMediaEntity;
 import org.tinymediamanager.scraper.mdblist.entities.MdbRating;
+import org.tinymediamanager.scraper.mdblist.entities.MdbSearchResult;
+import org.tinymediamanager.scraper.mdblist.entities.MdbSearchResults;
+import org.tinymediamanager.scraper.util.ListUtils;
 
 import retrofit2.Response;
 
@@ -42,9 +53,8 @@ import retrofit2.Response;
  * 
  * @author Myron Boyle
  */
-public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider {
-  public static final String        ID     = "mdblist";
-  private static final Logger       LOGGER = LoggerFactory.getLogger(MdbListMetadataProvider.class);
+abstract class MdbListMetadataProvider implements IMediaProvider {
+  public static final String        ID = "mdblist";
 
   protected final MediaProviderInfo providerInfo;
   protected MdbListController       controller;
@@ -54,7 +64,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
   }
 
   protected MediaProviderInfo createMediaProviderInfo() {
-    return new MediaProviderInfo(ID, "", "mdblist.com",
+    return new MediaProviderInfo(ID, getSubId(), "mdblist.com",
         "MDBLIst - The Ultimate Dynamic List Manager<br><br>mdblist.com is your go-to tool for creating dynamic, auto-updating movie and show lists tailored to your preferences. Seamlessly integrated with Stremio, it combines the power of multiple rating platforms like IMDb, TMDb, Letterboxd, Rotten Tomatoes, Metacritic, MyAnimeList, and RogerEbert. Whether you’re building a watchlist, tracking ratings, or syncing your library progress, mdblist.com makes it effortless.",
         MdbListMetadataProvider.class.getResource("/org/tinymediamanager/scraper/mdblist.png"));
   }
@@ -78,7 +88,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
         controller.setApiKey(apiKey);
       }
       catch (Exception e) {
-        LOGGER.error("could not initialize the API: {}", e.getMessage());
+        getLogger().error("could not initialize the API: {}", e.getMessage());
         // force re-initialization the next time this will be called
         controller = null;
         throw new ScrapeException(e);
@@ -91,21 +101,93 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
     return providerInfo;
   }
 
-  @Override
-  public List<MediaRating> getRatings(Map<String, Object> ids, MediaType mediaType) throws ScrapeException {
-    initAPI();
-    List<MediaRating> mediaRatingList = new ArrayList<>();
+  protected abstract String getSubId();
 
-    // MDBList does only have show (and movie) ratings, so skip for episodes
-    if (mediaType == MediaType.TV_EPISODE) {
-      return mediaRatingList;
+  protected abstract Logger getLogger();
+
+  protected SortedSet<MediaSearchResult> searchMdb(MediaSearchAndScrapeOptions options) throws ScrapeException {
+    getLogger().debug("search(): '{}'", options);
+    initAPI();
+    SortedSet<MediaSearchResult> results = new TreeSet<>();
+
+    if (!options.getIds().isEmpty()) {
+      try {
+        MediaMetadata md = getMetadata(options);
+        MediaSearchResult msr = md.toSearchResult(options.getMediaType());
+        msr.setScore(1.0f);
+        results.add(msr);
+        return results;
+      }
+      catch (Exception e) {
+        // if we got an exception, the getMetadataCall by ID did not work
+      }
     }
 
+    // so we do a search here
+    String query = options.getSearchQuery();
+    Response<MdbSearchResults> response = null;
+    try {
+      response = controller.search(options.getMediaType(), query).execute();
+      if (!response.isSuccessful()) {
+        String message = "";
+        try {
+          message = response.errorBody().string();
+        }
+        catch (IOException e) {
+          // ignore
+        }
+        getLogger().warn("request was not successful: HTTP/{} - {}", response.code(), message);
+        throw new HttpException(response.code(), message);
+      }
+    }
+    catch (Exception e) {
+      getLogger().error("request was not successful:{}", e);
+      throw new ScrapeException(e);
+    }
+
+    MdbSearchResults result = response.body();
+    if (result == null || result.search == null || result.search.isEmpty()) {
+      getLogger().warn("no result found");
+      throw new NothingFoundException();
+    }
+
+    for (MdbSearchResult res : result.search) {
+      MediaSearchResult msr = toSearchResult(res, options.getMediaType());
+      msr.calculateScore(options);
+      results.add(msr);
+    }
+
+    return results;
+  }
+
+  private MediaSearchResult toSearchResult(MdbSearchResult mdb, MediaType type) {
+    MediaSearchResult sr = new MediaSearchResult(getId(), type);
+    for (Map.Entry<String, Object> entry : mdb.ids.entrySet()) {
+      String key = entry.getKey().replaceFirst("id$", ""); // searchresult has "id" appended to all IDs
+      sr.setId(key, entry.getValue());
+    }
+    sr.setTitle(mdb.title);
+    sr.setYear(mdb.year);
+    return sr;
+  }
+
+  protected MediaMetadata getMetadata(MediaSearchAndScrapeOptions options) throws ScrapeException {
+    return getMetadata(options, false);
+  }
+
+  protected MediaMetadata getMetadata(MediaSearchAndScrapeOptions options, boolean keywords) throws ScrapeException {
+    getLogger().debug("getMetadata(): '{}'", options);
+    initAPI();
+
     Response<MdbMediaEntity> response = null;
-    for (Map.Entry<String, Object> entry : ids.entrySet()) {
-      // Fetch the ratings with the first found ID
+    for (Map.Entry<String, Object> entry : options.getIds().entrySet()) {
       try {
-        response = controller.getMediaEntity(entry.getKey(), mediaType, entry.getValue().toString()).execute();
+        if (keywords) {
+          response = controller.getMediaEntity(entry.getKey(), options.getMediaType(), entry.getValue().toString(), "keyword").execute();
+        }
+        else {
+          response = controller.getMediaEntity(entry.getKey(), options.getMediaType(), entry.getValue().toString()).execute();
+        }
         if (!response.isSuccessful()) {
           String message = "";
           try {
@@ -114,42 +196,92 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
           catch (IOException e) {
             // ignore
           }
-          LOGGER.debug("request was not successful: HTTP/{} - {}", response.code(), message);
+          getLogger().debug("request was not successful: HTTP/{} - {}", response.code(), message);
         }
         else {
           break;
         }
       }
       catch (Exception e) {
-        LOGGER.debug("request was not successful : '{}'", e.getMessage());
+        getLogger().debug("request was not successful:{}", e);
       }
     }
 
-    if (response == null || response.body() == null) {
+    if (response == null || response.body() == null || !response.isSuccessful()) {
       throw new NothingFoundException();
     }
 
-    List<MdbRating> ratings = response.body().ratings;
-    // Loop over result to get all Ratings and add them to list of media ratings
-    for (MdbRating rating : ratings) {
-      if (rating.source == null || (rating.value == 0f && !rating.source.equals(MediaMetadata.ROGER_EBERT))) {
-        continue;
-      }
-      MediaRating mediaRating = new MediaRating(rating.source, rating.value, rating.votes);
-      switch (rating.source) {
-        case MediaMetadata.LETTERBOXD: {
-          mediaRating.setMaxValue(5);
-          break;
-        }
+    MdbMediaEntity mdb = response.body();
+    MediaMetadata md = new MediaMetadata(getId());
+    for (Map.Entry<String, Object> entry : mdb.ids.entrySet()) {
+      md.setId(entry.getKey(), entry.getValue());
+    }
+    md.setTitle(mdb.title);
+    md.setYear(mdb.year);
+    md.setPlot(mdb.description);
+    md.setReleaseDate(mdb.released);
+    md.setRuntime(mdb.runtime);
 
-        case MediaMetadata.ROGER_EBERT: {
-          mediaRating.setMaxValue(4); // yes, 4
-          break;
-        }
-      }
-      mediaRatingList.add(mediaRating);
+    for (MdbRating rating : ListUtils.nullSafe(mdb.ratings)) {
+      md.addRating(getTmmRatingFrom(rating));
+    }
+    for (MdbIdTitle genre : ListUtils.nullSafe(mdb.genres)) {
+      MediaGenres g = MediaGenres.getGenre(genre.title);
+      md.addGenre(g);
+    }
+    for (MdbIdName prodComp : ListUtils.nullSafe(mdb.production_companies)) {
+      md.addProductionCompany(prodComp.name);
+    }
+    for (MdbIdName keyword : ListUtils.nullSafe(mdb.keywords)) {
+      md.addTag(keyword.name);
+    }
+    md.addSpokenLanguage(mdb.spspoken_language);
+    md.setOriginalLanguage(mdb.language);
+    md.addCountry(mdb.country);
+
+    MediaCertification cert = MediaCertification.findCertification(mdb.certification);
+    md.addCertification(cert);
+
+    if (mdb.trailer != null) {
+      MediaTrailer t = new MediaTrailer();
+      t.setUrl(mdb.trailer);
+      md.addTrailer(t);
     }
 
-    return mediaRatingList;
+    if (mdb.poster != null) {
+      MediaArtwork ma = new MediaArtwork(getId(), MediaArtworkType.POSTER);
+      ma.setOriginalUrl(mdb.poster);
+      ma.addImageSize(0, 0, mdb.poster, MediaArtwork.PosterSizes.LARGE.ordinal());
+      md.addMediaArt(ma);
+    }
+
+    if (mdb.backdrop != null) {
+      MediaArtwork ma = new MediaArtwork(getId(), MediaArtworkType.BACKGROUND);
+      ma.setOriginalUrl(mdb.backdrop);
+      ma.addImageSize(0, 0, mdb.backdrop, MediaArtwork.FanartSizes.LARGE.ordinal());
+      md.addMediaArt(ma);
+    }
+
+    return md;
+  }
+
+  protected MediaRating getTmmRatingFrom(MdbRating mdb) {
+    MediaRating rating = null;
+    if (mdb.source == null || (mdb.value == 0f && !mdb.source.equals(MediaMetadata.ROGER_EBERT))) {
+      return rating;
+    }
+    rating = new MediaRating(mdb.source, mdb.value, mdb.votes);
+    switch (mdb.source) {
+      case MediaMetadata.LETTERBOXD: {
+        rating.setMaxValue(5);
+        break;
+      }
+
+      case MediaMetadata.ROGER_EBERT: {
+        rating.setMaxValue(4); // yes, 4
+        break;
+      }
+    }
+    return rating;
   }
 }

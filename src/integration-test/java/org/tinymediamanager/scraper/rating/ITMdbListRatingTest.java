@@ -10,13 +10,13 @@ import org.junit.Test;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaType;
-import org.tinymediamanager.scraper.mdblist.MdbListMetadataProvider;
+import org.tinymediamanager.scraper.mdblist.MdbListRatingProvider;
 
 public class ITMdbListRatingTest {
 
   @Test
   public void testMovieRatings() throws Exception {
-    MdbListMetadataProvider mp = new MdbListMetadataProvider();
+    MdbListRatingProvider mp = new MdbListRatingProvider();
     Map<String, Object> ids = new HashMap<>();
     ids.put(MediaMetadata.IMDB, "tt6718170");
     List<MediaRating> mediaRatings = mp.getRatings(ids, MediaType.MOVIE); // Super Mario Bros Movie
@@ -25,7 +25,7 @@ public class ITMdbListRatingTest {
 
   @Test
   public void testShowRatings() throws Exception {
-    MdbListMetadataProvider mp = new MdbListMetadataProvider();
+    MdbListRatingProvider mp = new MdbListRatingProvider();
     Map<String, Object> ids = new HashMap<>();
     ids.put(MediaMetadata.TMDB, 8475);
     List<MediaRating> mediaRatings = mp.getRatings(ids, MediaType.TV_SHOW);

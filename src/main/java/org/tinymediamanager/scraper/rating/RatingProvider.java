@@ -31,7 +31,7 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.interfaces.IRatingProvider;
-import org.tinymediamanager.scraper.mdblist.MdbListMetadataProvider;
+import org.tinymediamanager.scraper.mdblist.MdbListRatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 
@@ -173,9 +173,9 @@ public class RatingProvider {
       // FIXME: does not work yet, since the scraper is no movie/show provider yet...
       // callScraper(MediaMetadata.MDBLIST, mediaType, missingRatings, ids, ratings);
       try {
-        MdbListMetadataProvider mdbListMetadataProvider = new MdbListMetadataProvider();
-        if (mdbListMetadataProvider.isActive()) {
-          List<MediaRating> ratingsFromMdblist = mdbListMetadataProvider.getRatings(ids, mediaType);
+        MdbListRatingProvider rp = new MdbListRatingProvider();
+        if (rp.isActive()) {
+          List<MediaRating> ratingsFromMdblist = rp.getRatings(ids, mediaType);
           for (MediaRating rating : ratingsFromMdblist) {
             RatingSource source = parseRatingSource(rating.getId());
             if (missingRatings.contains(source) && !ratings.contains(rating)) {
