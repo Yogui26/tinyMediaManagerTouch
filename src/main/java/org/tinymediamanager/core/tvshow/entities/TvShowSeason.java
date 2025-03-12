@@ -260,12 +260,8 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
     // to find out the delta (dummy)
     List<TvShowEpisode> episodesForDisplayBefore = getEpisodesForDisplay();
 
-    if (episode.isDummy()) {
-      dummyEpisodes.remove(episode);
-    }
-    else {
-      episodes.remove(episode);
-    }
+    dummyEpisodes.remove(episode);
+    episodes.remove(episode);
 
     // invalidate cache
     episodesForDisplay.clear();
@@ -401,6 +397,21 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
     }
 
     return new ArrayList<>(episodesForDisplay);
+  }
+
+  /**
+   * Gets the sum of all episodes runtime
+   * 
+   * @return the sum of all episode runtime
+   */
+  public int getRuntimeOfEpisodes() {
+    int runtime = 0;
+
+    for (TvShowEpisode episode : episodes) {
+      runtime += episode.getRuntime();
+    }
+
+    return runtime;
   }
 
   /**

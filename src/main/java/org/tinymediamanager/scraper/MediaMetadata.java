@@ -55,6 +55,7 @@ public class MediaMetadata {
   public static final String                               ANIDB               = "anidb";
   public static final String                               IMDB                = "imdb";
   public static final String                               LETTERBOXD          = "letterboxd";
+  public static final String                               MDBLIST             = "mdblist";
   public static final String                               METACRITIC          = "metacritic";
   public static final String                               METACRITIC_USER     = "metacriticuser";
   public static final String                               MY_ANIME_LIST       = "myanimelist";
@@ -524,6 +525,18 @@ public class MediaMetadata {
       else {
         ids.put(key, object);
       }
+    }
+  }
+
+  /**
+   * Set all given IDs
+   * 
+   * @param newIds
+   *          a {@link Map} containing all given IDs
+   */
+  public void setIds(Map<String, Object> newIds) {
+    for (Map.Entry<String, Object> id : newIds.entrySet()) {
+      setId(id.getKey(), id.getValue());
     }
   }
 
@@ -1002,6 +1015,13 @@ public class MediaMetadata {
         ratings.add(rating);
       }
     }
+  }
+
+  /**
+   * remove all {@link MediaRating}s
+   */
+  public void removeRatings() {
+    ratings.clear();
   }
 
   /**

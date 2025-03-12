@@ -112,6 +112,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
         MediaMetadata md = getMetadata(options);
         MediaSearchResult msr = new MediaSearchResult(id, options.getMediaType());
         msr.mergeFrom(md);
+        msr.setScore(1f);
         results.add(msr);
         return results;
       }
@@ -143,7 +144,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
       if ((StringUtils.isNotBlank(options.getImdbId()) && options.getImdbId().equals(m.getIMDBId()))
           || String.valueOf(options.getTmdbId()).equals(m.getId()) || (id != null && id.equals(m.getId()))) {
         LOGGER.debug("perfect match by ID - set score to 1");
-        m.setScore(1);
+        m.setScore(1f);
       }
       else {
         // calculate the score by comparing the search result with the search options
@@ -192,6 +193,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
         ep.setScrapeOptions(options);
         ep.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, TvUtils.getSeasonNumber(episode.season), TvUtils.getEpisodeNumber(episode.number));
         ep.setTitle(episode.title);
+        ep.setRuntime(episode.runtime);
 
         if (episode.rating != null && episode.votes != null) {
           MediaRating rating = new MediaRating(getId());

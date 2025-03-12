@@ -1,7 +1,32 @@
+Version 5.1.5
+=======================
++ [TV shows] added runtime for episodes too
++ [TV shows] enabled using runtime from mediainfo instead of scraped one #2838
+
+
+Version 5.1.4
+=======================
+x [TMDB] fix web link to episode #2875
+x [Movies/TV shows] fixed starting of sub-tasks in the chooser #2876
+x [TV shows] also process season NFOs when triggering read/write TV show NFO actions #2849
+x [UI] reworked message dialog for long texts/messages
+x [UI] use clearer messages when deleting movies/TV shows
+x [UI] removed changing seasons from TV show bulk editor, because this will not work with episode groups anymore #2856
+x [Scrapers] fixed calling MDBList API #2877
+
+
 Version 5.1.3
 =======================
++ [UI] added more clickable IDs #2840
++ [UI] added some more default/forced checkboxes to mediaInfo streams #2675
 x [Movies/TV shows] reworked task queueing to avoid concurrency problems #2864
+x [Movies/TV shows] migrated old legacy IDs to prevent duplicated IDs
+x [Movies] re-enabled getting artwork from FFmpeg using the automatic scraper #2866
 x [TV shows] added new season poster file naming scheme "<season_folder>/seasonXX.ext" #2817
+x [UI] fixed focus handling in the image chooser #2869
+x [MdbList] fix getting ratings due to changed API
+x [Scrapers] fix scraping with "best match" - didn't find anything (thx u/BadLuckFistFuck666)
+x [source] recognize SDTV as TV MediaSource (thx u/Gullible_Eagle4280)
 
 
 Version 5.1.2

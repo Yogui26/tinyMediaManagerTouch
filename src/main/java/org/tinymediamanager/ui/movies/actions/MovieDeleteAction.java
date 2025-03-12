@@ -23,6 +23,7 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -30,6 +31,7 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.dialogs.TmmOptionDialog;
 import org.tinymediamanager.ui.movies.MovieUIModule;
 
 /**
@@ -39,7 +41,7 @@ import org.tinymediamanager.ui.movies.MovieUIModule;
  */
 public class MovieDeleteAction extends TmmAction {
   public MovieDeleteAction() {
-    putValue(SMALL_ICON, IconManager.DELETE_FOREVER);
+    putValue(SMALL_ICON, IconManager.DELETE_FOREVER_RED);
     putValue(NAME, TmmResourceBundle.getString("movie.delete"));
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.delete.hint"));
     putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
@@ -55,10 +57,9 @@ public class MovieDeleteAction extends TmmAction {
     }
 
     // display warning and ask the user again
-    Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
-    int answer = JOptionPane.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("movie.delete.desc"),
-        TmmResourceBundle.getString("movie.delete"), //$NON-NLS-1$
-        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+    String message = Settings.getInstance().isEnableTrash() ? TmmResourceBundle.getString("movie.delete.desc")
+        : TmmResourceBundle.getString("movie.delete.desc2");
+    int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("movie.delete"), message);
     if (answer != JOptionPane.YES_OPTION) {
       return;
     }

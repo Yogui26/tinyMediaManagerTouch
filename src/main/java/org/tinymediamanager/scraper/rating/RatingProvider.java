@@ -31,6 +31,7 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.interfaces.IRatingProvider;
+import org.tinymediamanager.scraper.mdblist.MdbListMetadataProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 
@@ -112,10 +113,6 @@ public class RatingProvider {
     return null;
   }
 
-  public static List<MediaRating> getRatingsFromMdbList(Map<String, Object> ids, MediaType mediaType) {
-    return new MdbListRating().getRatings(mediaType, ids);
-  }
-
   /**
    * get a {@link List} of all supported rating sources
    * 
@@ -173,13 +170,23 @@ public class RatingProvider {
     // MdbList
     if (ListUtils.containsAny(missingRatings, RatingSource.METACRITIC, RatingSource.ROTTEN_TOMATOES_AVG_RATING,
         RatingSource.ROTTEN_TOMATOES_AVG_RATING, RatingSource.LETTERBOXD, RatingSource.MAL, RatingSource.ROGER_EBERT)) {
-      List<MediaRating> ratingsFromMdblist = new MdbListRating().getRatings(mediaType, ids);
-      for (MediaRating rating : ratingsFromMdblist) {
-        RatingSource source = parseRatingSource(rating.getId());
-        if (missingRatings.contains(source) && !ratings.contains(rating)) {
-          ratings.add(rating);
-          missingRatings.remove(source);
+      // FIXME: does not work yet, since the scraper is no movie/show provider yet...
+      // callScraper(MediaMetadata.MDBLIST, mediaType, missingRatings, ids, ratings);
+      try {
+        MdbListMetadataProvider mdbListMetadataProvider = new MdbListMetadataProvider();
+        if (mdbListMetadataProvider.isActive()) {
+          List<MediaRating> ratingsFromMdblist = mdbListMetadataProvider.getRatings(ids, mediaType);
+          for (MediaRating rating : ratingsFromMdblist) {
+            RatingSource source = parseRatingSource(rating.getId());
+            if (missingRatings.contains(source) && !ratings.contains(rating)) {
+              ratings.add(rating);
+              missingRatings.remove(source);
+            }
+          }
         }
+      }
+      catch (Exception e) {
+        LOGGER.debug("could not get mbdlist ratings - '{}'", e.getMessage());
       }
     }
 
