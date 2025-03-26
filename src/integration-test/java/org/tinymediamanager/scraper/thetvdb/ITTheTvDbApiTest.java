@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.tinymediamanager.core.BasicITest;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.entities.MediaCertification2;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.thetvdb.entities.AllSeriesResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.ContentRating;
@@ -53,12 +54,15 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void matchCerts() throws ScrapeException, IOException {
-    TheTvDbMovieMetadataProvider mp = new TheTvDbMovieMetadataProvider();
-    mp.initAPI();
     int cntCerts = 0;
     int unknownCerts = 0;
+    int unknownCerts2 = 0;
 
-    Response<ContentRatingResponse> response = mp.tvdb.getConfigService().getCertifications().execute();
+    // load new certs
+    MediaCertification2 c = MediaCertification2.getInstance();
+    c.load();
+
+    Response<ContentRatingResponse> response = theTvDbController.getConfigService().getCertifications().execute();
     if (response.isSuccessful()) {
       for (ContentRating cert : response.body().data) {
         cntCerts++;
@@ -68,6 +72,7 @@ public class ITTheTvDbApiTest extends BasicITest {
           System.out.println("Country not found: " + cert.country);
         }
         if (cert.fullname != null && !cert.name.equalsIgnoreCase(cert.fullname)) {
+          // to find some, where name and fullname is different
           System.out.println(cc.getAlpha2() + ": name differs: " + cert.name + " - " + cert.fullname);
         }
         if (!cert.contentType.equalsIgnoreCase("movie") && !cert.contentType.equalsIgnoreCase("episode")) {
@@ -78,12 +83,24 @@ public class ITTheTvDbApiTest extends BasicITest {
         MediaCertification tmmCert = MediaCertification.getCertification(cc.getAlpha2(), cert.name);
         if (tmmCert == MediaCertification.UNKNOWN) {
           unknownCerts++;
-          System.out.println("Did not find a TMM cert for TVDBs " + cc.getAlpha2() + " - " + cert.name);
+          // System.out.println("Did not find a TMM cert for TVDBs " + cc.getAlpha2() + " - " + cert.name);
+        }
+
+        // now check for NEW TMM match
+        org.tinymediamanager.scraper.entities.MediaCertification2.Certification newCert = c.getTvShowRatingFor(cc.getAlpha2(), cert.name);
+        if (newCert == null) {
+          newCert = c.getMovieRatingFor(cc.getAlpha2(), cert.name);
+        }
+        if (newCert == null) {
+          unknownCerts2++;
+          System.out.println("Did not find a NEW TMM cert for TMDBs tv " + cc.getAlpha2() + " - " + cert.name);
         }
       }
     }
 
     System.out.println("Found " + cntCerts + " certs in TVDB, could match " + (cntCerts - unknownCerts) + " to TMM (missing " + unknownCerts + ")");
+    System.out
+        .println("Found " + cntCerts + " certs in TVDB, could match " + (cntCerts - unknownCerts2) + " to NEW TMM (missing " + unknownCerts2 + ")");
     System.out.println();
 
   }

@@ -23,8 +23,40 @@ public class ITCertifications {
   private List<String> entries    = new ArrayList<>();
   private int          dupleCount = 0;
 
+  // This class is all about certifications:
+  //
+  // The getAllWebCertifications() scrapes the wikipedia & imdb site for ALL known certs
+  // as we added in Q3/2024.
+  // From a today's perspective, this is unneeded, and does not solve our problems
+  //
+  // Checking the certs on TMDB & TVDB (with dedicated certs config call) shows, that even with our
+  // now ~1000 certs, we only can match 80%. So adding all these weird names did not solve our problem at all.
+  // We need to go back-2-roots :)
+  // Just have a list of known good certifications, which we get from various SCRAPERS, and remove all the rest again
+  // check ITTmdbMetadataProviderTest & ITTheTvDbApiTest for matchingCerts tests.
+  //
+  // Our current approach is a big JSON file, derived from some externals site ;) and yes, we DO compare apples with pears!
+  // https://tv.pears.com/api/uts/v3/ratings?caller=web&locale=de-DEe&pfm=web&sfh=143443&v=31
+  // This list is quite clean, and kinda holds 95% of all certs we need.
+  // They furthermore have some ratingValue, to kinda represent the age through all the different countries.
+  // To update, download that JSON, sort it alphabetically, and do some comparison! (especially
+  // check changed descriptions, since this is our main point for detecting the age!)
+  //
+  // Starting with MediaCertification2.load() we will load that JSON from classpath resources.
+  // We extended that list, by detecting the minimumAge needed of all these certs.
+  // For those we cannot detect, we've added the tag into JSON (TODO: separate file for easier merge?)
+  // If we do this with our old certs too, we can match them that way :)
+
+  // Found 627 certs in TVDB, could match 182 to v4 TMM (missing 445)
+  // Found 627 certs in TVDB, could match 413 to v5 TMM (missing 214)
+  // Found 627 certs in TVDB, could match 559 to NEW TMM (missing 68)
+  //
+  // Found 594 certs in TMDB, could match 233 to v4 TMM (missing 361)
+  // Found 594 certs in TMDB, could match 452 to v5 TMM (missing 142)
+  // Found 594 certs in TMDB, could match 481 to NEW TMM (missing 113)
+
   @Test
-  public void doAll() throws Exception {
+  public void getAllWebCertifications() throws Exception {
 
     for (MediaCertification tmm : MediaCertification.values()) {
       String safeenum = tmm.name();

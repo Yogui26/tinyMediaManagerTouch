@@ -17,9 +17,14 @@
 package org.tinymediamanager.scraper.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 import org.tinymediamanager.core.BasicTest;
+import org.tinymediamanager.core.CertificationStyle;
+import org.tinymediamanager.scraper.entities.MediaCertification2.Certification;
+import org.tinymediamanager.scraper.entities.MediaCertification2.Country;
+import org.tinymediamanager.scraper.util.ListUtils;
 
 public class MediaCertificationTest extends BasicTest {
 
@@ -29,6 +34,18 @@ public class MediaCertificationTest extends BasicTest {
   // System.out.println(cert.name() + "\t" + cert.toString());
   // }
   // }
+
+  @Test
+  public void testCertificationTemplate() {
+    // assertEqual(expected, actual);
+    assertThat(CertificationStyle.formatCertification(MediaCertification.DE_FSK16, CertificationStyle.SHORT)).isEqualTo("FSK 16");
+    assertThat(CertificationStyle.formatCertification(MediaCertification.US_PG13, CertificationStyle.MEDIUM)).isEqualTo("US: PG-13");
+    assertThat(CertificationStyle.formatCertification(MediaCertification.DE_FSK16, CertificationStyle.LARGE))
+        .isEqualTo("DE:FSK 16 / DE:FSK-16 / DE:FSK16 / DE:16 / DE:ab 16");
+    assertThat(CertificationStyle.formatCertification(MediaCertification.DE_FSK16, CertificationStyle.LARGE_FULL))
+        .isEqualTo("Germany:FSK 16 / Germany:FSK-16 / Germany:FSK16 / Germany:16 / Germany:ab 16");
+    assertThat(CertificationStyle.formatCertification(MediaCertification.DE_FSK16, CertificationStyle.TECHNICAL)).isEqualTo("DE_FSK16");
+  }
 
   @Test
   public void testParseCertification() {
@@ -44,4 +61,101 @@ public class MediaCertificationTest extends BasicTest {
     assertThat(MediaCertification.findCertification("MA 15+")).isEqualTo(MediaCertification.AU_MA15);
   }
 
+  @Test
+  public void diffJsonCsvCerts() {
+    MediaCertification2 c = MediaCertification2.getInstance();
+    c.load();
+
+    // MV, ZW not in CSV
+    // DZ, IQ, LY, MA not in JSON
+
+    for (String cc : c.countryCerts.keySet()) {
+      Country json = c.getCountryCerts(cc);
+      Country csv = c.getCsvCountryCerts(cc);
+
+      for (Certification cert : ListUtils.nullSafe(json.show)) {
+        System.out.println("J  " + cc + ": " + cert.displayValue + " - " + cert.minimumAge);
+      }
+      System.out.println("---");
+      if (csv == null) {
+        System.out.println("*** CSV: country " + cc + " not found!");
+      }
+      else {
+        for (Certification cert : ListUtils.nullSafe(csv.show)) {
+          System.out.println("C  " + cc + ": " + cert.displayValue + " - " + cert.minimumAge);
+        }
+      }
+      System.out.println("**********************************");
+    }
+
+    for (String cc : c.csvCerts.keySet()) {
+      if (cc.isEmpty()) {
+        System.out.println();
+      }
+      Country json = c.countryCerts.get(cc);
+      if (json == null) {
+        System.out.println("*** JSON: country " + cc + " not found!");
+      }
+    }
+  }
+
+  @Test
+  public void findCertsWhereWeHaveNoMinimumAge() {
+    MediaCertification2 c = MediaCertification2.getInstance();
+    c.load();
+    int cnt = 0;
+    int unmatched = 0;
+
+    for (Certification cert : MediaCertification2.getInstance().getAllCerts()) {
+      cnt++;
+      if (cert.minimumAge == -1) {
+        unmatched++;
+        System.out.println(cert.id + ": " + cert.ratingCodeLabels);
+      }
+    }
+
+    System.out.println("all: " + cnt);
+    System.out.println("matched: " + (cnt - unmatched));
+    System.out.println("not matched: " + unmatched);
+    // asserts are here, to detect changes
+    // if this fails, check downloaded file closely, eg description changes...
+    assertEquals(1481, cnt);
+    assertEquals(98, unmatched);
+
+    // TODO: what todo with UNRATED ones? minAge 21?
+
+    System.out.println();
+    System.out.println("TODO: whats with these?");
+    for (Certification cert : MediaCertification2.getInstance().getAllCerts()) {
+      if (cert.minimumAge < -1 && cert.ratingValue != 900) {
+        System.out.println(cert.id + ": " + cert.ratingCodeLabels);
+      }
+    }
+
+  }
+
+  @Test
+  public void canWeMapAllNewCertToOurExistingOldCerts() {
+    MediaCertification2 c = MediaCertification2.getInstance();
+    c.load();
+    int cnt = 0;
+    int unmatched = 0;
+
+    for (MediaCertification old : MediaCertification.values()) {
+      cnt++;
+      Certification cert = c.getMovieRatingFor(old);
+      if (cert == null) {
+        cert = c.getTvShowRatingFor(old);
+      }
+      if (cert == null) {
+        unmatched++;
+        System.out.println("could not map " + old.name());
+      }
+    }
+
+    System.out.println("matched: " + (cnt - unmatched));
+    System.out.println("not matched: " + unmatched);
+    assertEquals(803, cnt);
+    assertEquals(287, unmatched);
+  }
 }
