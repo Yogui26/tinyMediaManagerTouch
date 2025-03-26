@@ -49,10 +49,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -131,10 +133,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   private final List<Pattern>          skipFolders      = new ArrayList<>();
   private final List<Movie>            moviesToUpdate   = new ArrayList<>();
   private final MovieList              movieList        = MovieModuleManager.getInstance().getMovieList();
+  private final Map<Path, List<Movie>> pathToMovieMap   = new HashMap<Path, List<Movie>>();
   private final Set<Path>              filesFound       = new HashSet<>();
   private final ReentrantReadWriteLock fileLock         = new ReentrantReadWriteLock();
   private final List<Runnable>         miTasks          = Collections.synchronizedList(new ArrayList<>());
-  private final List<Path>             existingMovies   = new ArrayList<>();
   private final List<MediaFile>        imageFiles       = new ArrayList<>();
 
   public MovieUpdateDatasourceTask() {
@@ -200,9 +202,15 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     postDirAll = 0;
     visFileAll = 0;
 
-    // get existing movie folders
-    for (Movie movie : movieList.getMovies()) {
-      existingMovies.add(movie.getPathNIO());
+    // PREPARE CACHE MAPS ET ALL
+    // fast path lookup
+    for (Movie m : movieList.getMovies()) {
+      List<Movie> list = pathToMovieMap.get(m.getPathNIO());
+      if (list == null) {
+        list = new ArrayList<Movie>();
+        list.add(m);
+      }
+      pathToMovieMap.put(m.getPathNIO(), list);
     }
 
     try {
@@ -313,7 +321,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
                 new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.discfolderinroot", new String[] { path.toString() }));
             continue;
           }
-          if (existingMovies.contains(path)) {
+          if (pathToMovieMap.containsKey(path)) {
             existingMovieDirs.add(path);
           }
           else {
@@ -327,6 +335,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       rootList.clear();
       publishState();
 
+      // parse folders inside the DS recursively
       LOGGER.debug("Processing '{}' existing, '{}' new movies and '{}' root files", existingMovieDirs.size(), newMovieDirs.size(), rootFiles.size());
 
       for (Path path : newMovieDirs) {
@@ -335,11 +344,18 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       for (Path path : existingMovieDirs) {
         searchAndParse(dsAsPath.toAbsolutePath(), path, Integer.MAX_VALUE);
       }
-      if (!rootFiles.isEmpty()) {
-        submitTask(new ParseMultiMovieDirTask(dsAsPath.toAbsolutePath(), dsAsPath.toAbsolutePath(), new ArrayList<>(rootFiles)));
-      }
 
+      // wait here because on a really _slow_ machine, there could be concurrent lists from the folder level AND root level
       waitForCompletionOrCancel();
+
+      // parse root as MMD
+      if (!rootFiles.isEmpty()) {
+        initThreadPool(1, "update");
+        setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + ds + "'");
+        publishState();
+        submitTask(new ParseMultiMovieDirTask(dsAsPath.toAbsolutePath(), dsAsPath.toAbsolutePath(), new ArrayList<>(rootFiles)));
+        waitForCompletionOrCancel();
+      }
 
       // print stats
       LOGGER.info("FilesFound: {}", filesFound.size());
@@ -828,10 +844,27 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       movieDir = movieDir.getParent();
     }
 
-    Movie movie = movieList.getMovieByPath(movieDir);
-    if (movie != null && movie.isLocked()) {
-      LOGGER.info("movie '{}' found in uds, but is locked", movie.getPath());
-      return;
+    // Movie movie = movieList.getMovieByPath(movieDir);
+    List<Movie> movies = pathToMovieMap.get(movieDir);
+
+    boolean newMovie = false;
+    Movie movie = null;
+    if (movies != null) {
+      movie = movies.get(0); // get the one and only
+      if (movie.isLocked()) {
+        LOGGER.info("movie '{}' found in uds, but is locked", movie.getPath());
+        return;
+      }
+    }
+    else {
+      // new movie - push already to cacheMap!
+      movies = new ArrayList<Movie>();
+      movie = new Movie();
+      movie.setPath(movieDir.toAbsolutePath().toString());
+      movie.setDataSource(dataSource.toString());
+      movies.add(movie);
+      pathToMovieMap.put(movie.getPathNIO(), movies);
+      newMovie = true;
     }
 
     Set<Path> allFiles = getAllFilesRecursiveButNoDiscFiles(movieDir);
@@ -849,13 +882,15 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     // ***************************************************************
     // first round - try to parse NFO(s) first
     // ***************************************************************
-    if (movie == null) {
+    if (newMovie) {
       LOGGER.debug("| movie not found; looking for NFOs");
       movie = parseNFOs(mfs);
       if (movie == null) {
         movie = new Movie();
       }
       movie.setNewlyAdded(true);
+      movie.setPath(movieDir.toAbsolutePath().toString());
+      movie.setDataSource(dataSource.toString());
     }
     movie.setDisc(isDiscFolder);
 
@@ -965,9 +1000,6 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       movie.setTitle(Utils.removeSortableName(videoName));
     }
 
-    movie.setPath(movieDir.toAbsolutePath().toString());
-    movie.setDataSource(dataSource.toString());
-
     // ***************************************************************
     // third round - check for UNKNOWN, if they match a video file name - we might keep them
     // ***************************************************************
@@ -1073,11 +1105,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     }
     if (videoAvailable) {
       LOGGER.debug("| store movie into DB as: {}", movie.getTitle());
-      movieList.addMovie(movie);
-
       movie.setOffline(isOffline);
       movie.reEvaluateDiscfolder();
       movie.reEvaluateStacking();
+      if (newMovie) {
+        movieList.addMovieFastWithNoChecks(movie);
+      }
       movie.saveToDb();
     }
     else {
@@ -1128,7 +1161,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     LOGGER.debug("Parsing multi  movie directory: {}", movieDir); // double space is for log alignment ;)
     publishState(movieDir.toString());
 
-    List<Movie> movies = movieList.getMoviesByPath(movieDir);
+    List<Movie> movies = pathToMovieMap.getOrDefault(movieDir, new ArrayList<Movie>());
 
     fileLock.writeLock().lock();
     filesFound.add(movieDir); // our global cache
@@ -1202,8 +1235,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
+      boolean newMovie = false;
       if (movie == null) {
         // 2) create if not found
+        newMovie = true;
         movie = parseNFOs(sameName);
 
         if (movie == null) {
@@ -1239,6 +1274,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         }
 
         movies.add(movie); // add to our cached copy
+        pathToMovieMap.put(movieDir, movies);
       }
 
       // try to parse the imdb id from the filename
@@ -1308,8 +1344,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         }
       }
 
-      movieList.addMovie(movie);
-      movie.saveToDb();
+      if (newMovie) {
+        movieList.addMovieFastWithNoChecks(movie);
+      }
     } // end foreach VIDEO MF
 
     // check stacking on all movie from this dir (it might have changed!)

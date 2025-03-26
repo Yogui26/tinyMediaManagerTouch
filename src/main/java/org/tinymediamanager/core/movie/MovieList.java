@@ -211,6 +211,20 @@ public final class MovieList extends AbstractModelObject {
   }
 
   /**
+   * Adds the movie.
+   * 
+   * @param movie
+   *          the movie
+   */
+  public void addMovieFastWithNoChecks(Movie movie) {
+    int oldValue = movieList.size();
+    movieList.add(movie);
+    movie.addPropertyChangeListener(movieListener);
+    firePropertyChange("movies", null, movieList);
+    firePropertyChange("movieCount", oldValue, movieList.size());
+  }
+
+  /**
    * Removes the datasource.
    * 
    * @param datasource
