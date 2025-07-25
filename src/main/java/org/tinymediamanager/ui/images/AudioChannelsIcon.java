@@ -15,7 +15,14 @@
  */
 package org.tinymediamanager.ui.images;
 
-import java.awt.Dimension;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import com.github.weisj.jsvg.SVGDocument;
+import com.github.weisj.jsvg.parser.LoaderContext;
 
 /**
  * the class {@link AudioChannelsIcon} is used to draw the aspect ratio icon
@@ -23,10 +30,34 @@ import java.awt.Dimension;
  * @author Manuel Laggner
  */
 public class AudioChannelsIcon extends MediaInfoIcon {
+  private final String text;
+
+  private String       svgContent;
 
   public AudioChannelsIcon(String text) throws Exception {
     super("audio/audio_channels.svg");
-    setPreferredSize(new Dimension(32, 32));
-    setText(text, 70);
+    this.text = text;
+    setPreferredHeight(32);
+
+  }
+
+  @Override
+  protected synchronized SVGDocument loadSVG() {
+    if (StringUtils.isBlank(text)) {
+      return null;
+    }
+
+    try {
+      if (StringUtils.isBlank(svgContent)) {
+        svgContent = IOUtils.toString(getUrl(), StandardCharsets.UTF_8);
+      }
+
+      String modifiedSvgContent = svgContent.replace("{{text}}", text);
+
+      return SVG_LOADER.load(new ByteArrayInputStream(modifiedSvgContent.getBytes(StandardCharsets.UTF_8)), null, LoaderContext.createDefault());
+    }
+    catch (Exception e) {
+      return null;
+    }
   }
 }

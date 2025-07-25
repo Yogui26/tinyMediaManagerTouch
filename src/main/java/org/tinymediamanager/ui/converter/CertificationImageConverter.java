@@ -15,7 +15,7 @@
  */
 package org.tinymediamanager.ui.converter;
 
-import java.net.URI;
+import java.net.URL;
 import java.util.Locale;
 
 import javax.swing.Icon;
@@ -25,8 +25,6 @@ import org.jdesktop.beansbinding.Converter;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.ui.images.TmmSvgIcon;
-
-import com.kitfox.svg.app.beans.SVGIcon;
 
 /**
  * The Class CertificationImageConverter.
@@ -41,16 +39,15 @@ public class CertificationImageConverter extends Converter<MediaCertification, I
     if (cert == null || cert == MediaCertification.UNKNOWN) {
       return null;
     }
-    // try to find an image for this genre
+    // try to find an image for this certification
     try {
-      URI uri = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg").toURI();
-      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      URL url = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg");
+      TmmSvgIcon icon = new TmmSvgIcon(url);
       icon.setPreferredHeight(32);
-      icon.setAutosize(SVGIcon.AUTOSIZE_STRETCH);
 
       // only color the monochrome ones
       if (cert.getCountry() == CountryCode.US) {
-        icon.setColor(UIManager.getColor("Label.foreground"), "#000000");
+        icon.setColor("#000000", UIManager.getColor("Label.foreground"));
       }
 
       return icon;

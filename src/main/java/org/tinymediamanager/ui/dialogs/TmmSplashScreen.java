@@ -58,7 +58,7 @@ public class TmmSplashScreen extends JDialog {
   private final JLabel                  lblVersion;
 
   public TmmSplashScreen() throws URISyntaxException {
-    ImageIcon splashscreen = new TmmSvgIcon(IconManager.class.getResource("images/svg/splashscreen.svg").toURI());
+    ImageIcon splashscreen = new TmmSvgIcon(IconManager.class.getResource("images/svg/splashscreen.svg"));
 
     setModal(false);
     setUndecorated(true);

@@ -18,7 +18,6 @@ package org.tinymediamanager.ui.components.combobox;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
-import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +42,7 @@ import org.tinymediamanager.ui.images.TmmSvgIcon;
  * @author Manuel Laggner
  */
 public class MediaScraperComboBox extends JComboBox<MediaScraper> {
-  private Map<URI, ImageIcon> imageCache;
+  private Map<URL, ImageIcon> imageCache;
   private int                 listWidth = 0;
 
   public MediaScraperComboBox() {
@@ -105,18 +104,20 @@ public class MediaScraperComboBox extends JComboBox<MediaScraper> {
     }
 
     try {
-      URI uri = url.toURI();
-      ImageIcon logo = imageCache.get(uri);
+      ImageIcon logo = imageCache.get(url);
+
       if (logo == null) {
         if (url.getFile().endsWith("svg")) {
-          TmmSvgIcon svgIcon = new TmmSvgIcon(uri);
-          svgIcon.setPreferredHeight(calculatePreferredHeight());
+          TmmSvgIcon svgIcon = new TmmSvgIcon(url);
+
+          // FIXME
+          // svgIcon.setPreferredHeight(calculatePreferredHeight());
           logo = svgIcon;
         }
         else {
           logo = ImageUtils.createMultiResolutionImage(IconManager.loadImageFromURL(url), calculatePreferredHeight());
         }
-        imageCache.put(uri, logo);
+        imageCache.put(url, logo);
       }
       return logo;
     }

@@ -19,7 +19,7 @@ package org.tinymediamanager.ui.panels;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -44,8 +44,6 @@ import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.images.TmmSvgIcon;
-
-import com.kitfox.svg.app.beans.SVGIcon;
 
 /**
  * the class {@link InformationPanel} is used to provide some boilerplate code for the information panels
@@ -164,14 +162,14 @@ public abstract class InformationPanel extends JPanel {
     }
     // try to find an image for this genre
     try {
-      URI uri = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg").toURI();
-      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      URL url = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg");
+      TmmSvgIcon icon = new TmmSvgIcon(url);
+
       icon.setPreferredHeight(32);
-      icon.setAutosize(SVGIcon.AUTOSIZE_STRETCH);
 
       // only color the monochrome ones
       if (cert.getCountry() == CountryCode.US) {
-        icon.setColor(UIManager.getColor("Label.foreground"), "#000000");
+        icon.setColor("#000000", UIManager.getColor("Label.foreground"));
       }
 
       return icon;

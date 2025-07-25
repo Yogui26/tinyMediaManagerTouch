@@ -15,15 +15,6 @@
  */
 package org.tinymediamanager.ui.images;
 
-import static org.tinymediamanager.ui.images.SvgIconHelper.getHexString;
-import static org.tinymediamanager.ui.images.SvgIconHelper.setFill;
-
-import javax.swing.UIManager;
-
-import com.kitfox.svg.SVGDiagram;
-import com.kitfox.svg.Text;
-import com.kitfox.svg.animation.AnimationElement;
-
 /**
  * the class {@link GenericVideoCodecIcon} is used to draw the aspect ratio icon
  * 
@@ -37,21 +28,22 @@ public class GenericVideoCodecIcon extends MediaInfoIcon {
   }
 
   private void setText(String text) {
-    // get the text node from the root
-    try {
-      // clear cached SVG, because we want to modify the source
-      getSvgUniverse().clear();
-
-      SVGDiagram diagram = getSvgUniverse().getDiagram(getSvgURI());
-      Text textElement = (Text) diagram.getElement("text");
-
-      textElement.addAttribute("x", AnimationElement.AT_XML, "141");
-      textElement.appendText(text);
-      setFill(getHexString(UIManager.getColor("Label.foreground")), diagram.getRoot());
-      textElement.rebuild();
-    }
-    catch (Exception ex) {
-      // ignored
-    }
+    // FIXME
+    // // get the text node from the root
+    // try {
+    // // clear cached SVG, because we want to modify the source
+    // getSvgUniverse().clear();
+    //
+    // SVGDiagram diagram = getSvgUniverse().getDiagram(getSvgURI());
+    // Text textElement = (Text) diagram.getElement("text");
+    //
+    // textElement.addAttribute("x", AnimationElement.AT_XML, "141");
+    // textElement.appendText(text);
+    // setFill(getHexString(UIManager.getColor("Label.foreground")), diagram.getRoot());
+    // textElement.rebuild();
+    // }
+    // catch (Exception ex) {
+    // // ignored
+    // }
   }
 }

@@ -19,7 +19,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.FontMetrics;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,7 +49,7 @@ import org.tinymediamanager.ui.images.TmmSvgIcon;
 public class MediaScraperCheckComboBox extends TmmCheckComboBox<MediaScraper> {
   private static final Logger LOGGER    = LoggerFactory.getLogger(MediaScraperCheckComboBox.class);
 
-  private Map<URI, ImageIcon> imageCache;
+  private Map<URL, ImageIcon> imageCache;
 
   private int                 listWidth = 0;
 
@@ -232,18 +231,20 @@ public class MediaScraperCheckComboBox extends TmmCheckComboBox<MediaScraper> {
       }
 
       try {
-        URI uri = url.toURI();
-        ImageIcon logo = imageCache.get(uri);
+        ImageIcon logo = imageCache.get(url);
+
         if (logo == null) {
           if (url.getFile().endsWith("svg")) {
-            TmmSvgIcon svgIcon = new TmmSvgIcon(uri);
-            svgIcon.setPreferredHeight(calculatePreferredHeight());
+            TmmSvgIcon svgIcon = new TmmSvgIcon(url);
+
+            // FIXME
+            // svgIcon.setPreferredHeight(calculatePreferredHeight());
             logo = svgIcon;
           }
           else {
             logo = ImageUtils.createMultiResolutionImage(IconManager.loadImageFromURL(url), calculatePreferredHeight());
           }
-          imageCache.put(uri, logo);
+          imageCache.put(url, logo);
         }
         return logo;
       }

@@ -35,11 +35,8 @@ import javax.swing.UIManager;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.ui.components.toolbar.ToolbarMenu;
-import org.tinymediamanager.ui.images.TmmAwesomeIcon;
 import org.tinymediamanager.ui.images.TmmSvgIcon;
 import org.tinymediamanager.ui.images.TmmTextIcon;
-
-import com.kitfox.svg.app.beans.SVGIcon;
 
 public class IconManager {
   public static final ImageIcon              EMPTY_IMAGE                  = new ImageIcon(IconManager.class.getResource("plaf/empty.png"));
@@ -54,9 +51,8 @@ public class IconManager {
   public static final ImageIcon              TOOLBAR_ABOUT_HOVER          = createSVGIcon("icn_about_hover.svg", new Dimension(24, 24));
   public static final ImageIcon              TOOLBAR_ADD_MOVIE_SET        = createSVGIcon("icn_add_collection.svg", new Dimension(36, 36));
   public static final ImageIcon              TOOLBAR_ADD_MOVIE_SET_HOVER  = createSVGIcon("icn_add_collection_hover.svg", new Dimension(36, 36));
-  public static final ImageIcon              TOOLBAR_ALERT                = createSVGIcon("icn_alert.svg", new Dimension(17, 19), true);
-  public static final ImageIcon              TOOLBAR_ALERT_RED            = createSVGIcon("icn_alert_active.svg", new Dimension(17, 19), Color.RED,
-      true);
+  public static final ImageIcon              TOOLBAR_ALERT                = createSVGIcon("icn_alert.svg", new Dimension(17, 19));
+  public static final ImageIcon              TOOLBAR_ALERT_RED            = createSVGIcon("icn_alert_active.svg", new Dimension(17, 19), Color.RED);
   public static final ImageIcon              TOOLBAR_DOWNLOAD             = createSVGIcon("icn_download.svg", new Dimension(24, 24));
   public static final ImageIcon              TOOLBAR_EDIT                 = createSVGIcon("icn_edit.svg", new Dimension(36, 36));
   public static final ImageIcon              TOOLBAR_EDIT_HOVER           = createSVGIcon("icn_edit_hover.svg", new Dimension(36, 36));
@@ -84,20 +80,20 @@ public class IconManager {
   public static final ImageIcon              MENU_TV_SHOWS_ACTIVE         = createSVGIcon("icn_tvshows_active.svg", new Dimension(29, 21));
 
   // rating icons
-  public static final ImageIcon              STAR_FILLED                  = createSVGIcon("star-filled.svg", new Dimension(24, 24), true);
-  public static final ImageIcon              STAR_EMPTY                   = createSVGIcon("star-empty.svg", new Dimension(24, 24), true);
-  public static final ImageIcon              RATING_NEUTRAL               = createSVGIcon("rating.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_EMTPY                 = createSVGIcon("rating-empty.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_USER                  = createSVGIcon("rating-user.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_IMDB                  = createSVGIcon("rating-imdb.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_TMDB                  = createSVGIcon("rating-tmdb.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_TOMATOMETER           = createSVGIcon("rating-tomatometer.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_METACRITIC            = createSVGIcon("rating-metacritic.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_THETVDB               = createSVGIcon("rating-thetvdb.svg", new Dimension(53, 36), true);
-  public static final ImageIcon              RATING_TRAKTTV               = createSVGIcon("rating-trakttv.svg", new Dimension(36, 36), true);
-  public static final ImageIcon              RATING_LETTERBOXD            = createSVGIcon("rating-letterboxd.svg", new Dimension(53, 36), true);
-  public static final ImageIcon              RATING_MAL                   = createSVGIcon("rating-myanimelist.svg", new Dimension(53, 36), true);
-  public static final ImageIcon              RATING_ROGEREBERT            = createSVGIcon("rating-roger_ebert.svg", new Dimension(53, 36), true);
+  public static final ImageIcon              STAR_FILLED                  = createSVGIcon("star-filled.svg", new Dimension(24, 24));
+  public static final ImageIcon              STAR_EMPTY                   = createSVGIcon("star-empty.svg", new Dimension(24, 24));
+  public static final ImageIcon              RATING_NEUTRAL               = createSVGIcon("rating.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_EMTPY                 = createSVGIcon("rating-empty.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_USER                  = createSVGIcon("rating-user.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_IMDB                  = createSVGIcon("rating-imdb.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_TMDB                  = createSVGIcon("rating-tmdb.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_TOMATOMETER           = createSVGIcon("rating-tomatometer.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_METACRITIC            = createSVGIcon("rating-metacritic.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_THETVDB               = createSVGIcon("rating-thetvdb.svg", new Dimension(53, 36));
+  public static final ImageIcon              RATING_TRAKTTV               = createSVGIcon("rating-trakttv.svg", new Dimension(36, 36));
+  public static final ImageIcon              RATING_LETTERBOXD            = createSVGIcon("rating-letterboxd.svg", new Dimension(53, 36));
+  public static final ImageIcon              RATING_MAL                   = createSVGIcon("rating-myanimelist.svg", new Dimension(53, 36));
+  public static final ImageIcon              RATING_ROGEREBERT            = createSVGIcon("rating-roger_ebert.svg", new Dimension(53, 36));
 
   // font awesome icons for actions in the popup menu
   public static final ImageIcon              ADD                          = createMenuIcon("plus.svg");
@@ -354,31 +350,24 @@ public class IconManager {
   }
 
   private static ImageIcon createSVGIcon(String name, Dimension size) {
-    return createSVGIcon(name, size, null, false);
-  }
-
-  private static ImageIcon createSVGIcon(String name, Dimension size, boolean autoSize) {
-    return createSVGIcon(name, size, null, autoSize);
+    return createSVGIcon(name, size, (Color) null);
   }
 
   private static ImageIcon createSVGIcon(String name, Dimension size, String colorReference) {
-    return createSVGIcon(name, size, UIManager.getColor(colorReference), false);
+    return createSVGIcon(name, size, UIManager.getColor(colorReference));
   }
 
-  private static ImageIcon createSVGIcon(String name, Dimension size, Color color, boolean autoSize) {
+  private static ImageIcon createSVGIcon(String name, Dimension size, Color color) {
     try {
       // create the icon
-      URI uri = IconManager.class.getResource("images/svg/" + name).toURI();
-      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      URL url = IconManager.class.getResource("images/svg/" + name);
+      TmmSvgIcon icon = new TmmSvgIcon(url);
       icon.setPreferredSize(size);
 
       if (color != null) {
         icon.setColor(color);
       }
 
-      if (!autoSize) {
-        icon.setAutosize(SVGIcon.AUTOSIZE_NONE);
-      }
       return icon;
     }
     catch (Exception e) {
@@ -389,8 +378,8 @@ public class IconManager {
   private static ImageIcon createSVGIcon(String name, Color color, double scaleFactor) {
     try {
       // create the icon
-      URI uri = IconManager.class.getResource("images/svg/" + name).toURI();
-      TmmAwesomeIcon icon = new TmmAwesomeIcon(uri, color);
+      URL url = IconManager.class.getResource("images/svg/" + name);
+      TmmSvgIcon icon = new TmmSvgIcon(url, color);
 
       icon.setPreferredHeight(calculateFontIconSize(scaleFactor));
 
