@@ -47,6 +47,7 @@ public class MediaInfoIcon extends TmmSvgIcon {
    *          the x coordinate
    */
   protected void setText(String text, int x) {
+
     // FIXME
     // // get the text node from the root
     // try {
