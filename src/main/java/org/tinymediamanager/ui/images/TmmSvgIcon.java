@@ -25,16 +25,21 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.Dimension2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
 import java.awt.image.RGBImageFilter;
 import java.net.URL;
 import java.util.function.Function;
 
 import javax.swing.ImageIcon;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import com.formdev.flatlaf.util.MultiResolutionImageSupport;
 import com.formdev.flatlaf.util.UIScale;
 import com.github.weisj.jsvg.SVGDocument;
 import com.github.weisj.jsvg.parser.SVGLoader;
+import com.github.weisj.jsvg.renderer.PlatformSupport;
 
 /**
  * A convenience class to create SVG icons for tinyMediaManager
@@ -243,7 +248,7 @@ public class TmmSvgIcon extends ImageIcon {
       }
 
       try {
-        this.document.render(null, g);
+        this.document.renderWithPlatform(TmmPlatformSupport.INSTANCE, g, null);
       }
       catch (Exception var9) {
         this.paintSvgError(g, 0, 0);
@@ -294,5 +299,28 @@ public class TmmSvgIcon extends ImageIcon {
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
     g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+  }
+
+  private static class TmmPlatformSupport implements PlatformSupport {
+    private final static TmmPlatformSupport INSTANCE    = new TmmPlatformSupport();
+
+    private final static String             FONT_FAMILY = "Dialog";
+
+    @NotNull
+    @Override
+    public String fontFamily() {
+      return FONT_FAMILY;
+    }
+
+    @Override
+    public ImageObserver imageObserver() {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public TargetSurface targetSurface() {
+      return null;
+    }
   }
 }
