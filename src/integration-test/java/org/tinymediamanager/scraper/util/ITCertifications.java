@@ -15,13 +15,16 @@ import org.jsoup.select.Elements;
 import org.junit.Test;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.entities.MediaCertification2;
+import org.tinymediamanager.scraper.entities.MediaCertification2.Certification;
+import org.tinymediamanager.scraper.entities.MediaCertification2.Country;
 import org.tinymediamanager.scraper.http.OnDiskCachedUrl;
 import org.tinymediamanager.scraper.http.Url;
 
 public class ITCertifications {
 
-  private List<String> entries    = new ArrayList<>();
-  private int          dupleCount = 0;
+  private List<String> entries   = new ArrayList<>();
+  private int          dupeCount = 0;
 
   // This class is all about certifications:
   //
@@ -56,6 +59,27 @@ public class ITCertifications {
   // Found 594 certs in TMDB, could match 481 to NEW TMM (missing 113)
 
   @Test
+  public void superviseAgeCertifications() throws Exception {
+    MediaCertification2.getInstance().printAgeStatisticsForVerification();
+  }
+
+  @Test
+  public void mc2toEnum() throws Exception {
+    for (Country cc : MediaCertification2.getInstance().getCertsMap().values()) {
+      // Country cc = MediaCertification2.getInstance().getCountry("AT");
+      cc.mergeCerts();
+      for (Certification cert : cc.merged.values()) {
+        String deprecated = cert.deprecated ? "@Deprecated " : "";
+        String alt = cert.alternateNames != null ? "\"" + String.join("\", \"", cert.alternateNames) + "\"" : "";
+        String javaenum = deprecated + cert.id2 + "(CountryCode." + cc.countryCode + ", \"" + cert.ratingCodeLabels + "\", new String[] { " + alt
+            + " }),";
+        System.out.println(javaenum);
+      }
+      System.out.println();
+    }
+  }
+
+  @Test
   public void getAllWebCertifications() throws Exception {
 
     for (MediaCertification tmm : MediaCertification.values()) {
@@ -73,17 +97,17 @@ public class ITCertifications {
       // entries.add(javaenum); // activate when adding TMM internal ones!
     }
 
-    getMovieCerts();
-    getTvShowCerts();
+    getWikipediaMovieCerts();
+    getWikipediaTvShowCerts();
     getImdbCerts();
-    System.out.println("Dupes found: " + dupleCount);
+    System.out.println("Dupes found: " + dupeCount);
 
     Collections.sort(entries);
     entries.forEach(System.out::println);
   }
 
   @Test
-  public void getMovieCerts() throws Exception {
+  public void getWikipediaMovieCerts() throws Exception {
     Url url = new OnDiskCachedUrl("https://en.wikipedia.org/wiki/Motion_picture_content_rating_system", 1, TimeUnit.HOURS);
     InputStream is = url.getInputStream();
     Document doc = Jsoup.parse(is, "UTF-8", "");
@@ -114,14 +138,14 @@ public class ITCertifications {
         String cert = td.text();
         cert = cert.replaceAll("\\(.*", "").strip();
         if (!cert.equals("N/A")) {
-          print(country, cert);
+          printAsJava(country, cert);
         }
       }
     }
   }
 
   @Test
-  public void getTvShowCerts() throws Exception {
+  public void getWikipediaTvShowCerts() throws Exception {
     Url url = new OnDiskCachedUrl("https://en.wikipedia.org/wiki/Television_content_rating_system", 1, TimeUnit.HOURS);
     InputStream is = url.getInputStream();
     Document doc = Jsoup.parse(is, "UTF-8", "");
@@ -159,7 +183,7 @@ public class ITCertifications {
           String cert = td.text();
           cert = cert.replaceAll("\\(.*", "").strip();
           if (!cert.equals("N/A")) {
-            print(country, cert);
+            printAsJava(country, cert);
           }
         }
       }
@@ -214,25 +238,24 @@ public class ITCertifications {
         if (cert.equals("Note")) {
           continue; // FIX: Germany/Switzerland/USA
         }
-        print(country, cert);
+        printAsJava(country, cert);
       }
     }
   }
 
-  private void print(String country, String cert) {
+  private void printAsJava(String country, String cert) {
     // System.out.println("Found: " + country + ":" + cert);
     Locale l = LanguageUtils.KEY_TO_COUNTRY_LOCALE_MAP.get(country.toLowerCase(Locale.ROOT));
     if (l != null) {
       cert = cert.replaceAll("[\"\\[\\]]", "");
       String safeenum = cert.replaceAll("[^A-Za-z0-9_]", "");
-      String javaenum = l.getCountry() + "_" + safeenum + "(CountryCode." + l.getCountry() + ", \"" + cert + "\", new String[] { \"" + cert
-          + "\" }),";
+      String javaenum = l.getCountry() + "_" + safeenum + "(\"" + l.getCountry() + "\", \"" + cert + "\", new String[] { \"" + cert + "\" }),";
       if (entries.contains(javaenum)) {
         // System.err.println("dupe: " + l.getCountry() + "_" + safeenum);
-        dupleCount++;
+        dupeCount++;
       }
       else {
-        // System.out.println(javaenum);
+        System.out.println(javaenum);
         entries.add(javaenum);
       }
     }

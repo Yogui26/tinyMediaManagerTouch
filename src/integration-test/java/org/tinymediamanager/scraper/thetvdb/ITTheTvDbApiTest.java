@@ -46,10 +46,16 @@ public class ITTheTvDbApiTest extends BasicITest {
   @Before
   public void setup() throws Exception {
     super.setup();
+    setTraceLogging();
     TheTvDbMetadataProvider md = new TheTvDbTvShowMetadataProvider();
 
     theTvDbController = new TheTvDbController();
     theTvDbController.setAuthToken(md.getAuthToken());
+  }
+
+  @Test
+  public void api() throws IOException {
+    Response<ContentRatingResponse> rat = theTvDbController.getConfigService().getCertifications().execute();
   }
 
   @Test
@@ -60,7 +66,6 @@ public class ITTheTvDbApiTest extends BasicITest {
 
     // load new certs
     MediaCertification2 c = MediaCertification2.getInstance();
-    c.load();
 
     Response<ContentRatingResponse> response = theTvDbController.getConfigService().getCertifications().execute();
     if (response.isSuccessful()) {

@@ -32,9 +32,12 @@ import org.tinymediamanager.core.TmmResourceBundle;
  */
 public enum MediaCertification {
   // https://en.wikipedia.org/wiki/Television_content_rating_system
+  // https://rating-system.fandom.com/wiki/Rating_systems_(TV)
   // https://en.wikipedia.org/wiki/Motion_picture_content_rating_system
+  // https://rating-system.fandom.com/wiki/Rating_systems_(Movies)
   // https://help.imdb.com/article/contribution/titles/certificates/GU757M8ZJ9ZPXB39#
-  //
+  // https://support.google.com/moviestvpartners/answer/6224874?hl=en#zippy=%2Caccepted-rating-systems
+  // https://www.primevideo.com/help?nodeId=GFGQU3WYEG6FSJFJ
   // list generated with org.tinymediamanager.scraper.util.ITCertifications
 
   // well known / most used certifications will be on top

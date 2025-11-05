@@ -61,6 +61,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
 
     int cntCerts = 0;
     int unknownCerts = 0;
+    int fallbackCerts = 0;
 
     // load known certs from TMDB
     Response<Certifications> certs = mp.api.certificationService().getMovieCertification().execute();
@@ -71,64 +72,81 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
     System.out.println("found " + tvCerts.certifications.size() + " countries containing tvshow certs");
 
     // a short test, if all TMDB certs could be matched to TMM certs...
-    for (Map.Entry<String, List<Certification>> country : movieCerts.certifications.entrySet()) {
-      for (Certification cert : country.getValue()) {
-        cntCerts++;
-        MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
-        if (tmmCert == MediaCertification.UNKNOWN) {
-          unknownCerts++;
-          System.out.println("Did not find a old TMM cert for TMDBs movie " + country.getKey() + " - " + cert.certification);
-        }
-      }
-    }
-
-    for (Map.Entry<String, List<Certification>> country : tvCerts.certifications.entrySet()) {
-      for (Certification cert : country.getValue()) {
-        cntCerts++;
-        MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
-        if (tmmCert == MediaCertification.UNKNOWN) {
-          unknownCerts++;
-          System.out.println("Did not find a old TMM cert for TMDBs tv " + country.getKey() + " - " + cert.certification);
-        }
-      }
-    }
-
-    System.out.println("Found " + cntCerts + " certs in TMDB, could match " + (cntCerts - unknownCerts) + " to TMM (missing " + unknownCerts + ")");
+    // for (Map.Entry<String, List<Certification>> country : movieCerts.certifications.entrySet()) {
+    // for (Certification cert : country.getValue()) {
+    // cntCerts++;
+    // MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
+    // if (tmmCert == MediaCertification.UNKNOWN) {
+    // unknownCerts++;
+    // System.out.println("Did not find a old TMM (MC1) cert for TMDBs movie " + country.getKey() + " - " + cert.certification);
+    // }
+    // }
+    // }
+    //
+    // for (Map.Entry<String, List<Certification>> country : tvCerts.certifications.entrySet()) {
+    // for (Certification cert : country.getValue()) {
+    // cntCerts++;
+    // MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
+    // if (tmmCert == MediaCertification.UNKNOWN) {
+    // unknownCerts++;
+    // System.out.println("Did not find a old TMM (MC1) cert for TMDBs tv " + country.getKey() + " - " + cert.certification);
+    // }
+    // }
+    // }
+    //
+    // System.out.println("Found " + cntCerts + " certs in TMDB, could match " + (cntCerts - unknownCerts) + " to TMM (missing " + unknownCerts +
+    // ")");
     System.out.println();
     unknownCerts = 0;
+    fallbackCerts = 0;
 
     MediaCertification2 c = MediaCertification2.getInstance();
-    c.load();
     // same test with NEW apple certs
     for (Map.Entry<String, List<Certification>> country : movieCerts.certifications.entrySet()) {
       for (Certification cert : country.getValue()) {
-        org.tinymediamanager.scraper.entities.MediaCertification2.Certification tmmCert = c.getMovieRatingFor(country.getKey(), cert.certification);
+        cntCerts++;
+        String cc = getCountryExceptiuon(country.getKey());
+        org.tinymediamanager.scraper.entities.MediaCertification2.Certification tmmCert = c.getMovieRatingFor(cc, cert.certification);
         if (tmmCert == null) {
           // fallback
-          tmmCert = c.getTvShowRatingFor(country.getKey(), cert.certification);
+          tmmCert = c.getTvShowRatingFor(cc, cert.certification);
+          fallbackCerts++;
         }
         if (tmmCert == null) {
           unknownCerts++;
-          System.out.println("Did not find a NEW TMM cert for TMDBs movie " + country.getKey() + " - " + cert.certification);
+          System.out.println("Did not find a NEW TMM (MC2) cert for TMDBs movie " + cc + " - " + cert.certification);
         }
       }
     }
     for (Map.Entry<String, List<Certification>> country : tvCerts.certifications.entrySet()) {
       for (Certification cert : country.getValue()) {
-        org.tinymediamanager.scraper.entities.MediaCertification2.Certification tmmCert = c.getTvShowRatingFor(country.getKey(), cert.certification);
+        cntCerts++;
+        String cc = getCountryExceptiuon(country.getKey());
+        org.tinymediamanager.scraper.entities.MediaCertification2.Certification tmmCert = c.getTvShowRatingFor(cc, cert.certification);
         if (tmmCert == null) {
           // fallback
-          tmmCert = c.getMovieRatingFor(country.getKey(), cert.certification);
+          tmmCert = c.getMovieRatingFor(cc, cert.certification);
+          fallbackCerts++;
         }
         if (tmmCert == null) {
           unknownCerts++;
-          System.out.println("Did not find a NEW TMM cert for TMDBs tv " + country.getKey() + " - " + cert.certification);
+          System.out.println("Did not find a NEW TMM (MC2) cert for TMDBs tv " + cc + " - " + cert.certification);
         }
       }
     }
+    System.out.println("-----------------------------------------------");
     System.out
         .println("Found " + cntCerts + " certs in TMDB, could match " + (cntCerts - unknownCerts) + " to NEW TMM (missing " + unknownCerts + ")");
+    System.out.println("Found via fallback / in other type: " + fallbackCerts);
+  }
 
+  private String getCountryExceptiuon(String cc) {
+    return switch (cc) {
+      case "PR" -> "US";// "PuertoRico" on TMDB is still not an own country? Nevertheless, it has MPAA certs, so US is fine
+      case "VI" -> "US";// "U.S. Virgin Islands" also uses MPAA certs
+      case "CA-QC" -> "CA";// Quebec: Well, we list it as single country, mixed certs
+      default -> cc;
+    };
   }
 
   @Test

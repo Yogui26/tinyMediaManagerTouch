@@ -23,8 +23,6 @@ import org.junit.Test;
 import org.tinymediamanager.core.BasicTest;
 import org.tinymediamanager.core.CertificationStyle;
 import org.tinymediamanager.scraper.entities.MediaCertification2.Certification;
-import org.tinymediamanager.scraper.entities.MediaCertification2.Country;
-import org.tinymediamanager.scraper.util.ListUtils;
 
 public class MediaCertificationTest extends BasicTest {
 
@@ -62,47 +60,7 @@ public class MediaCertificationTest extends BasicTest {
   }
 
   @Test
-  public void diffJsonCsvCerts() {
-    MediaCertification2 c = MediaCertification2.getInstance();
-    c.load();
-
-    // MV, ZW not in CSV
-    // DZ, IQ, LY, MA not in JSON
-
-    for (String cc : c.countryCerts.keySet()) {
-      Country json = c.getCountryCerts(cc);
-      Country csv = c.getCsvCountryCerts(cc);
-
-      for (Certification cert : ListUtils.nullSafe(json.show)) {
-        System.out.println("J  " + cc + ": " + cert.displayValue + " - " + cert.minimumAge);
-      }
-      System.out.println("---");
-      if (csv == null) {
-        System.out.println("*** CSV: country " + cc + " not found!");
-      }
-      else {
-        for (Certification cert : ListUtils.nullSafe(csv.show)) {
-          System.out.println("C  " + cc + ": " + cert.displayValue + " - " + cert.minimumAge);
-        }
-      }
-      System.out.println("**********************************");
-    }
-
-    for (String cc : c.csvCerts.keySet()) {
-      if (cc.isEmpty()) {
-        System.out.println();
-      }
-      Country json = c.countryCerts.get(cc);
-      if (json == null) {
-        System.out.println("*** JSON: country " + cc + " not found!");
-      }
-    }
-  }
-
-  @Test
   public void findCertsWhereWeHaveNoMinimumAge() {
-    MediaCertification2 c = MediaCertification2.getInstance();
-    c.load();
     int cnt = 0;
     int unmatched = 0;
 
@@ -137,7 +95,6 @@ public class MediaCertificationTest extends BasicTest {
   @Test
   public void canWeMapAllNewCertToOurExistingOldCerts() {
     MediaCertification2 c = MediaCertification2.getInstance();
-    c.load();
     int cnt = 0;
     int unmatched = 0;
 
