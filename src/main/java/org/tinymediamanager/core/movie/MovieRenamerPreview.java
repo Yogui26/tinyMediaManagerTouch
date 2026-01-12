@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.RenamerPreviewContainer;
 import org.tinymediamanager.core.RenamerPreviewContainer.MediaFileTypeContainer;
@@ -48,8 +49,15 @@ public class MovieRenamerPreview {
   public RenamerPreviewContainer generatePreview() {
 
     // generate the new path
-    container.newPath = Paths.get(movie.getDataSource())
-        .resolve(MovieRenamer.createDestinationForFoldername(MovieModuleManager.getInstance().getSettings().getRenamerPathname(), movie));
+    String newPath = MovieRenamer.createDestinationForFoldername(MovieModuleManager.getInstance().getSettings().getRenamerPathname(), movie);
+    if (StringUtils.isNotBlank(newPath)) {
+      container.newPath = Paths.get(movie.getDataSource(), newPath);
+    }
+    else {
+      // use existing path
+      container.newPath = movie.getPathNIO();
+    }
+
     this.clone.setPath(container.newPath.toString());
 
     // process movie media files
