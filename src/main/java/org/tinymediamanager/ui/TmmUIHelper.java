@@ -470,8 +470,8 @@ public class TmmUIHelper {
     }
 
     // handle local files via Desktop.open / Linux fallbacks
-    if (url.startsWith("file:")) {
-      openLocalFileByUrl(url);
+    if (url.startsWith("file:/")) {
+      openFile(Path.of(new URI(url)));
       return;
     }
 
@@ -502,72 +502,6 @@ public class TmmUIHelper {
     else {
       throw new UnsupportedOperationException();
     }
-  }
-
-  /**
-   * Normalizes a possibly malformed \`file:\` URL into a proper \`file:///\` URI and opens the file.
-   * <p>
-   * Handles: - Linux style: \`file://tmp/... -> file:///tmp/...\` - Windows style: \`file:/C:\...\`, \`file://C:\...\` -> \`file:///C:/...\` -
-   * Single-slash: \`file:/tmp/... -> file:///tmp/...\`
-   * </p>
-   *
-   * @param url
-   *          the \`file:\` url to normalize and open
-   * @throws Exception
-   *           when normalization or opening fails
-   */
-  private static void openLocalFileByUrl(String url) throws Exception {
-    String normalized = url;
-
-    // Strip whitespace
-    normalized = normalized.trim();
-
-    // If it is a Windows-style path after \`file:\` (e.g. \`file:/C:\...\` or \`file://C:\...\`)
-    // convert backslashes to forward slashes and ensure \`file:///C:/...\`
-    if (normalized.matches("^file:/+([A-Za-z]):\\\\.*")) {
-      normalized = normalized.replaceFirst("^file:/+([A-Za-z]):\\\\", "file:///$1:/");
-      normalized = normalized.replace("\\", "/");
-    }
-    else if (normalized.matches("^file:/+([A-Za-z]):/.*")) {
-      // \`file:/C:/...\` or \`file://C:/...\` -> ensure triple slash
-      normalized = normalized.replaceFirst("^file:/+([A-Za-z]):/", "file:///$1:/");
-    }
-    else if (normalized.startsWith("file://") && !normalized.startsWith("file:///")) {
-      // Linux malformed \`file://tmp/... -> file:///tmp/...\`
-      normalized = normalized.replaceFirst("^file://(?!/)", "file:///");
-    }
-    else if (normalized.startsWith("file:/") && !normalized.startsWith("file:///")) {
-      // Single-slash \`file:/tmp/... -> file:///tmp/...\`
-      normalized = normalized.replaceFirst("^file:/", "file:///");
-    }
-
-    // Build URI and Path
-    URI uri = new URI(normalized);
-
-    // For URIs with percent-encoding, prefer Paths.get(URI)
-    Path path;
-    try {
-      path = Paths.get(uri);
-    }
-    catch (Exception e) {
-      // Fallback: try to derive from scheme-specific part
-      String ssp = uri.getSchemeSpecificPart();
-      if (StringUtils.isNotBlank(ssp)) {
-        // Remove leading \`/\` for Windows drive letters like \`/C:/...\`
-        if (ssp.matches("^/([A-Za-z]):/.*")) {
-          ssp = ssp.substring(1);
-        }
-        // Replace backslashes defensively
-        ssp = ssp.replace("\\", "/");
-        path = Paths.get(ssp);
-      }
-      else {
-        throw e;
-      }
-    }
-
-    // Delegate to platform-aware opener
-    TmmUIHelper.openFile(path);
   }
 
   /**
