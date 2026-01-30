@@ -2,6 +2,8 @@ Version 5.2.7
 =======================
 + [Trailer] integrated deno for yt-dlp #3200
 ---
+x [TV shows] fixed cleanup of mediainfo XML files for episodes #3198
+x [TV shows] also do a cleanup of empty TV show folders #3201
 x [UI] fixed sorting of the rating column in the TV show module
 x [WOL] send WOL magic packets twice to improve wake-up reliability #3178
 

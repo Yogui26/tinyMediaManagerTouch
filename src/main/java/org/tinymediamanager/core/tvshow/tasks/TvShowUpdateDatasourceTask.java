@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -630,38 +629,54 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * detect which mediafiles has to be parsed and start a thread to do that
    */
   private void gatherMediaInformationForUngatheredMediaFiles(TvShow tvShow) {
-
-    // get mediainfo consumer
-    Consumer<MediaFile> processMediaFile = mf -> {
+    // get mediainfo for TV show (fanart/poster..)
+    for (MediaFile mf : tvShow.getMediaFiles()) {
       if (StringUtils.isBlank(mf.getContainerFormat())) {
         submitTask(new TvShowMediaFileInformationFetcherTask(mf, tvShow, false));
       }
       else {
-        // // did the file dates/size change?
+        // did the file dates/size change?
         if (MediaFileHelper.gatherBasicFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
-          // okay, something changed with that show file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
-          if (mf.getType() == MediaFileType.VIDEO) {
-            tvShow.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
-              Utils.deleteFileSafely(mediaFile.getFileAsPath());
-              tvShow.removeFromMediaFiles(mediaFile);
-            });
-          }
           submitTask(new TvShowMediaFileInformationFetcherTask(mf, tvShow, true));
         }
       }
-    };
-
-    // get mediainfo for tv show (fanart/poster..)
-    tvShow.getMediaFiles().forEach(processMediaFile);
+    }
 
     // get mediainfo for all seasons within the TV show
     for (TvShowSeason season : new ArrayList<>(tvShow.getSeasons())) {
-      season.getMediaFiles().forEach(processMediaFile);
+      for (MediaFile mf : season.getMediaFiles()) {
+        if (StringUtils.isBlank(mf.getContainerFormat())) {
+          submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, false));
+        }
+        else {
+          // did the file dates/size change?
+          if (MediaFileHelper.gatherBasicFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
+            submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, true));
+          }
+        }
+      }
     }
 
     // get mediainfo for all episodes within this TV show
     for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
-      episode.getMediaFiles().forEach(processMediaFile);
+      for (MediaFile mf : episode.getMediaFiles()) {
+        if (StringUtils.isBlank(mf.getContainerFormat())) {
+          submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, false));
+        }
+        else {
+          // at least update the file dates
+          if (MediaFileHelper.gatherBasicFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
+            // okay, something changed with that episode file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
+            if (mf.getType() == MediaFileType.VIDEO) {
+              episode.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
+                Utils.deleteFileSafely(mediaFile.getFileAsPath());
+                episode.removeFromMediaFiles(mediaFile);
+              });
+            }
+            submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, true));
+          }
+        }
+      }
     }
   }
 
@@ -717,7 +732,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       Set<Path> allFiles = getAllFilesRecursive(showDir);
       if (allFiles.isEmpty()) {
-        LOGGER.debug("Skip empty directory: {}", showDir);
+        LOGGER.debug("no file found in directory {}", showDir);
+        // do a cleanup, if the show existed before
+        if (tvShow != null) {
+          cleanup(tvShow);
+        }
         return "";
       }
 
@@ -746,6 +765,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       if (getMediaFiles(mfs, MediaFileType.VIDEO).isEmpty()) {
         LOGGER.debug("no video file found in directory {}", showDir);
+        // do cleanup, if the show existed before
+        if (tvShow != null) {
+          cleanup(tvShow);
+        }
         return "";
       }
 
