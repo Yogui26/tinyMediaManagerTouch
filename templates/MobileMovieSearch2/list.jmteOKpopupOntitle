@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Movie Collection</title>
 	<link rel="stylesheet" href="include/jquery.mobile-1.4.5.min.css">
-	<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+	<script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript" src="include/jquery.mobile-1.4.5.min.js"></script>
 	<script type="text/javascript" src="include/indexOf.js"></script>
 	<script>
@@ -156,7 +156,7 @@ a.more{
 	<form id="searchResults" name="searchResults">
 ${foreach movies movie}
 		<div class="responsive" id="resp${movie.imdbId}">
-			<a target="_blank" href="http://www.imdb.com/title/${movie.imdbId}" title="
+			<a target="_blank" href="https://www.imdb.com/title/${movie.imdbId}" title="
 
                         ${movie.title} : ${movie.runtime} min
 

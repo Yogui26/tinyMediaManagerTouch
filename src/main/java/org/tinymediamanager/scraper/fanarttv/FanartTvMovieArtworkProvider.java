@@ -96,7 +96,8 @@ public class FanartTvMovieArtworkProvider extends FanartTvMetadataProvider imple
       }
     }
 
-    if ((images == null || images.body() == null) && tmdbId != 0) {
+    // fallback to tmdb lookup when the IMDB lookup did not return anything
+    if ((images == null || images.body() == null || StringUtils.isBlank(images.body().name)) && tmdbId != 0) {
       try {
         LOGGER.debug("getArtwork with TMDB id: {}", tmdbId);
         images = api.getMovieService().getMovieImages(Integer.toString(tmdbId)).execute();

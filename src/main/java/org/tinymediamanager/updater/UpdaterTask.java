@@ -50,7 +50,7 @@ import com.threerings.getdown.util.ProgressObserver;
 
 /**
  * UpdaterTasks checks if there's a new update for TMM
- * 
+ *
  * @author Myron Boyle
  */
 public class UpdaterTask extends TmmTask {
@@ -64,6 +64,8 @@ public class UpdaterTask extends TmmTask {
 
   @Override
   public void doInBackground() {
+    Path updateFolder = Paths.get(UPDATE_FOLDER);
+
     downloadSuccessful = false;
 
     try {
@@ -93,7 +95,6 @@ public class UpdaterTask extends TmmTask {
       ProgressObserver progobs = this::publishState;
 
       // we will clean the checksum update folder at startup (this will force to re-download partially downloaded files)
-      Path updateFolder = Paths.get(UPDATE_FOLDER);
       Utils.deleteDirectoryRecursive(updateFolder);
       updateFolder.toFile().mkdirs();
 
@@ -157,6 +158,9 @@ public class UpdaterTask extends TmmTask {
       // remove digest file(s) to force re-download the next time
       Utils.deleteFileSafely(Paths.get("digest.txt"));
       Utils.deleteFileSafely(Paths.get("digest2.txt"));
+
+      // also remove any downloaded files
+      Utils.deleteDirectorySafely(updateFolder);
     }
   }
 

@@ -1479,7 +1479,6 @@ public class Utils {
   public static void sendWakeOnLanPacket(String macAddr) {
     // Broadcast IP address
     final String IP = "255.255.255.255";
-    final int port = 7;
 
     try {
       final byte[] MACBYTE = new byte[6];
@@ -1496,9 +1495,19 @@ public class Utils {
         System.arraycopy(MACBYTE, 0, bytes, i, MACBYTE.length);
       }
 
-      // Send UDP packet here
+      // Send UDP packet (port 7 and with a light delay on port 9)
+      // both ports are commonly used for WOL and in some setup we need the first packet to populate ARP tables and
+      // the second one to actually wakes up the machine
       final InetAddress address = InetAddress.getByName(IP);
-      final DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, port);
+
+      DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, 7);
+      try (DatagramSocket socket = new DatagramSocket()) {
+        socket.send(packet);
+      }
+
+      Thread.sleep(100);
+
+      packet = new DatagramPacket(bytes, bytes.length, address, 9);
       try (DatagramSocket socket = new DatagramSocket()) {
         socket.send(packet);
       }

@@ -49,7 +49,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.text.JTextComponent;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,7 +228,7 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     }, AWTEvent.MOUSE_EVENT_MASK);
 
     // inform user that MI could not be loaded
-    if (Platform.isLinux() && StringUtils.isBlank(MediaInfo.version())) {
+    if (Platform.isLinux() && !MediaInfo.isMediaInfoAvailable()) {
       SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(MainWindow.this, TmmResourceBundle.getString("mediainfo.failed.linux")));
     }
 

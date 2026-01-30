@@ -23,6 +23,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 
@@ -220,17 +221,17 @@ public class UrlUtil {
     // /photos-ak-snc1/v315/224/13/659629384/s659629384_752969_4472.jpg?asdf=jklo
 
     // file we're facing a file:/ uri, just remove that
-    if (url.startsWith("file:/")) {
-      path = url.replace("file:/", "");
-    }
-    else {
-      try {
+    try {
+      if (url.startsWith("file:/")) {
+        path = Path.of(new URI(url)).toString();
+      }
+      else {
         url = getURIEncoded(url).toString();
         path = new URL(url).getPath();
       }
-      catch (Exception e) {
-        return ret;
-      }
+    }
+    catch (Exception e) {
+      return ret;
     }
 
     // Checks for both forward and/or backslash

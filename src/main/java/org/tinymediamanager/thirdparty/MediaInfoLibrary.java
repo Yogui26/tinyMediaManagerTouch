@@ -42,37 +42,53 @@ interface MediaInfoLibrary extends Library {
     }
   }
 
-  // libmediainfo for linux depends on libzen, so we need to load dependencies first, because we know where our native libs are (e.g. Java Web Start
-  // Cache).
-  // if we do not, the system will look for dependencies, but only in the library path
-  Library          LIB_ZEN  = Platform.isLinux() ? Native.load("zen", Library.class) : null;
+  MediaInfoLibrary INSTANCE = load();
 
-  MediaInfoLibrary INSTANCE = Native.load("mediainfo", MediaInfoLibrary.class,
-      singletonMap(OPTION_FUNCTION_MAPPER, (FunctionMapper) (lib, method) -> {
-                                  // MediaInfo_New(), MediaInfo_Open() ...
-                                  return "MediaInfo_" + method.getName();
-                                }));
+  private static MediaInfoLibrary load() {
+    try {
+      // libmediainfo for linux depends on libzen, so we need to load dependencies first, because we know where our native libs are
+      // if we do not, the system will look for dependencies, but only in the library path
+      if (Platform.isLinux()) {
+        Native.load("zen", Library.class);
+      }
 
-  //@formatter:off
-  
-  //Constructor/Destructor
+      return Native.load("mediainfo", MediaInfoLibrary.class, singletonMap(OPTION_FUNCTION_MAPPER, (FunctionMapper) (lib, method) -> {
+        // MediaInfo_New(), MediaInfo_Open() ...
+        return "MediaInfo_" + method.getName();
+      }));
+    }
+    catch (UnsatisfiedLinkError e) {
+      return null;
+    }
+  }
+
+  // Constructor/Destructor
   Pointer New();
+
   void Delete(Pointer Handle);
 
-  //File
+  // File
   SizeT Open(Pointer Handle, WString file);
+
   SizeT Open_Buffer_Init(Pointer handle, long length, long offset);
+
   SizeT Open_Buffer_Continue(Pointer handle, byte[] buffer, SizeT size);
-  long  Open_Buffer_Continue_GoTo_Get(Pointer handle);
+
+  long Open_Buffer_Continue_GoTo_Get(Pointer handle);
+
   SizeT Open_Buffer_Finalize(Pointer handle);
-  void  Close(Pointer Handle);
 
-  //Infos
+  void Close(Pointer Handle);
+
+  // Infos
   WString Inform(Pointer Handle, int Reserved);
-  WString Get(Pointer Handle, int StreamKind, SizeT StreamNumber, WString parameter, int infoKind, int searchKind);
-  WString GetI(Pointer Handle, int StreamKind, SizeT StreamNumber, SizeT parameterIndex, int infoKind);
-  SizeT   Count_Get(Pointer Handle, int StreamKind, SizeT StreamNumber);
 
-  //Options
+  WString Get(Pointer Handle, int StreamKind, SizeT StreamNumber, WString parameter, int infoKind, int searchKind);
+
+  WString GetI(Pointer Handle, int StreamKind, SizeT StreamNumber, SizeT parameterIndex, int infoKind);
+
+  SizeT Count_Get(Pointer Handle, int StreamKind, SizeT StreamNumber);
+
+  // Options
   WString Option(Pointer Handle, WString option, WString value);
 }

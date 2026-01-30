@@ -171,19 +171,38 @@ public final class TvShowList extends AbstractModelObject {
 
   /**
    * removes the active instance <br>
-   * <b>Should only be used for unit testing et all!</b><br>
+   * <b>Should only be used for unit testing et al.</b><br>
    */
   static void clearInstance() {
     instance = null;
   }
 
   /**
-   * Gets the tv shows.
+   * Gets all TV shows.
    *
-   * @return the tv shows
+   * @return all TV shows
    */
   public List<TvShow> getTvShows() {
     return tvShows;
+  }
+
+  /**
+   * * Gets all TV shows for a given datasource
+   *
+   * @param dataSource
+   *          the data source
+   * @return all TV shows for the given datasource
+   */
+  public List<TvShow> getTvShowsForDataSource(String dataSource) {
+    List<TvShow> shows = new ArrayList<>();
+
+    for (TvShow show : new ArrayList<>(tvShows)) {
+      if (show.getDataSource().equals(dataSource)) {
+        shows.add(show);
+      }
+    }
+
+    return shows;
   }
 
   /**
@@ -277,7 +296,7 @@ public final class TvShowList extends AbstractModelObject {
    * @return the unscraped TvShows
    */
   public List<TvShow> getUnscrapedTvShows() {
-    return tvShows.parallelStream().filter(tvShow -> !tvShow.isScraped()).sorted().collect(Collectors.toList());
+    return tvShows.parallelStream().filter(tvShow -> !tvShow.isScraped()).sorted(new TvShowComparator()).collect(Collectors.toList());
   }
 
   /**
@@ -1431,7 +1450,7 @@ public final class TvShowList extends AbstractModelObject {
    * @return the new TvShows
    */
   public List<TvShow> getNewTvShows() {
-    return tvShows.parallelStream().filter(MediaEntity::isNewlyAdded).sorted().collect(Collectors.toList());
+    return tvShows.parallelStream().filter(MediaEntity::isNewlyAdded).sorted(new TvShowComparator()).collect(Collectors.toList());
   }
 
   /**
@@ -1754,6 +1773,16 @@ public final class TvShowList extends AbstractModelObject {
     }
 
     return missingMetadata;
+  }
+
+  private static class TvShowComparator implements Comparator<TvShow> {
+    @Override
+    public int compare(TvShow o1, TvShow o2) {
+      if (o1 == null || o2 == null || o1.getTitleSortable() == null || o2.getTitleSortable() == null) {
+        return 0;
+      }
+      return o1.getTitleSortable().compareToIgnoreCase(o2.getTitleSortable());
+    }
   }
 
   private static class TvShowMediaScraperComparator implements Comparator<MediaScraper> {

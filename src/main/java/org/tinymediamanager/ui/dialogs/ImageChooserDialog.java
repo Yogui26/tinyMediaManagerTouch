@@ -179,6 +179,8 @@ public class ImageChooserDialog extends TmmDialog {
   private JLabel                           lblExtrafanartSelected;
 
   private boolean                          persistFilters = false;
+  private JButton                          btnClearWidthFilter;
+  private JButton                          btnClearHeightFilter;
 
   enum SortOrder {
     SCORE(TmmResourceBundle.getString("imagechooser.sortby.score")),
@@ -369,7 +371,8 @@ public class ImageChooserDialog extends TmmDialog {
           true);
 
       contentPanel.add(collapsiblePanel, "cell 0 0 2 1,grow, wmin 0");
-      panelFilter.setLayout(new MigLayout("insets 0", "[][25%:n][30lp!][][30lp:n,right][15%:25%][30lp:n][50lp:50lp,grow][grow][10lp!]", "[][]"));
+      panelFilter.setLayout(
+          new MigLayout("insets 0", "[][25%:n][30lp!][][30lp:n,right][15%:25%][30lp:n,right][75lp:75lp,grow][grow][10lp!]", "[center][center]"));
 
       {
         JLabel lblScraperT = new TmmLabel(TmmResourceBundle.getString("scraper.artwork"));
@@ -377,7 +380,15 @@ public class ImageChooserDialog extends TmmDialog {
 
         cbScraper = new MediaScraperCheckComboBox(artworkScrapers);
         cbScraper.setFocusable(false);
-        panelFilter.add(cbScraper, "cell 1 0, growx, wmin 0, top");
+        panelFilter.add(cbScraper, "cell 1 0,growx,wmin 0");
+
+        btnClearWidthFilter = new FlatButton(IconManager.DELETE);
+        btnClearWidthFilter.addActionListener((actionEvent) -> {
+          widthSlider.setLowValue(widthSlider.getMinimum());
+          widthSlider.setHighValue(widthSlider.getMaximum());
+          filterChanged();
+        });
+        panelFilter.add(btnClearWidthFilter, "cell 7 0");
 
         JLabel lblLanguageT = new TmmLabel(TmmResourceBundle.getString("metatag.language"));
         panelFilter.add(lblLanguageT, "cell 0 1");
@@ -385,7 +396,7 @@ public class ImageChooserDialog extends TmmDialog {
         cbLanguage = new TmmCheckComboBox();
         cbLanguage.setFocusable(false);
         cbLanguage.setSingleLineEditor(); // looks weird when preselecting langu?
-        panelFilter.add(cbLanguage, "cell 1 1, growx, wmin 0, top");
+        panelFilter.add(cbLanguage, "cell 1 1,growx,wmin 0");
       }
       {
         JLabel lblWidthT = new TmmLabel(TmmResourceBundle.getString("metatag.width"));
@@ -399,7 +410,7 @@ public class ImageChooserDialog extends TmmDialog {
         configureInitialSlider(widthSlider, true);
         panelFilter.add(widthSlider, "cell 5 0,growx");
 
-        lblMaxWidth = new JLabel("0");
+        lblMaxWidth = new JLabel("");
         TmmFontHelper.changeFont(lblMaxWidth, TmmFontHelper.L1);
         panelFilter.add(lblMaxWidth, "cell 6 0");
 
@@ -425,6 +436,15 @@ public class ImageChooserDialog extends TmmDialog {
         cbSortOrder = new JComboBox(SortOrder.values());
         panelFilter.add(cbSortOrder, "cell 8 0,alignx right");
       }
+
+      btnClearHeightFilter = new FlatButton(IconManager.DELETE);
+      btnClearHeightFilter.addActionListener((actionEvent) -> {
+        heightSlider.setLowValue(heightSlider.getMinimum());
+        heightSlider.setHighValue(heightSlider.getMaximum());
+        filterChanged();
+      });
+
+      panelFilter.add(btnClearHeightFilter, "cell 7 1");
     }
     {
       scrollPane = new NoBorderScrollPane();
@@ -584,6 +604,9 @@ public class ImageChooserDialog extends TmmDialog {
       // load saved filters
       loadFilters();
     }
+
+    // init values
+    filterChanged();
   }
 
   private void loadFilters() {
@@ -1037,6 +1060,7 @@ public class ImageChooserDialog extends TmmDialog {
     int targetWidthMax = Math.max(suggestedWidthMax, maxWidth);
     if (widthSlider.getMaximum() != targetWidthMax) {
       widthSlider.setMaximum(targetWidthMax);
+      widthSlider.setHighValue(targetWidthMax);
     }
 
     int maxHeight = 0;
@@ -1050,6 +1074,7 @@ public class ImageChooserDialog extends TmmDialog {
     int targetHeightMax = Math.max(suggestedHeightMax, maxHeight);
     if (heightSlider.getMaximum() != targetHeightMax) {
       heightSlider.setMaximum(targetHeightMax);
+      heightSlider.setHighValue(targetHeightMax);
     }
 
     // reconfigure ticks when range changes
@@ -1904,9 +1929,8 @@ public class ImageChooserDialog extends TmmDialog {
       Path file = TmmUIHelper.selectFile(TmmResourceBundle.getString("image.choose"), path,
           new FileNameExtensionFilter("Image files", "jpg", "jpeg", "png", "bmp", "gif", "tbn", "webp"));
       if (file != null && Utils.isRegularFile(file)) {
-        String fileName = file.toAbsolutePath().toString();
         imageLabel.clearImage();
-        imageLabel.setImageUrl("file:/" + fileName);
+        imageLabel.setImageUrl(file.toAbsolutePath().toUri().toString());
         task.cancel(true);
         TmmProperties.getInstance().putProperty(DIALOG_ID + ".path", file.getParent().toString());
         setVisible(false);

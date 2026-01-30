@@ -350,7 +350,7 @@ public final class MovieList extends AbstractModelObject {
    * @return the unscraped movies
    */
   public List<Movie> getUnscrapedMovies() {
-    return movieList.parallelStream().filter(movie -> !movie.isScraped()).sorted().collect(Collectors.toList());
+    return movieList.parallelStream().filter(movie -> !movie.isScraped()).sorted(new MovieComparator()).collect(Collectors.toList());
   }
 
   /**
@@ -359,7 +359,7 @@ public final class MovieList extends AbstractModelObject {
    * @return the new movies
    */
   public List<Movie> getNewMovies() {
-    return movieList.parallelStream().filter(MediaEntity::isNewlyAdded).sorted().collect(Collectors.toList());
+    return movieList.parallelStream().filter(MediaEntity::isNewlyAdded).sorted(new MovieComparator()).collect(Collectors.toList());
   }
 
   /**
@@ -2062,6 +2062,16 @@ public final class MovieList extends AbstractModelObject {
     }
 
     return missingMetadata;
+  }
+
+  private static class MovieComparator implements Comparator<Movie> {
+    @Override
+    public int compare(Movie o1, Movie o2) {
+      if (o1 == null || o2 == null || o1.getTitleSortable() == null || o2.getTitleSortable() == null) {
+        return 0;
+      }
+      return o1.getTitleSortable().compareToIgnoreCase(o2.getTitleSortable());
+    }
   }
 
   private static class MovieSetComparator implements Comparator<MovieSet> {

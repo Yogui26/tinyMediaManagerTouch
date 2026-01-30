@@ -31,6 +31,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
+import org.tinymediamanager.addon.DenoAddon;
 import org.tinymediamanager.addon.YtDlpAddon;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmProperties;
@@ -150,6 +151,20 @@ public class YtDlp {
       cmdList.add("--no-check-certificates");
     }
 
+    if (Settings.getInstance().getYtDlpParams().contains("--js-runtimes")) {
+      LOGGER.debug("User defined js-runtimes detected - skipping deno js runtime integration");
+    }
+    else {
+      try {
+        String denoPath = getDenoExecutable();
+        cmdList.add("--js-runtimes");
+        cmdList.add("deno:" + denoPath);
+      }
+      catch (IOException e) {
+        LOGGER.debug("deno is not available - skipping deno js runtime integration");
+      }
+    }
+
     cmdList.add(url);
     cmdList.add("-P");
     cmdList.add(trailerFile.getParent().toAbsolutePath().toString());
@@ -232,6 +247,24 @@ public class YtDlp {
     }
     else {
       throw new IOException("yt-dlp is not available");
+    }
+  }
+
+  /**
+   * Retrieves the path to the deno executable.
+   *
+   * @return absolute path to deno executable
+   * @throws IOException
+   *           if deno is not available
+   */
+  private static String getDenoExecutable() throws IOException {
+    DenoAddon denoAddon = new DenoAddon();
+
+    if (denoAddon.isAvailable()) {
+      return denoAddon.getExecutablePath();
+    }
+    else {
+      throw new IOException("deno is not available");
     }
   }
 

@@ -16,6 +16,9 @@
 package org.tinymediamanager.scraper.http;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +42,28 @@ public class TmmHttpHeaderLoggerInterceptor implements Interceptor {
     Request request = chain.request();
     Headers headersRequest = request.headers();
     if (headersRequest.size() > 0) {
-      LOGGER.trace("-> Headers: {}", headersRequest.toMultimap());
+      Map<String, List<String>> headers = new HashMap<>(headersRequest.toMultimap());
+
+      // remove sensitive headers
+      headers.remove("authorization");
+      headers.remove("cookie");
+      headers.remove("user-agent");
+      headers.remove("x-api-key");
+      headers.remove("api-key");
+      headers.remove("referer");
+
+      LOGGER.trace("-> Headers: {}", headers);
     }
 
     Response response = chain.proceed(request);
     Headers headersResponse = response.headers();
     if (headersResponse.size() > 0) {
-      LOGGER.trace("<- Headers: {}", headersResponse.toMultimap());
+      Map<String, List<String>> headers = new HashMap<>(headersResponse.toMultimap());
+
+      // remove sensitive headers
+      headers.remove("set-cookie");
+
+      LOGGER.trace("<- Headers: {}", headers);
     }
 
     return response;

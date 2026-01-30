@@ -33,6 +33,7 @@ import static org.tinymediamanager.core.MediaFileType.LOGO;
 import static org.tinymediamanager.core.MediaFileType.POSTER;
 import static org.tinymediamanager.core.MediaFileType.VIDEO;
 import static org.tinymediamanager.core.Utils.DISC_FOLDER_REGEX;
+import static org.tinymediamanager.core.Utils.containsSkipFile;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -1932,6 +1933,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         // just in case mapping fails
       }
 
+      // check if that parent folder is to be skipped (could not catch all in preVisitDirectory)
+      if (file.getParent() != null && (containsSkipFile(file.getParent(), skipFoldersWithNomedia, fsAttrCache))) {
+        return CONTINUE;
+      }
+
       try {
         String filename = file.getFileName().toString();
         String path = "";
@@ -1980,11 +1986,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         fsAttrCache.putIfAbsent(dir.toAbsolutePath(), attrs);
       }
       catch (Exception ignored) {
+        // ignore
       }
 
       try {
         // getFilename returns null on DS root!
-        if (dir.getFileName() != null && (isInSkipFolder(dir) || Utils.containsSkipFile(dir, skipFoldersWithNomedia, fsAttrCache))) {
+        if (dir.getFileName() != null && (isInSkipFolder(dir))) {
           LOGGER.debug("Skipping dir: {}", dir);
           return SKIP_SUBTREE;
         }
@@ -2082,6 +2089,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       catch (Exception ignored) {
       }
 
+      // check if that parent folder is to be skipped (could not catch all in preVisitDirectory)
+      if (file.getParent() != null && (containsSkipFile(file.getParent(), skipFoldersWithNomedia, fsAttrCache))) {
+        return CONTINUE;
+      }
+
       try {
         if (Utils.isRegularFile(attr) && !file.getFileName().toString().matches(SKIP_REGEX)) {
           // check for video?
@@ -2132,11 +2144,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         fsAttrCache.putIfAbsent(dir.toAbsolutePath(), attrs);
       }
       catch (Exception ignored) {
+        // ignore
       }
 
       try {
-        if (dir.getFileName() != null
-            && (isInSkipFolder(dir) || Utils.containsSkipFile(dir, skipFoldersWithNomedia, fsAttrCache) || parent.matches(DISC_FOLDER_REGEX))) {
+        if (dir.getFileName() != null && (isInSkipFolder(dir) || parent.matches(DISC_FOLDER_REGEX))) {
           LOGGER.debug("Skipping dir: {}", dir);
           return SKIP_SUBTREE;
         }

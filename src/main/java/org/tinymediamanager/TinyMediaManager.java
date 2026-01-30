@@ -449,6 +449,7 @@ public final class TinyMediaManager {
     if (newVersion || TmmUIHelper.shouldCheckForUpdate()) {
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("ffmpeg"));
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("yt-dlp"));
+      TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("deno"));
     }
   }
 

@@ -214,6 +214,14 @@ public class MovieJmteTests extends BasicMovieTest {
       compare("${movie.country;split(2,17)}", "Germany");
       compare("${movie.country;split(3,17)}", ""); // empty or all?
 
+      // a replace was using a stripped parameter. Since we could have spaces in there, use it 1:1
+      compare("${movieSet.title;replace(\" \",\"#\")}", "Aladdin#Collection");
+      compare("${movieSet.title;replace(\" \",\"     \")}", "Aladdin     Collection");
+      compare("${movieSet.title;replace( ,#)}", "Aladdin#Collection"); // w/o quotes
+      compare("${movieSet.title;replace( ,     )}", "Aladdin     Collection"); // w/o quotes
+      // previous behavior: param 1 gets strip()ed and matches so ALL chars :p
+      compare("${movieSet.title;replace(,-)}", "-A-l-a-d-d-i-n- -C-o-l-l-e-c-t-i-o-n-");
+
     }
     catch (Exception e) {
       e.printStackTrace();

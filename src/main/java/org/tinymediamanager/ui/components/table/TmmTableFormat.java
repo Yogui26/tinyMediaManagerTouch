@@ -22,6 +22,7 @@ import java.awt.FontMetrics;
 import java.nio.file.Path;
 import java.text.Collator;
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.text.RuleBasedCollator;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -384,7 +385,8 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
   }
 
   public static class FileSizeComparator implements Comparator<String> {
-    Pattern pattern = Pattern.compile("(.*) ([kMGT]?)");
+    private final Pattern      pattern = Pattern.compile("(.*) ([kMGT]?)");
+    private final NumberFormat nf      = NumberFormat.getInstance(Locale.getDefault());
 
     @Override
     public int compare(String arg0, String arg1) {
@@ -404,8 +406,9 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
       Matcher matcher = pattern.matcher(sizeAsString);
       if (matcher.find()) {
         try {
-          float value = Float.parseFloat(matcher.group(1).replace(",", ".")); // fix DE format
+          float value = parseLocalizedNumber(matcher.group(1));
           String unit = matcher.group(2);
+
           if ("T".equals(unit)) {
             size = (long) (value * 1000 * 1000 * 1000 * 1000);
           }
@@ -428,6 +431,22 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
       }
 
       return size;
+    }
+
+    private float parseLocalizedNumber(String numberStr) {
+      try {
+        return nf.parse(numberStr).floatValue();
+      }
+      catch (Exception e) {
+        // Fallback: try replacing common separators
+        try {
+          return Float.parseFloat(numberStr.replace(",", "."));
+        }
+        catch (Exception ex) {
+          // just not let it crash
+          return 0;
+        }
+      }
     }
   }
 

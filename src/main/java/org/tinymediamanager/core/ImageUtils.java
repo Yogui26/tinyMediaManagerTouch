@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -288,9 +289,8 @@ public class ImageUtils {
     Path destFile = destinationFolder.resolve(filename);
 
     // check if old and new file are the same (possible if you select it in the imagechooser)
-    if (urlAsString.startsWith("file:")) {
-      String newUrl = urlAsString.replace("file:/", "");
-      Path file = Paths.get(newUrl);
+    if (urlAsString.startsWith("file:/")) {
+      Path file = Path.of(new URI(urlAsString));
       if (file.equals(destFile)) {
         return destFile;
       }

@@ -45,6 +45,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -52,6 +53,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
@@ -221,12 +223,6 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       stopWatch.start();
       start();
 
-      // get existing show folders
-      List<Path> existing = new ArrayList<>();
-      for (TvShow show : tvShowList.getTvShows()) {
-        existing.add(show.getPathNIO());
-      }
-
       // here we have 2 ways of updating:
       // - per datasource -> update ds / remove orphaned / update MFs
       // - per TV show -> udpate TV show / update MFs
@@ -270,8 +266,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           }
           publishState();
 
-          List<Path> newTvShowDirs = new ArrayList<>();
-          List<Path> existingTvShowDirs = new ArrayList<>();
+          List<Path> foundTvShowDirs = new ArrayList<>();
           List<Path> rootList = listFilesAndDirs(dsAsPath);
 
           // when there is _nothing_ found in the ds root, it might be offline -
@@ -303,24 +298,14 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
                 List<Path> subList = listFilesAndDirs(path);
                 for (Path sub : subList) {
                   if (Files.isDirectory(sub)) {
-                    if (existing.contains(sub)) {
-                      existingTvShowDirs.add(sub);
-                    }
-                    else {
-                      newTvShowDirs.add(sub);
-                    }
+                    foundTvShowDirs.add(sub);
                   }
                 }
               }
 
               // normal datasource/show folder
               else {
-                if (existing.contains(path)) {
-                  existingTvShowDirs.add(path);
-                }
-                else {
-                  newTvShowDirs.add(path);
-                }
+                foundTvShowDirs.add(path);
               }
             }
             else {
@@ -334,12 +319,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             }
           }
 
-          for (Path subdir : newTvShowDirs) {
+          for (Path subdir : foundTvShowDirs) {
             submitTask(new FindTvShowTask(subdir, dsAsPath.toAbsolutePath()));
           }
-          for (Path subdir : existingTvShowDirs) {
-            submitTask(new FindTvShowTask(subdir, dsAsPath.toAbsolutePath()));
-          }
+
           waitForCompletionOrCancel();
 
           // print stats
@@ -354,7 +337,21 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             break;
           }
 
-          cleanupDatasource(ds);
+          // found TV shows are cleaned up in the FindTvShowTask
+          // just process TV shows which are not found
+          List<TvShow> toCleanup = new ArrayList<>();
+          for (TvShow tvShow : new ArrayList<>(tvShowList.getTvShows())) {
+            // only from the same datasource
+            if (!Paths.get(tvShow.getDataSource()).toAbsolutePath().equals(dsAsPath.toAbsolutePath())) {
+              continue;
+            }
+
+            if (!filesFound.contains(tvShow.getPathNIO().toAbsolutePath())) {
+              toCleanup.add(tvShow);
+            }
+          }
+
+          cleanup(toCleanup);
           waitForCompletionOrCancel();
           if (cancel) {
             break;
@@ -548,45 +545,6 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
   }
 
-  private void cleanupDatasource(String datasource) {
-    setTaskName(TmmResourceBundle.getString("update.cleanup"));
-    setTaskDescription(null);
-    setProgressDone(0);
-
-    int showCount = tvShowList.getTvShows().size();
-    setWorkUnits(showCount);
-    publishState();
-
-    LOGGER.info("Removing orphaned TV shows/episodes/files...");
-
-    for (int i = showCount - 1; i >= 0; i--) {
-      if (cancel) {
-        break;
-      }
-
-      publishState(showCount - i);
-
-      TvShow tvShow = tvShowList.getTvShows().get(i);
-
-      // check only TV shows matching datasource
-      if (!Paths.get(datasource).toAbsolutePath().equals(Paths.get(tvShow.getDataSource()).toAbsolutePath())) {
-        continue;
-      }
-
-      // do not process locked TV shows (because filesFound has not been filled for them)
-      if (tvShow.isLocked()) {
-        continue;
-      }
-
-      if (!Files.exists(tvShow.getPathNIO())) {
-        tvShowList.removeTvShow(tvShow);
-      }
-      else {
-        cleanup(tvShow);
-      }
-    }
-  }
-
   private void cleanup(TvShow tvShow) {
     boolean dirty = false;
     if (!tvShow.isNewlyAdded() || tvShow.hasNewlyAddedEpisodes()) {
@@ -672,8 +630,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * detect which mediafiles has to be parsed and start a thread to do that
    */
   private void gatherMediaInformationForUngatheredMediaFiles(TvShow tvShow) {
-    // get mediainfo for tv show (fanart/poster..)
-    for (MediaFile mf : tvShow.getMediaFiles()) {
+
+    // get mediainfo consumer
+    Consumer<MediaFile> processMediaFile = mf -> {
       if (StringUtils.isBlank(mf.getContainerFormat())) {
         submitTask(new TvShowMediaFileInformationFetcherTask(mf, tvShow, false));
       }
@@ -690,50 +649,19 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           submitTask(new TvShowMediaFileInformationFetcherTask(mf, tvShow, true));
         }
       }
-    }
+    };
+
+    // get mediainfo for tv show (fanart/poster..)
+    tvShow.getMediaFiles().forEach(processMediaFile);
 
     // get mediainfo for all seasons within the TV show
     for (TvShowSeason season : new ArrayList<>(tvShow.getSeasons())) {
-      for (MediaFile mf : season.getMediaFiles()) {
-        if (StringUtils.isBlank(mf.getContainerFormat())) {
-          submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, false));
-        }
-        else {
-          // // did the file dates/size change?
-          if (MediaFileHelper.gatherBasicFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
-            // okay, something changed with that season file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
-            if (mf.getType() == MediaFileType.VIDEO) {
-              season.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
-                Utils.deleteFileSafely(mediaFile.getFileAsPath());
-                tvShow.removeFromMediaFiles(mediaFile);
-              });
-            }
-            submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, true));
-          }
-        }
-      }
+      season.getMediaFiles().forEach(processMediaFile);
     }
 
     // get mediainfo for all episodes within this TV show
     for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
-      for (MediaFile mf : episode.getMediaFiles()) {
-        if (StringUtils.isBlank(mf.getContainerFormat())) {
-          submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, false));
-        }
-        else {
-          // at least update the file dates
-          if (MediaFileHelper.gatherBasicFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
-            // okay, something changed with that episode file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
-            if (mf.getType() == MediaFileType.VIDEO) {
-              episode.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
-                Utils.deleteFileSafely(mediaFile.getFileAsPath());
-                episode.removeFromMediaFiles(mediaFile);
-              });
-            }
-            submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, true));
-          }
-        }
-      }
+      episode.getMediaFiles().forEach(processMediaFile);
     }
   }
 
@@ -906,7 +834,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Try to detect some sports/leagues from TheSportsDB
       // You cannot have a complete /sport/league/video.mkv structure as show;
       // the "league" must be the TvShow root, and if the datasource matches a "sport", we can add this too
-      if (TheSportsDbHelper.SPORT_LEAGUES.keySet().contains(tvShow.getPathNIO().getFileName().toString())) {
+      if (TheSportsDbHelper.SPORT_LEAGUES.containsKey(tvShow.getPathNIO().getFileName().toString())) {
         League l = TheSportsDbHelper.SPORT_LEAGUES.get(tvShow.getPathNIO().getFileName().toString());
         tvShow.setId(MediaMetadata.TSDB, l.idLeague);
       }
@@ -1181,15 +1109,15 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
               // try to parse the imdb id from the filename
               if (!MediaIdUtil.isValidImdbId(episode.getImdbId())) {
-                episode.setId(MediaMetadata.IMDB, ParserUtils.detectImdbId(Utils.relPath(showDir, vid.getFileAsPath()).toString()));
+                episode.setId(MediaMetadata.IMDB, ParserUtils.detectImdbId(Utils.relPath(showDir, vid.getFileAsPath())));
               }
               // try to parse the Tmdb id from the filename
               if (episode.getTmdbId().isEmpty()) {
-                episode.setId(MediaMetadata.TMDB, ParserUtils.detectTmdbId(Utils.relPath(showDir, vid.getFileAsPath()).toString()));
+                episode.setId(MediaMetadata.TMDB, ParserUtils.detectTmdbId(Utils.relPath(showDir, vid.getFileAsPath())));
               }
               // try to parse the Tvdb id from the filename
               if (episode.getTvdbId().isEmpty()) {
-                episode.setId(MediaMetadata.TVDB, ParserUtils.detectTvdbId(Utils.relPath(showDir, vid.getFileAsPath()).toString()));
+                episode.setId(MediaMetadata.TVDB, ParserUtils.detectTvdbId(Utils.relPath(showDir, vid.getFileAsPath())));
               }
               if (episode.getMediaSource() == MediaSource.UNKNOWN) {
                 episode.setMediaSource(MediaSource.parseMediaSource(vid.getBasename()));
@@ -1274,15 +1202,15 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             // try to parse the imdb id from the filename
             if (!MediaIdUtil.isValidImdbId(episode.getImdbId())) {
-              episode.setId(MediaMetadata.IMDB, ParserUtils.detectImdbId(Utils.relPath(showDir, vid.getFileAsPath()).toString()));
+              episode.setId(MediaMetadata.IMDB, ParserUtils.detectImdbId(Utils.relPath(showDir, vid.getFileAsPath())));
             }
             // try to parse the Tmdb id from the filename
             if (episode.getTmdbId().isEmpty()) {
-              episode.setId(MediaMetadata.TMDB, ParserUtils.detectTmdbId(Utils.relPath(showDir, vid.getFileAsPath()).toString()));
+              episode.setId(MediaMetadata.TMDB, ParserUtils.detectTmdbId(Utils.relPath(showDir, vid.getFileAsPath())));
             }
             // try to parse the Tvdb id from the filename
             if (episode.getTvdbId().isEmpty()) {
-              episode.setId(MediaMetadata.TVDB, ParserUtils.detectTvdbId(Utils.relPath(showDir, vid.getFileAsPath()).toString()));
+              episode.setId(MediaMetadata.TVDB, ParserUtils.detectTvdbId(Utils.relPath(showDir, vid.getFileAsPath())));
             }
             if (episode.getMediaSource() == MediaSource.UNKNOWN) {
               episode.setMediaSource(MediaSource.parseMediaSource(vid.getBasename()));
@@ -1450,6 +1378,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       tvShow.saveToDb();
 
+      // cleanup
+      cleanup(tvShow);
+
       return showDir.getFileName().toString();
     }
 
@@ -1467,9 +1398,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       String ext = mf.getExtension();
 
       // do not use regexp here since they are extremely expensive
-      ret = StringUtils.replaceIgnoreCase(ret, "-" + mf.getType() + "." + ext, "." + ext);
-      ret = StringUtils.replaceIgnoreCase(ret, "." + mf.getType() + "." + ext, "." + ext);
-      ret = StringUtils.replaceIgnoreCase(ret, "_" + mf.getType() + "." + ext, "." + ext);
+      ret = Strings.CI.replace(ret, "-" + mf.getType() + "." + ext, "." + ext);
+      ret = Strings.CI.replace(ret, "." + mf.getType() + "." + ext, "." + ext);
+      ret = Strings.CI.replace(ret, "_" + mf.getType() + "." + ext, "." + ext);
 
       // does not work for extrafanarts/landscape - but that's mostly not used on episode level
       for (Pattern pattern : extraMfFiletypePatterns) {
@@ -1495,6 +1426,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         for (MediaFileType type : types) {
           if (mediaFile.getType().equals(type)) {
             match = true;
+            break;
           }
         }
         if (match) {
@@ -1520,6 +1452,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         for (MediaFileType type : types) {
           if (mediaFile.getType().equals(type)) {
             match = true;
+            break;
           }
         }
         if (match) {

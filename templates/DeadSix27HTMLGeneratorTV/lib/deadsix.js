@@ -112,11 +112,11 @@ function openTrailer(youtubeID, divID, start) {
     if (youtubeID.substring(0, 6) == "daily_") {
         youtubeID = youtubeID.substring(6, youtubeID.length);
         if (start != "") { start = "&start=" + start; }
-        $("#video_" + divID).html("<iframe src=\"http://www.dailymotion.com/embed/video/" + youtubeID + "?autoPlay=1&forcedQuality=hd720&wmode=transparent" + start + "\"></iframe>");
+        $("#video_" + divID).html("<iframe src=\"https://www.dailymotion.com/embed/video/" + youtubeID + "?autoPlay=1&forcedQuality=hd720&wmode=transparent" + start + "\"></iframe>");
     }
     else {
         if (start != "") { start = "#t=" + start; }
-        $("#video_" + divID).html("<iframe src=\"http://www.youtube-nocookie.com/embed/" + youtubeID + "?autoplay=1&wmode=transparent&iv_load_policy=3" + start + "\"></iframe>");
+        $("#video_" + divID).html("<iframe src=\"https://www.youtube-nocookie.com/embed/" + youtubeID + "?autoplay=1&wmode=transparent&iv_load_policy=3" + start + "\"></iframe>");
     }
     $("#closeButton_" + divID).fadeIn();
     $("#overlay").show().animate({ height: '100%', opacity: 0.8 }, 500);

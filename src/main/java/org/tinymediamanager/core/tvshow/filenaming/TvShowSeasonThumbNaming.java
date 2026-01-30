@@ -119,7 +119,12 @@ public enum TvShowSeasonThumbNaming implements ITvShowSeasonFileNaming {
         return SEASON_LANDSCAPE.getFilename(tvShowSeason, extension, forRenamer);
       }
 
-      return seasonFoldername + File.separator + String.format("season%02d-landscape.%s", tvShowSeason.getSeason(), extension);
+      String filename = String.format("season%02d-landscape.%s", tvShowSeason.getSeason(), extension);
+      if (tvShowSeason.getSeason() == 0 && TvShowModuleManager.getInstance().getSettings().isSpecialSeason()) {
+        filename = "season-specials-landscape." + extension;
+      }
+
+      return seasonFoldername + File.separator + filename;
     }
   }
 }

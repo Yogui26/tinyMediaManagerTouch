@@ -129,7 +129,7 @@ public class MediaRating {
    */
   public float getRatingNormalized() {
     if (maxValue != 0) {
-      return rating / maxValue * 10;
+      return rating * 10 / maxValue;
     }
     return 0;
   }

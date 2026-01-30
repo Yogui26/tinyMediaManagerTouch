@@ -179,7 +179,17 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     /*
      * rating
      */
-    col = new Column(TmmResourceBundle.getString("metatag.rating"), "rating", movie -> getRating(movie.getRating()), Float.class);
+    col = new Column(TmmResourceBundle.getString("metatag.rating"), "rating", movie -> {
+      // since the user can choose rating sources with differend max values, we need to normalize it to 10
+      Float ratingValue = null;
+      MediaRating mediaRating = movie.getRating();
+
+      if (mediaRating != MediaMetadata.EMPTY_RATING && mediaRating.getRating() > 0) {
+        ratingValue = mediaRating.getRatingNormalized();
+      }
+
+      return ratingValue;
+    }, Float.class);
     col.setColumnComparator(floatComparator);
     col.setHeaderIcon(IconManager.RATING);
     col.setCellRenderer(new RightAlignTableCellRenderer());

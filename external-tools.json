@@ -33,28 +33,60 @@
   },
   {
     "name" : "yt-dlp",
-    "version": "2025.12.08",
+    "version": "2026.01.29",
     "filename" : "yt-dlp",
     "urls": [
       {
         "arch" : "windows-amd64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp.exe"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.29/yt-dlp.exe"
       },
       {
         "arch" : "macos-amd64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_macos"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.29/yt-dlp_macos"
       },
       {
         "arch" : "macos-arm64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_macos"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.29/yt-dlp_macos"
       },
       {
         "arch" : "linux-amd64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_linux"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.29/yt-dlp_linux"
       },
       {
         "arch" : "linux-arm64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_linux_aarch64"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.29/yt-dlp_linux_aarch64"
+      }
+    ]
+  },
+  {
+    "name": "deno",
+    "version": "2.6.6",
+    "filename": "deno",
+    "urls": [
+      {
+        "arch": "windows-amd64",
+        "url": "https://github.com/denoland/deno/releases/download/v2.6.6/deno-x86_64-pc-windows-msvc.zip",
+        "filenameInArchive": "deno.exe"
+      },
+      {
+        "arch": "macos-amd64",
+        "url": "https://github.com/denoland/deno/releases/download/v2.6.6/deno-x86_64-apple-darwin.zip",
+        "filenameInArchive": "deno"
+      },
+      {
+        "arch": "macos-arm64",
+        "url": "https://github.com/denoland/deno/releases/download/v2.6.6/deno-aarch64-apple-darwin.zip",
+        "filenameInArchive": "deno"
+      },
+      {
+        "arch": "linux-amd64",
+        "url": "https://github.com/denoland/deno/releases/download/v2.6.6/deno-x86_64-unknown-linux-gnu.zip",
+        "filenameInArchive": "deno"
+      },
+      {
+        "arch": "linux-arm64",
+        "url": "https://github.com/denoland/deno/releases/download/v2.6.6/deno-aarch64-unknown-linux-gnu.zip",
+        "filenameInArchive": "deno"
       }
     ]
   }

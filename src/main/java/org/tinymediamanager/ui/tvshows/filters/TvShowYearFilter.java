@@ -15,22 +15,17 @@
  */
 package org.tinymediamanager.ui.tvshows.filters;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 
 import javax.swing.JLabel;
-import javax.swing.SwingUtilities;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 
-import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.tvshow.TvShowList;
-import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
-import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
@@ -38,19 +33,14 @@ import org.tinymediamanager.ui.components.label.TmmLabel;
  * 
  * @author Wolfgang Janes
  */
-public class TvShowYearFilter extends AbstractCheckComboBoxTvShowUIFilter<Integer> {
-  private final TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+public class TvShowYearFilter extends AbstractNumberTvShowUIFilter {
 
   public TvShowYearFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2));
-    buildYearArray();
-    tvShowList.addPropertyChangeListener(Constants.YEAR, evt -> SwingUtilities.invokeLater(this::buildYearArray));
-  }
 
-  @Override
-  protected JLabel createLabel() {
-    return new TmmLabel(TmmResourceBundle.getString("metatag.year"));
+    // display the year without any formatting
+    spinnerLow.setEditor(new JSpinner.NumberEditor(spinnerLow, "###0"));
+    spinnerHigh.setEditor(new JSpinner.NumberEditor(spinnerHigh, "###0"));
   }
 
   @Override
@@ -59,26 +49,34 @@ public class TvShowYearFilter extends AbstractCheckComboBoxTvShowUIFilter<Intege
   }
 
   @Override
-  protected String parseTypeToString(Integer type) throws Exception {
-    return type.toString();
+  public void clearFilter() {
+    spinnerLow.setValue(LocalDate.now().getYear());
+    spinnerHigh.setValue(LocalDate.now().getYear());
   }
 
   @Override
-  protected Integer parseStringToType(String string) throws Exception {
-    return Integer.parseInt(string);
+  public void setFilterValue(Object value) {
+    String[] values = value.toString().split(",");
+    if (values.length > 0) {
+      spinnerLow.setValue(MetadataUtil.parseInt(values[0], LocalDate.now().getYear()));
+    }
+    if (values.length > 1) {
+      spinnerHigh.setValue(MetadataUtil.parseInt(values[1], LocalDate.now().getYear()));
+    }
+  }
+
+  @Override
+  protected SpinnerNumberModel getNumberModel() {
+    return new SpinnerNumberModel(LocalDate.now().getYear(), 1800, 2100, 1);
   }
 
   @Override
   protected boolean accept(TvShow tvShow, List<TvShowEpisode> episodes, boolean invert) {
-    List<Integer> selectedItems = checkComboBox.getSelectedItems();
-    return invert ^ selectedItems.contains(tvShow.getYear());
+    return invert ^ matchInt(tvShow.getYear());
   }
 
-  private void buildYearArray() {
-    Set<Integer> yearSet = new HashSet<>();
-    tvShowList.getTvShows().forEach(tvShow -> yearSet.add(tvShow.getYear()));
-    List<Integer> years = new ArrayList<>(ListUtils.asSortedList(yearSet));
-    Collections.sort(years);
-    setValues(years);
+  @Override
+  protected JLabel createLabel() {
+    return new TmmLabel(TmmResourceBundle.getString("metatag.year"));
   }
 }

@@ -3,25 +3,40 @@ package org.tinymediamanager.core.tvshow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Locale;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.tinymediamanager.TmmOsUtils;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonBannerNaming;
+import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonFanartNaming;
+import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonPosterNaming;
+import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonThumbNaming;
 import org.tinymediamanager.core.tvshow.tasks.TvShowRenameTask;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 
 public class TvShowRenamerTest extends BasicTvShowTest {
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+
+    // load MI
+    TmmOsUtils.loadNativeLibs();
+  }
 
   private TvShow createSingleTvShow() {
     // setup dummy
@@ -752,5 +767,310 @@ public class TvShowRenamerTest extends BasicTvShowTest {
   private void renameTvShow(TvShow tvShow) {
     TvShowRenameTask task = new TvShowRenameTask(Collections.singletonList(tvShow), tvShow.getEpisodes());
     task.run(); // blocking
+  }
+
+  /**
+   * Helper method to create a TV show with season artwork for testing season file naming patterns. Follows the same setup pattern as
+   * testSimpleEpisodeWithSeasonArtwork.
+   */
+  private TvShow createShowWithSeasonArtwork(String testName, MediaFileType artworkType, String extension) throws Exception {
+    Path destination = getWorkFolder().resolve("season_naming").resolve(testName);
+    FileUtils.deleteDirectory(destination.toFile());
+    FileUtils.forceMkdir(destination.toFile());
+
+    TvShow show = new TvShow();
+    show.setTitle("Breaking Bad");
+    show.setYear(2008);
+    show.setDataSource(destination.getParent().toAbsolutePath().toString());
+    show.setPath(destination.toAbsolutePath().toString());
+    TvShowList.getInstance().addTvShow(show);
+
+    // Create episodes for seasons 0 and 1 to drive the renamer
+    TvShowEpisode ep0 = new TvShowEpisode();
+    ep0.setTvShow(show);
+    ep0.setTitle("Special 1");
+    ep0.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 0, 1));
+    MediaFile mf0 = new MediaFile(destination.resolve("S00E01.mkv").toAbsolutePath());
+    ep0.addToMediaFiles(mf0);
+    show.addEpisode(ep0);
+
+    TvShowEpisode ep1 = new TvShowEpisode();
+    ep1.setTvShow(show);
+    ep1.setTitle("Pilot");
+    ep1.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 1));
+    MediaFile mf1 = new MediaFile(destination.resolve("S01E01.mkv").toAbsolutePath());
+    ep1.addToMediaFiles(mf1);
+    show.addEpisode(ep1);
+
+    // Attach season artwork sources for seasons 0 and 1
+    for (int seasonNr : Arrays.asList(0, 1)) {
+      TvShowSeason season = show.getOrCreateSeason(seasonNr);
+      String artworkName = String.format("season%02d-%s.%s", seasonNr, artworkType.name().toLowerCase(Locale.ROOT).replace("season_", ""), extension);
+      Path artworkPath = destination.resolve(artworkName).toAbsolutePath();
+
+      // Create the artwork file
+      FileUtils.forceMkdirParent(artworkPath.toFile());
+      FileUtils.writeStringToFile(artworkPath.toFile(), "", StandardCharsets.UTF_8);
+
+      MediaFile mf = new MediaFile(artworkPath, artworkType);
+      mf.gatherMediaInformation();
+      season.addToMediaFiles(mf);
+    }
+
+    return show;
+  }
+
+  /**
+   * Helper method to verify that expected season artwork files exist after renaming
+   */
+  private void assertSeasonArtworkExists(TvShow show, int seasonNr, String expectedFilename) {
+    if (expectedFilename == null || expectedFilename.isEmpty()) {
+      return;
+    }
+    Path showDir = Paths.get(show.getPath());
+    Path target = showDir.resolve(expectedFilename);
+    assertThat(target).as("Season %d artwork file should exist: %s", seasonNr, expectedFilename).exists();
+  }
+
+  // =====================================================================================
+  // Season Poster Naming Tests
+  // =====================================================================================
+
+  @Test
+  public void testSeasonPosterNaming_SEASON_POSTER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonPosterFilenames();
+    settings.addSeasonPosterFilename(TvShowSeasonPosterNaming.SEASON_POSTER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("poster_season_poster", MediaFileType.SEASON_POSTER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "season-specials-poster.jpg");
+    assertSeasonArtworkExists(show, 1, "season01-poster.jpg");
+  }
+
+  @Test
+  public void testSeasonPosterNaming_SEASON_FOLDER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonPosterFilenames();
+    settings.addSeasonPosterFilename(TvShowSeasonPosterNaming.SEASON_FOLDER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("poster_season_folder", MediaFileType.SEASON_POSTER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season-specials-poster.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/season01-poster.jpg");
+  }
+
+  @Test
+  public void testSeasonPosterNaming_SEASON_FOLDER2() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonPosterFilenames();
+    settings.addSeasonPosterFilename(TvShowSeasonPosterNaming.SEASON_FOLDER2);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("poster_season_folder2", MediaFileType.SEASON_POSTER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season-specials.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/season01.jpg");
+  }
+
+  @Test
+  public void testSeasonPosterNaming_FOLDER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonPosterFilenames();
+    settings.addSeasonPosterFilename(TvShowSeasonPosterNaming.FOLDER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("poster_folder", MediaFileType.SEASON_POSTER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/folder.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/folder.jpg");
+  }
+
+  @Test
+  public void testSeasonPosterNaming_POSTER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonPosterFilenames();
+    settings.addSeasonPosterFilename(TvShowSeasonPosterNaming.POSTER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("poster_poster", MediaFileType.SEASON_POSTER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/poster.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/poster.jpg");
+  }
+
+  @Test
+  public void testSeasonPosterNaming_COVER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonPosterFilenames();
+    settings.addSeasonPosterFilename(TvShowSeasonPosterNaming.COVER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("poster_cover", MediaFileType.SEASON_POSTER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/cover.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/cover.jpg");
+  }
+
+  // =====================================================================================
+  // Season Fanart Naming Tests
+  // =====================================================================================
+
+  @Test
+  public void testSeasonFanartNaming_SEASON_FANART() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonFanartFilenames();
+    settings.addSeasonFanartFilename(TvShowSeasonFanartNaming.SEASON_FANART);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("fanart_season_fanart", MediaFileType.SEASON_FANART, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "season-specials-fanart.jpg");
+    assertSeasonArtworkExists(show, 1, "season01-fanart.jpg");
+  }
+
+  @Test
+  public void testSeasonFanartNaming_SEASON_FOLDER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonFanartFilenames();
+    settings.addSeasonFanartFilename(TvShowSeasonFanartNaming.SEASON_FOLDER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("fanart_season_folder", MediaFileType.SEASON_FANART, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season-specials-fanart.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/season01-fanart.jpg");
+  }
+
+  // =====================================================================================
+  // Season Banner Naming Tests
+  // =====================================================================================
+
+  @Test
+  public void testSeasonBannerNaming_SEASON_BANNER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonBannerFilenames();
+    settings.addSeasonBannerFilename(TvShowSeasonBannerNaming.SEASON_BANNER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("banner_season_banner", MediaFileType.SEASON_BANNER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "season-specials-banner.jpg");
+    assertSeasonArtworkExists(show, 1, "season01-banner.jpg");
+  }
+
+  @Test
+  public void testSeasonBannerNaming_SEASON_FOLDER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonBannerFilenames();
+    settings.addSeasonBannerFilename(TvShowSeasonBannerNaming.SEASON_FOLDER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("banner_season_folder", MediaFileType.SEASON_BANNER, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season-specials-banner.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/season01-banner.jpg");
+  }
+
+  // =====================================================================================
+  // Season Thumb Naming Tests
+  // =====================================================================================
+
+  @Test
+  public void testSeasonThumbNaming_SEASON_THUMB() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonThumbFilenames();
+    settings.addSeasonThumbFilename(TvShowSeasonThumbNaming.SEASON_THUMB);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("thumb_season_thumb", MediaFileType.SEASON_THUMB, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "season-specials-thumb.jpg");
+    assertSeasonArtworkExists(show, 1, "season01-thumb.jpg");
+  }
+
+  @Test
+  public void testSeasonThumbNaming_SEASON_FOLDER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonThumbFilenames();
+    settings.addSeasonThumbFilename(TvShowSeasonThumbNaming.SEASON_FOLDER);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("thumb_season_folder", MediaFileType.SEASON_THUMB, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season-specials-thumb.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/season01-thumb.jpg");
+  }
+
+  @Test
+  public void testSeasonThumbNaming_SEASON_LANDSCAPE() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonThumbFilenames();
+    settings.addSeasonThumbFilename(TvShowSeasonThumbNaming.SEASON_LANDSCAPE);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("thumb_season_landscape", MediaFileType.SEASON_THUMB, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "season-specials-landscape.jpg");
+    assertSeasonArtworkExists(show, 1, "season01-landscape.jpg");
+  }
+
+  @Test
+  public void testSeasonThumbNaming_SEASON_FOLDER_LANDSCAPE() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonThumbFilenames();
+    settings.addSeasonThumbFilename(TvShowSeasonThumbNaming.SEASON_FOLDER_LANDSCAPE);
+    settings.setSpecialSeason(true);
+
+    TvShow show = createShowWithSeasonArtwork("thumb_season_folder_landscape", MediaFileType.SEASON_THUMB, "jpg");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season-specials-landscape.jpg");
+    assertSeasonArtworkExists(show, 1, "Season 1/season01-landscape.jpg");
+  }
+
+  // =====================================================================================
+  // Season NFO Naming Tests
+  // =====================================================================================
+
+  @Test
+  public void testSeasonNfoNaming_SEASON() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonNfoFilenames();
+    settings.addSeasonNfoFilename(TvShowSeasonNfoNaming.SEASON);
+
+    TvShow show = createShowWithSeasonArtwork("nfo_season", MediaFileType.NFO, "nfo");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "season-specials.nfo");
+    assertSeasonArtworkExists(show, 1, "season01.nfo");
+  }
+
+  @Test
+  public void testSeasonNfoNaming_SEASON_FOLDER() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.clearSeasonNfoFilenames();
+    settings.addSeasonNfoFilename(TvShowSeasonNfoNaming.SEASON_FOLDER);
+
+    TvShow show = createShowWithSeasonArtwork("nfo_season_folder", MediaFileType.NFO, "nfo");
+    renameTvShow(show);
+
+    assertSeasonArtworkExists(show, 0, "Specials/season.nfo");
+    assertSeasonArtworkExists(show, 1, "Season 1/season.nfo");
   }
 }

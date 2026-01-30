@@ -347,7 +347,7 @@ public class TvShowSettingsDefaults {
     tvShowSettings.keyartFilenames.add(TvShowKeyartNaming.KEYART);
 
     tvShowSettings.seasonPosterFilenames.clear();
-    tvShowSettings.seasonPosterFilenames.add(TvShowSeasonPosterNaming.SEASON_FOLDER);
+    tvShowSettings.seasonPosterFilenames.add(TvShowSeasonPosterNaming.POSTER);
 
     tvShowSettings.seasonFanartFilenames.clear();
     tvShowSettings.seasonFanartFilenames.add(TvShowSeasonFanartNaming.SEASON_FANART);

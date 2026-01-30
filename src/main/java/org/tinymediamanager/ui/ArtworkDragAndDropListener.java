@@ -132,9 +132,8 @@ public class ArtworkDragAndDropListener implements DropTargetListener {
       }
 
       File file = imageFiles[0];
-      String fileName = file.getAbsolutePath();
       imageLabel.clearImage();
-      imageLabel.setImageUrl("file:/" + fileName);
+      imageLabel.setImageUrl(file.toURI().toString());
     }
     catch (Throwable t) {
       LOGGER.error("An error occurred while processing the dropped file: ", t);

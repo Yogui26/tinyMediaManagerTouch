@@ -73,26 +73,8 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
 
     Comparator<MediaCertification> certificationComparator = new CertificationComparator();
     Comparator<String> stringComparator = new StringComparator();
-    Comparator<Integer> integerComparator = Comparator.comparingInt(o -> o);
-    Comparator<String> floatComparator = (o1, o2) -> {
-      float value1 = 0;
-      float value2 = 0;
-
-      try {
-        value1 = Float.parseFloat(o1);
-      }
-      catch (Exception ignored) {
-        // do nothing
-      }
-      try {
-        value2 = Float.parseFloat(o2);
-      }
-      catch (Exception ignored) {
-        // do nothing
-      }
-
-      return Float.compare(value1, value2);
-    };
+    Comparator<Integer> integerComparator = new IntegerComparator();
+    Comparator<Float> floatComparator = new FloatComparator();
     Comparator<Date> dateComparator = new DateComparator();
     Comparator<Date> dateTimeComparator = new DateTimeComparator();
     Comparator<ImageIcon> imageComparator = new ImageComparator();
@@ -190,7 +172,7 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     /*
      * rating
      */
-    col = new Column(TmmResourceBundle.getString("metatag.rating"), "rating", this::getRating, String.class);
+    col = new Column(TmmResourceBundle.getString("metatag.rating"), "rating", this::getRating, Float.class);
     col.setHeaderIcon(IconManager.RATING);
     col.setCellRenderer(new RightAlignTableCellRenderer());
     col.setColumnResizeable(false);
@@ -684,12 +666,12 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     return null;
   }
 
-  private String getRating(TmmTreeNode node) {
+  private Float getRating(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShow || userObject instanceof TvShowEpisode) {
       MediaRating mediaRating = ((MediaEntity) userObject).getRating();
       if (mediaRating != null && mediaRating != MediaMetadata.EMPTY_RATING && mediaRating.getRating() > 0) {
-        return String.valueOf(mediaRating.getRating());
+        return mediaRating.getRatingNormalized();
       }
     }
     return null;

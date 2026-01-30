@@ -1,3 +1,26 @@
+Version 5.2.7
+=======================
++ [Trailer] integrated deno for yt-dlp #3200
+---
+x [UI] fixed sorting of the rating column in the TV show module
+x [WOL] send WOL magic packets twice to improve wake-up reliability #3178
+
+
+Version 5.2.6
+=======================
++ [TV shows] added support for more Jellyfin compatible season poster filenames #3187
+---
+x [UI] show normalized rating values (0...10) in the rating column
+x [UI] fixed sorting of the file size columns
+x [UI] re-set the maximum value of the width/height slider in the image chooser while scraping images
+x [TV shows] year filtering now matches the modern movie filter style
+x [Movies] fixed skipping of folder with .tmmignore, tmmignore or .nomedia in it
+x [Movies, TV shows] fixed loading of unscraped and newly added items #3190
+y [Fanart.tv] improved fallback to TMDB id lookup when IMDb id lookup fails
+x [Linux] fixed startup if libmediainfo is missing #3191
+x [Updater] fixed downloading on incomplete/corrupted updates
+
+
 Version 5.2.5
 =======================
 + [TV shows] added taglines for TV shows #3173

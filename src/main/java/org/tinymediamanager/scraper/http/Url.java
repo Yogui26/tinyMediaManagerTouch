@@ -293,9 +293,12 @@ public class Url {
   public InputStream getInputStream(boolean headRequest) throws IOException, InterruptedException {
     // workaround for local files
     if (url.startsWith("file:")) {
-      String newUrl = url.replace("file:/", "");
-      File file = new File(newUrl);
-      return new FileInputStream(file);
+      try {
+        return new FileInputStream(Path.of(new URI(url)).toFile());
+      }
+      catch (Exception e) {
+        throw new IOException(e);
+      }
     }
 
     InputStream is = null;
