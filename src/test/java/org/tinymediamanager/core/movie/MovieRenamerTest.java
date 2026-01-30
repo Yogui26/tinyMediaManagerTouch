@@ -67,6 +67,27 @@ public class MovieRenamerTest extends BasicMovieTest {
   }
 
   @Test
+  public void testRenameSingleMovieFolderOnlyCleanup() throws Exception {
+    try {
+      initTest();
+
+      MovieModuleManager.getInstance().getSettings().setRenamerPathname("");
+      MovieModuleManager.getInstance().getSettings().setRenamerFilename("");
+
+      UdsMiRenamerExample example = new UdsMiRenamerExample("Single", "Aladdin", 1992, "singlefile.avi", "1080p", "h264", "Single");
+      example.oldFiles = new String[] { "singlefile.avi", "fanart.png", "movie.nfo", "singlefile-poster.png", "trailer.mp4", "extras/cut-scenes.mkv",
+          "trailer/trailer2.mp4" };
+      String movieBasename = "singlefile";
+      example.newFiles = new String[] { movieBasename + ".avi", movieBasename + "-fanart.png", movieBasename + ".nfo", movieBasename + "-poster.png",
+          movieBasename + "-trailer.mp4", "extras/cut-scenes.mkv", "trailer/trailer2.mp4" };
+      checkExample(example);
+    }
+    finally {
+      finishTest();
+    }
+  }
+
+  @Test
   public void testRenameSingleMovieFolderMultipleArtwork() throws Exception {
     try {
       initTest();
@@ -165,12 +186,15 @@ public class MovieRenamerTest extends BasicMovieTest {
     assertThat(movie.getPathNIO()).isEqualTo(moviePath);
     checkFiles(moviePath, example.newFiles);
 
-    // undo rename
+    // undo rename (if changes were made)
     MovieRenamer.undoRename(movie);
 
-    assertThat(moviePath).doesNotExist();
-    moviePath = datasource.resolve(example.oldFolder);
-    assertThat(movie.getPathNIO()).isEqualTo(moviePath);
+    if (!example.oldFolder.equals(example.newFolder)) {
+      assertThat(moviePath).doesNotExist();
+      moviePath = datasource.resolve(example.oldFolder);
+      assertThat(movie.getPathNIO()).isEqualTo(moviePath);
+    }
+
     checkFiles(moviePath, example.oldFiles);
   }
 

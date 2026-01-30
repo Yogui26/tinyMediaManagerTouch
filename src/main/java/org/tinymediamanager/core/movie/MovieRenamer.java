@@ -109,7 +109,8 @@ public class MovieRenamer {
   // to not use posix here
   private static final Pattern             TITLE_PATTERN               = Pattern.compile("\\$\\{.*?(title|originalTitle|englishTitle).*?\\}",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern             YEAR_ID_PATTERN             = Pattern.compile("\\$\\{.*?(year|imdb|tmdb).*?\\}", Pattern.CASE_INSENSITIVE);
+  private static final Pattern             YEAR_PATTERN                = Pattern.compile("\\$\\{.*?(year|imdb|tmdb).*?\\}", Pattern.CASE_INSENSITIVE);
+  private static final Pattern             ID_PATTERN                  = Pattern.compile("\\$\\{.*?(imdb|tmdb).*?\\}", Pattern.CASE_INSENSITIVE);
   private static final Pattern             ORIGINAL_FILENAME_PATTERN   = Pattern.compile("\\$\\{.*?originalFilename.*?\\}", Pattern.CASE_INSENSITIVE);
   private static final Pattern             TRAILER_STACKING_PATTERN    = Pattern.compile(".*?(\\d)$");
 
@@ -246,14 +247,6 @@ public class MovieRenamer {
    *          the movie
    */
   public static void renameMovie(Movie movie) {
-    // skip renamer, if all templates are empty!
-    if (MovieModuleManager.getInstance().getSettings().getRenamerPathname().isEmpty()
-        && MovieModuleManager.getInstance().getSettings().getRenamerFilename().isEmpty()) {
-      LOGGER.warn("NOT renaming Movie '{}' - renaming patterns are empty!", movie.getTitle());
-      return;
-    }
-
-    // FIXME: what? when?
     boolean posterRenamed = false;
     boolean fanartRenamed = false;
 
@@ -868,7 +861,6 @@ public class MovieRenamer {
       // Template empty or not even title set, so we are NOT renaming any files
       // we keep the same name on renaming ;)
       newVideoBasename = movie.getVideoBasenameWithoutStacking();
-      LOGGER.warn("File pattern '{}' is not valid - NOT renaming files!", MovieModuleManager.getInstance().getSettings().getRenamerFilename());
     }
     else {
       // since we rename, generate the new basename
@@ -912,29 +904,8 @@ public class MovieRenamer {
     // return list of all generated MFs
     List<MediaFile> newFiles = new ArrayList<>();
     boolean newDestIsMultiMovieDir = movie.isMultiMovieDir();
-    String newPathname = "";
 
-    String pattern = MovieModuleManager.getInstance().getSettings().getRenamerPathname();
-    // keep MMD setting unless renamer pattern is not empty
-    if (!pattern.isEmpty()) {
-      // re-evaluate multiMovieDir based on renamer settings
-      // folder MUST BE UNIQUE, so we need at least a T/E-Y combo or IMDBid
-      // If renaming just to a fixed pattern (eg "$S"), movie will downgrade to a MMD
-      newDestIsMultiMovieDir = !MovieRenamer.isFolderPatternUnique(pattern);
-      newPathname = MovieRenamer.createDestinationForFoldername(pattern, movie);
-    }
-    else {
-      // keep same dir
-      // Path relativize(Path other)
-      newPathname = Utils.relPath(Paths.get(movie.getDataSource()), movie.getPathNIO());
-    }
     Path newMovieDir = movie.getPathNIO();
-    try {
-      newMovieDir = Paths.get(movie.getDataSource(), newPathname);
-    }
-    catch (Exception e) {
-      LOGGER.warn("New movie folder name '{}' is not allowed - '{}'", newPathname, e.getMessage());
-    }
 
     String newFilename = newVideoFileName;
     if (StringUtils.isBlank(newFilename)) {
@@ -958,12 +929,6 @@ public class MovieRenamer {
     defaultMF.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
 
     Path relativePathOfMediafile = movie.getPathNIO().relativize(mf.getFileAsPath());
-
-    if (!isFilePatternValid() && !movie.isDisc()) {
-      // not renaming files, but IF we have a folder pattern, we need to move around! (but NOT disc movies!)
-      newFiles.add(defaultMF);
-      return newFiles;
-    }
 
     switch (mf.getType()) {
       case VIDEO:
@@ -1680,14 +1645,14 @@ public class MovieRenamer {
 
   /**
    * Check if the folder rename pattern is unique<br>
-   * Unique true, when having at least a $T/$E-$Y combo or $I imdbId<br>
+   * Unique true, when having at least a title/year combo or imdbId and/or tmdbId<br>
    *
    * @param pattern
    *          the pattern to check the uniqueness for
    * @return true/false
    */
   public static boolean isFolderPatternUnique(String pattern) {
-    return TITLE_PATTERN.matcher(pattern).find() && YEAR_ID_PATTERN.matcher(pattern).find();
+    return (TITLE_PATTERN.matcher(pattern).find() && YEAR_PATTERN.matcher(pattern).find()) || ID_PATTERN.matcher(pattern).find();
   }
 
   /**
@@ -1709,7 +1674,7 @@ public class MovieRenamer {
    * @return true/false
    */
   public static boolean isFilePatternValid(String pattern) {
-    return TITLE_PATTERN.matcher(pattern).find() || ORIGINAL_FILENAME_PATTERN.matcher(pattern).find();
+    return TITLE_PATTERN.matcher(pattern).find() || ORIGINAL_FILENAME_PATTERN.matcher(pattern).find() || ID_PATTERN.matcher(pattern).find();
   }
 
   /**
