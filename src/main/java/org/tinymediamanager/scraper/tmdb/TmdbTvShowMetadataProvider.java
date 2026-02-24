@@ -78,6 +78,7 @@ import org.tinymediamanager.scraper.tmdb.entities.BaseKeyword;
 import org.tinymediamanager.scraper.tmdb.entities.BaseTvEpisode;
 import org.tinymediamanager.scraper.tmdb.entities.BaseTvShow;
 import org.tinymediamanager.scraper.tmdb.entities.CastMember;
+import org.tinymediamanager.scraper.tmdb.entities.Certifications;
 import org.tinymediamanager.scraper.tmdb.entities.ContentRating;
 import org.tinymediamanager.scraper.tmdb.entities.CrewMember;
 import org.tinymediamanager.scraper.tmdb.entities.FindResults;
@@ -1630,5 +1631,33 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
       case 4, 5, 6, 7 -> MediaEpisodeGroup.EpisodeGroupType.ALTERNATE;
       default -> null;
     };
+  }
+
+  /**
+   * Returns all RAW tvshow certs from TMDB <br>
+   * 
+   * @return Certification map (key=country) or NULL
+   * @throws ScrapeException
+   *           on API init
+   */
+  public Certifications getAllPossibleCertifications() throws ScrapeException {
+    LOGGER.debug("getAllPossibleCertifications()");
+    // lazy initialization of the api
+    initAPI();
+
+    try {
+      Response<Certifications> httpResponse = api.certificationService().getTvShowCertification().execute();
+      if (!httpResponse.isSuccessful()) {
+        throw new HttpException(httpResponse.code(), httpResponse.message());
+      }
+      Certifications certs = httpResponse.body();
+      return certs;
+    }
+    catch (Exception e) {
+      LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+      // throw new ScrapeException(e); // nah
+    }
+
+    return null;
   }
 }

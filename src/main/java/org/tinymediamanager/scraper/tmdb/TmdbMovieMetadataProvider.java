@@ -69,6 +69,7 @@ import org.tinymediamanager.scraper.tmdb.entities.BaseCompany;
 import org.tinymediamanager.scraper.tmdb.entities.BaseKeyword;
 import org.tinymediamanager.scraper.tmdb.entities.BaseMovie;
 import org.tinymediamanager.scraper.tmdb.entities.CastMember;
+import org.tinymediamanager.scraper.tmdb.entities.Certifications;
 import org.tinymediamanager.scraper.tmdb.entities.Collection;
 import org.tinymediamanager.scraper.tmdb.entities.CollectionResultsPage;
 import org.tinymediamanager.scraper.tmdb.entities.Country;
@@ -1029,5 +1030,33 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     else {
       return false;
     }
+  }
+
+  /**
+   * Returns all RAW movie certs from TMDB <br>
+   * 
+   * @return Certification map (key=country) or NULL
+   * @throws ScrapeException
+   *           on API init
+   */
+  public Certifications getAllPossibleCertifications() throws ScrapeException {
+    LOGGER.debug("getAllPossibleCertifications()");
+    // lazy initialization of the api
+    initAPI();
+
+    try {
+      Response<Certifications> httpResponse = api.certificationService().getMovieCertification().execute();
+      if (!httpResponse.isSuccessful()) {
+        throw new HttpException(httpResponse.code(), httpResponse.message());
+      }
+      Certifications certs = httpResponse.body();
+      return certs;
+    }
+    catch (Exception e) {
+      LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+      // throw new ScrapeException(e); // nah
+    }
+
+    return null;
   }
 }

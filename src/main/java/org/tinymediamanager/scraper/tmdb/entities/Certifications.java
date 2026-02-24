@@ -13,6 +13,9 @@ public class Certifications {
 
   }
 
+  /**
+   * key = country
+   */
   public HashMap<String, List<Certification>> certifications;
 
 }

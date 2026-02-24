@@ -65,6 +65,7 @@ import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkTypeRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.CompanyBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.ContentRating;
+import org.tinymediamanager.scraper.thetvdb.entities.ContentRatingResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.EpisodeBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.EpisodeExtendedRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.EpisodeExtendedResponse;
@@ -1172,5 +1173,40 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     TvShowSearchAndScrapeOptions saso = new TvShowSearchAndScrapeOptions();
     saso.setDataFromOtherOptions(options);
     return getMetadata(saso).getTrailers();
+  }
+
+  /**
+   * Returns all RAW tvshow certs from TVDB <br>
+   * 
+   * @return list of ContentRating or EMPTY
+   * @throws ScrapeException
+   *           on API init
+   */
+  public List<ContentRating> getAllPossibleCertifications() throws ScrapeException {
+    List<ContentRating> ret = new ArrayList<>();
+
+    LOGGER.debug("getAllPossibleCertifications()");
+    // lazy initialization of the api
+    initAPI();
+
+    try {
+      Response<ContentRatingResponse> httpResponse = tvdb.getConfigService().getCertifications().execute();
+      if (!httpResponse.isSuccessful()) {
+        throw new HttpException(httpResponse.code(), httpResponse.message());
+      }
+      ContentRatingResponse certs = httpResponse.body();
+      for (ContentRating cert : certs.data) {
+        if (!cert.contentType.equals("movie")) {
+          ret.add(cert);
+        }
+      }
+      return ret;
+    }
+    catch (Exception e) {
+      LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+      // throw new ScrapeException(e); // nah
+    }
+
+    return ret;
   }
 }
