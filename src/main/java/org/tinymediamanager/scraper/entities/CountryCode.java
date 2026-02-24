@@ -339,9 +339,7 @@ public enum CountryCode {
   // /** <a href="http://en.wikipedia.org/wiki/Gabon">Gabon </a> */
   // GA("Gabon", "GAB", 266),
   //
-  /**
-   * <a href="http://en.wikipedia.org/wiki/United_Kingdom">United Kingdom</a>
-   */
+  /** <a href="http://en.wikipedia.org/wiki/United_Kingdom">United Kingdom</a> */
   GB("United Kingdom", "GBR", 826),
   //
   // /** <a href="http://en.wikipedia.org/wiki/Grenada">Grenada</a> */
@@ -441,9 +439,7 @@ public enum CountryCode {
   /** <a href="http://en.wikipedia.org/wiki/India">India</a> */
   IN("India", "IND", 356),
   //
-  /**
-   * <a href="http://en.wikipedia.org/wiki/British_Indian_Ocean_Territory"> British Indian Ocean Territory</a>
-   */
+  /** <a href="http://en.wikipedia.org/wiki/British_Indian_Ocean_Territory"> British Indian Ocean Territory</a> */
   IO("British Indian Ocean Territory", "IOT", 86),
   //
   /** <a href="http://en.wikipedia.org/wiki/Iraq">Iraq</a> */
@@ -498,9 +494,7 @@ public enum CountryCode {
   // */
   // KP("Democratic People's Republic of Korea", "PRK", 408),
   //
-  /**
-   * <a href="http://en.wikipedia.org/wiki/South_Korea">Republic of Korea</a>
-   */
+  /** <a href="http://en.wikipedia.org/wiki/South_Korea">Republic of Korea</a> */
   KR("Republic of Korea", "KOR", 410),
   //
   /** <a href="http://en.wikipedia.org/wiki/Kuwait">Kuwait</a> */
@@ -542,7 +536,7 @@ public enum CountryCode {
   LT("Lithuania", "LTU", 440),
   //
   // /** <a href="http://en.wikipedia.org/wiki/Luxembourg">Luxembourg</a> */
-  // LU("Luxembourg", "LUX", 442),
+  LU("Luxembourg", "LUX", 442),
   //
   /** <a href="http://en.wikipedia.org/wiki/Latvia">Latvia</a> */
   LV("Latvia", "LVA", 428),
@@ -578,9 +572,7 @@ public enum CountryCode {
   // */
   // MH("Marshall Islands", "MHL", 584),
   //
-  /**
-   * <a href="http://en.wikipedia.org/wiki/Republic_of_Macedonia">The former Yugoslav Republic of Macedonia</a>
-   */
+  /** <a href="http://en.wikipedia.org/wiki/Republic_of_Macedonia">The former Yugoslav Republic of Macedonia</a> */
   MK("The former Yugoslav Republic of Macedonia", "MKD", 807),
   //
   // /** <a href="http://en.wikipedia.org/wiki/Mali">Mali</a> */
@@ -592,8 +584,8 @@ public enum CountryCode {
   // /** <a href="http://en.wikipedia.org/wiki/Mongolia">Mongolia</a> */
   // MN("Mongolia", "MNG", 496),
   //
-  // /** <a href="http://en.wikipedia.org/wiki/Macau">Macao</a> */
-  // MO("Macao", "MCO", 492),
+  /** <a href="http://en.wikipedia.org/wiki/Macau">Macao</a> */
+  MO("Macao", "MCO", 492),
   //
   // /**
   // * <a href="http://en.wikipedia.org/wiki/Northern_Mariana_Islands">Northern
@@ -708,8 +700,8 @@ public enum CountryCode {
   // /** <a href="http://en.wikipedia.org/wiki/Pitcairn_Islands">Pitcairn</a> */
   // PN("Pitcairn", "PCN", 612),
   //
-  // /** <a href="http://en.wikipedia.org/wiki/Puerto_Rico">Puerto Rico</a> */
-  // PR("Puerto Rico", "PRI", 630),
+  /** <a href="http://en.wikipedia.org/wiki/Puerto_Rico">Puerto Rico</a> */
+  PR("Puerto Rico", "PRI", 630),
   //
   // /**
   // * <a href="http://en.wikipedia.org/wiki/Palestinian_territories">Occupied
@@ -878,9 +870,7 @@ public enum CountryCode {
   // /** <a href="http://en.wikipedia.org/wiki/Tuvalu">Tuvalu</a> */
   // TV("Tuvalu", "TUV", 798),
   //
-  /**
-   * <a href="http://en.wikipedia.org/wiki/Taiwan">Taiwan, Province of China</a>
-   */
+  /** <a href="http://en.wikipedia.org/wiki/Taiwan">Taiwan, Province of China</a> */
   TW("Taiwan, Province of China", "TWN", 158),
   //
   // /**
@@ -924,9 +914,7 @@ public enum CountryCode {
   // */
   // VC("Saint Vincent and the Grenadines", "VCT", 670),
   //
-  /**
-   * <a href="http://en.wikipedia.org/wiki/Venezuela">Bolivarian Republic of Venezuela</a>
-   */
+  /** <a href="http://en.wikipedia.org/wiki/Venezuela">Bolivarian Republic of Venezuela</a> */
   VE("Bolivarian Republic of Venezuela", "VEN", 862),
   //
   // /**
@@ -935,13 +923,9 @@ public enum CountryCode {
   // */
   // VG("British Virgin Islands", "VGB", 92),
   //
-  // /**
-  // * <a
-  // href="http://en.wikipedia.org/wiki/United_States_Virgin_Islands">Virgin
-  // * Islands, U.S.</a>
-  // */
-  // VI("Virgin Islands, U.S.", "VIR", 850),
-  //
+  /** <a href="http://en.wikipedia.org/wiki/United_States_Virgin_Islands">Virgin Islands, U.S.</a> */
+  VI("Virgin Islands, U.S.", "VIR", 850),
+
   /** <a href="http://en.wikipedia.org/wiki/Vietnam">Viet Nam</a> */
   VN("Viet Nam", "VNM", 704),
   //

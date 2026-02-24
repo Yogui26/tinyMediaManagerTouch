@@ -37,9 +37,11 @@ public enum MediaCertification {
   //
   // list generated with org.tinymediamanager.scraper.util.ITCertifications
 
-  // well known / most used certifications will be on top
-  NOT_RATED(CountryCode.US, "NR", new String[] { "Not Rated", "NR" }),
+  // Global NR/UR catch-all - ignore them, as they do not have a proper meaning...
+  NOT_RATED(null, "NR", new String[] { "Not Rated", "NR" }),
+  UNRATED(null, "UR", new String[] { "Unrated", "UR" }),
 
+  // well known / most used certifications will be on top
   US_APPROVED(CountryCode.US, "Approved", new String[] { "Approved" }),
   US_G(CountryCode.US, "G", new String[] { "G", "Rated G" }),
   US_NC17(CountryCode.US, "NC-17", new String[] { "NC-17", "Rated NC-17" }),
@@ -87,8 +89,8 @@ public enum MediaCertification {
   DE_FSK18(CountryCode.DE, "FSK 18", new String[] { "FSK 18", "FSK-18", "FSK18", "18", "ab 18" }),
   DE_FSK6(CountryCode.DE, "FSK 6", new String[] { "FSK 6", "FSK-6", "FSK6", "6", "ab 6" }),
   DE_Infoprogrammgem14JuSchG(CountryCode.DE, "Infoprogramm gemäß § 14 JuSchG", new String[] { "Infoprogramm gemäß § 14 JuSchG" }),
-  DE_Notrated(CountryCode.DE, "Not rated", new String[] { "Not rated" }),
-  DE_Unrated(CountryCode.DE, "Unrated", new String[] { "Unrated" }),
+  // DE_Notrated(CountryCode.DE, "Not rated", new String[] { "Not rated" }),
+  // DE_Unrated(CountryCode.DE, "Unrated", new String[] { "Unrated" }),
   DE_X(CountryCode.DE, "X", new String[] { "X" }),
 
   // others down here
@@ -101,7 +103,7 @@ public enum MediaCertification {
   AE_21(CountryCode.AE, "21+", new String[] { "21+" }),
   AE_FAM(CountryCode.AE, "FAM", new String[] { "FAM" }),
   AE_G(CountryCode.AE, "G", new String[] { "G" }),
-  AE_NotRated(CountryCode.AE, "Not Rated", new String[] { "Not Rated" }),
+  // AE_NotRated(CountryCode.AE, "Not Rated", new String[] { "Not Rated" }),
   AE_PG(CountryCode.AE, "PG", new String[] { "PG" }),
   AE_PG12(CountryCode.AE, "PG-12", new String[] { "PG-12", "PG12" }),
   AE_PG13(CountryCode.AE, "PG-13", new String[] { "PG-13", "PG13" }),
@@ -131,12 +133,17 @@ public enum MediaCertification {
   AR_7(CountryCode.AR, "7", new String[] { "7" }),
   AR_ATP(CountryCode.AR, "ATP", new String[] { "ATP" }),
   AR_C(CountryCode.AR, "C", new String[] { "C" }),
+  AR_SAM13(CountryCode.AR, "SAM 13", new String[] { "SAM 13" }),
+  AR_SAM16(CountryCode.AR, "SAM 16", new String[] { "SAM 16" }),
+  AR_SAM18(CountryCode.AR, "SAM 18", new String[] { "SAM 18" }),
 
   AT_10(CountryCode.AT, "10", new String[] { "10" }),
   AT_12(CountryCode.AT, "12", new String[] { "12" }),
   AT_14(CountryCode.AT, "14", new String[] { "14" }),
   AT_16(CountryCode.AT, "16", new String[] { "16" }),
   AT_6(CountryCode.AT, "6", new String[] { "6" }),
+  AT_8(CountryCode.AT, "8", new String[] { "8" }),
+  AT_AA(CountryCode.AT, "AA", new String[] { "AA" }),
   AT_Unrestricted(CountryCode.AT, "Unrestricted", new String[] { "Unrestricted" }),
 
   AU_C(CountryCode.AU, "C", new String[] { "C" }),
@@ -160,7 +167,7 @@ public enum MediaCertification {
   BD_A(CountryCode.BD, "A", new String[] { "A" }),
   BD_Banned(CountryCode.BD, "Banned", new String[] { "Banned" }),
   BD_NonCommercial(CountryCode.BD, "Non-Commercial", new String[] { "Non-Commercial" }),
-  BD_NotRated(CountryCode.BD, "Not Rated", new String[] { "Not Rated" }),
+  // BD_NotRated(CountryCode.BD, "Not Rated", new String[] { "Not Rated" }),
   BD_U(CountryCode.BD, "U", new String[] { "U" }),
 
   BE_12(CountryCode.BE, "12", new String[] { "12" }),
@@ -169,7 +176,7 @@ public enum MediaCertification {
   BE_18(CountryCode.BE, "18", new String[] { "18" }),
   BE_6(CountryCode.BE, "6", new String[] { "6" }),
   BE_9(CountryCode.BE, "9", new String[] { "9" }),
-  BE_ALTOUS(CountryCode.BE, "AL/TOUS", new String[] { "AL/TOUS" }),
+  BE_ALTOUS(CountryCode.BE, "AL/TOUS", new String[] { "AL/TOUS", "AL" }),
   BE_KNT(CountryCode.BE, "KNT", new String[] { "KNT" }),
   BE_KT(CountryCode.BE, "KT", new String[] { "KT" }),
 
@@ -178,12 +185,12 @@ public enum MediaCertification {
   BG_14(CountryCode.BG, "14", new String[] { "14" }),
   BG_16(CountryCode.BG, "16", new String[] { "16" }),
   BG_18(CountryCode.BG, "18", new String[] { "18" }),
-  BG_A(CountryCode.BG, "A", new String[] { "A" }),
-  BG_B(CountryCode.BG, "B", new String[] { "B" }),
-  BG_C(CountryCode.BG, "C", new String[] { "C", "C+" }),
-  BG_D(CountryCode.BG, "D", new String[] { "D", "D+" }),
-  BG_Unrated(CountryCode.BG, "Unrated", new String[] { "Unrated" }),
-  BG_X(CountryCode.BG, "X", new String[] { "X" }),
+  BG_A(CountryCode.BG, "A", new String[] { "A" }), // children
+  BG_B(CountryCode.BG, "B", new String[] { "B" }), // for all / no restriction
+  BG_C(CountryCode.BG, "C", new String[] { "C", "C+" }), // 12+
+  BG_D(CountryCode.BG, "D", new String[] { "D", "D+" }), // 16+
+  // BG_Unrated(CountryCode.BG, "Unrated", new String[] { "Unrated" }), // all ages according TMDB
+  BG_X(CountryCode.BG, "X", new String[] { "X" }), // 18+
 
   BR_10(CountryCode.BR, "10", new String[] { "10", "BR-10" }),
   BR_12(CountryCode.BR, "12", new String[] { "12", "BR-12" }),
@@ -203,24 +210,30 @@ public enum MediaCertification {
   BS_D(CountryCode.BS, "D", new String[] { "D" }),
   BS_T(CountryCode.BS, "T", new String[] { "T" }),
 
+  CAQC_13(CountryCode.CA, "13+", new String[] { "13", "13+" }),
+  CAQC_16(CountryCode.CA, "16+", new String[] { "16", "16+" }),
+  CAQC_18(CountryCode.CA, "18+", new String[] { "18", "18+" }),
+  CAQC_8(CountryCode.CA, "8+", new String[] { "8", "8+" }),
+  CAQC_G(CountryCode.CA, "G", new String[] { "G" }),
+
   CA_13(CountryCode.CA, "13", new String[] { "13", "13+" }),
-  CA_14(CountryCode.CA, "14+", new String[] { "14+" }),
+  CA_14(CountryCode.CA, "14+", new String[] { "14", "14+" }),
   CA_14A(CountryCode.CA, "14A", new String[] { "14A" }),
   CA_16(CountryCode.CA, "16", new String[] { "16", "16+" }),
   CA_18(CountryCode.CA, "18", new String[] { "18", "18+" }),
   CA_18A(CountryCode.CA, "18A", new String[] { "18A" }),
   CA_7(CountryCode.CA, "7+", new String[] { "7+" }),
   CA_8(CountryCode.CA, "8", new String[] { "8" }),
-  CA_A(CountryCode.CA, "A", new String[] { "A" }),
-  CA_C(CountryCode.CA, "C", new String[] { "C" }),
-  CA_C8(CountryCode.CA, "C8", new String[] { "C8" }),
+  CA_A(CountryCode.CA, "A", new String[] { "A" }), // sex
+  CA_C(CountryCode.CA, "C", new String[] { "C" }), // 2-7
+  CA_C8(CountryCode.CA, "C8", new String[] { "C8" }), // 8+
   CA_E(CountryCode.CA, "E", new String[] { "E", "Exempt" }),
   CA_G(CountryCode.CA, "G", new String[] { "G" }),
   CA_NC17(CountryCode.CA, "NC-17", new String[] { "NC-17" }),
   CA_PG(CountryCode.CA, "PG", new String[] { "PG" }),
   CA_PG13(CountryCode.CA, "PG-13", new String[] { "PG-13" }),
   CA_Prohibited(CountryCode.CA, "Prohibited", new String[] { "Prohibited" }),
-  CA_R(CountryCode.CA, "R", new String[] { "R" }),
+  CA_R(CountryCode.CA, "R", new String[] { "R" }), // 18+
   CA_RC(CountryCode.CA, "RC", new String[] { "RC", "Refused classification" }),
   CA_TV14(CountryCode.CA, "TV-14", new String[] { "TV-14" }),
   CA_TVG(CountryCode.CA, "TV-G", new String[] { "TV-G" }),
@@ -238,8 +251,9 @@ public enum MediaCertification {
   CH_18(CountryCode.CH, "18", new String[] { "18" }),
   CH_6(CountryCode.CH, "6", new String[] { "6" }),
   CH_7(CountryCode.CH, "7", new String[] { "7" }),
+  CH_8(CountryCode.CH, "8", new String[] { "8" }),
   CH_Btl(CountryCode.CH, "Btl", new String[] { "Btl" }),
-  CH_Unrated(CountryCode.CH, "Unrated", new String[] { "Unrated" }),
+  // CH_Unrated(CountryCode.CH, "Unrated", new String[] { "Unrated" }),
 
   CK_G(CountryCode.CK, "G", new String[] { "G" }),
   CK_MA(CountryCode.CK, "MA", new String[] { "MA" }),
@@ -249,16 +263,18 @@ public enum MediaCertification {
   CL_14(CountryCode.CL, "14", new String[] { "14" }),
   CL_18(CountryCode.CL, "18", new String[] { "18" }),
   CL_7(CountryCode.CL, "7", new String[] { "7" }),
-  CL_A(CountryCode.CL, "A", new String[] { "A" }),
+  CL_A(CountryCode.CL, "A", new String[] { "A" }), // 18+ Adult
   CL_Educational(CountryCode.CL, "Educational", new String[] { "Educational" }),
   CL_Excessiveviolence(CountryCode.CL, "Excessive violence", new String[] { "Excessive violence" }),
-  CL_F(CountryCode.CL, "F", new String[] { "F" }),
-  CL_I(CountryCode.CL, "I", new String[] { "I" }),
+  CL_F(CountryCode.CL, "F", new String[] { "F" }), // all
+  CL_I(CountryCode.CL, "I", new String[] { "I" }), // all
   CL_I10(CountryCode.CL, "I10", new String[] { "I10" }),
+  CL_I12(CountryCode.CL, "I12", new String[] { "I12" }),
   CL_I7(CountryCode.CL, "I7", new String[] { "I7" }),
   CL_Pornography(CountryCode.CL, "Pornography", new String[] { "Pornography" }),
-  CL_R(CountryCode.CL, "R", new String[] { "R" }),
-  CL_TE(CountryCode.CL, "TE", new String[] { "TE" }),
+  CL_R(CountryCode.CL, "R", new String[] { "R" }), // 12+ but accompanied
+  CL_TE(CountryCode.CL, "TE", new String[] { "TE" }), // GA
+  CL_TE7(CountryCode.CL, "TE+7", new String[] { "TE" }), // 7+
 
   CN_Banned(CountryCode.CN, "Banned", new String[] { "Banned" }),
   CN_Suitableforallages(CountryCode.CN, "Suitable for all ages", new String[] { "Suitable for all ages" }),
@@ -287,13 +303,17 @@ public enum MediaCertification {
   CY_K(CountryCode.CY, "K", new String[] { "K" }),
 
   CZ_(CountryCode.CZ, "*", new String[] { "*" }),
-  CZ_12(CountryCode.CZ, "12", new String[] { "12" }),
-  CZ_15(CountryCode.CZ, "15", new String[] { "15" }),
-  CZ_18(CountryCode.CZ, "18", new String[] { "18" }),
+  CZ_0(CountryCode.CZ, "0+", new String[] { "0", "0+" }),
+  CZ_12(CountryCode.CZ, "12+", new String[] { "12", "12+" }),
+  CZ_15(CountryCode.CZ, "15+", new String[] { "15", "15+" }),
+  CZ_18(CountryCode.CZ, "18+", new String[] { "18", "18+" }),
+  CZ_5(CountryCode.CZ, "5+", new String[] { "5", "5+" }),
+  CZ_7(CountryCode.CZ, "7+", new String[] { "7", "7+" }),
+  CZ_9(CountryCode.CZ, "9+", new String[] { "9", "9+" }),
+  CZ_U(CountryCode.CZ, "U", new String[] { "U" }), // all
   CZ_E(CountryCode.CZ, "E", new String[] { "E" }),
   CZ_PG(CountryCode.CZ, "PG", new String[] { "PG" }),
-  CZ_U(CountryCode.CZ, "U", new String[] { "U" }),
-  CZ_Unrated(CountryCode.CZ, "Unrated", new String[] { "Unrated" }),
+  // CZ_Unrated(CountryCode.CZ, "Unrated", new String[] { "Unrated" }),
 
   DK_11(CountryCode.DK, "11", new String[] { "11" }),
   DK_1115(CountryCode.DK, "11 / 15", new String[] { "11 / 15" }),
@@ -301,8 +321,8 @@ public enum MediaCertification {
   DK_15(CountryCode.DK, "15", new String[] { "15" }),
   DK_16(CountryCode.DK, "16", new String[] { "16" }),
   DK_7(CountryCode.DK, "7", new String[] { "7" }),
-  DK_A(CountryCode.DK, "A", new String[] { "A" }),
-  DK_F(CountryCode.DK, "F", new String[] { "F" }),
+  DK_A(CountryCode.DK, "A", new String[] { "A" }), // all
+  DK_F(CountryCode.DK, "F", new String[] { "F" }), // Exempt from classification
 
   EC_13(CountryCode.EC, "13+", new String[] { "13+" }),
   EC_7(CountryCode.EC, "7+", new String[] { "7+" }),
@@ -310,7 +330,7 @@ public enum MediaCertification {
   EC_All(CountryCode.EC, "All", new String[] { "All" }),
   EC_B(CountryCode.EC, "B", new String[] { "B" }),
   EC_C(CountryCode.EC, "C", new String[] { "C" }),
-  EC_NotRated(CountryCode.EC, "Not Rated", new String[] { "Not Rated" }),
+  // EC_NotRated(CountryCode.EC, "Not Rated", new String[] { "Not Rated" }),
   EC_PG(CountryCode.EC, "PG", new String[] { "PG" }),
   EC_R(CountryCode.EC, "R", new String[] { "R" }),
   EC_TV14(CountryCode.EC, "TV-14", new String[] { "TV-14" }),
@@ -332,7 +352,7 @@ public enum MediaCertification {
   EG_8(CountryCode.EG, "8+", new String[] { "8+" }),
   EG_Allages(CountryCode.EG, "All ages", new String[] { "All ages" }),
   EG_G(CountryCode.EG, "G", new String[] { "G" }),
-  EG_NotRated(CountryCode.EG, "Not Rated", new String[] { "Not Rated" }),
+  // EG_NotRated(CountryCode.EG, "Not Rated", new String[] { "Not Rated" }),
   EG_PG(CountryCode.EG, "PG", new String[] { "PG" }),
   EG_PG12(CountryCode.EG, "PG-12", new String[] { "PG-12" }),
   EG_PG13(CountryCode.EG, "PG-13", new String[] { "PG-13" }),
@@ -351,17 +371,17 @@ public enum MediaCertification {
   ES_3(CountryCode.ES, "3", new String[] { "3" }),
   ES_4(CountryCode.ES, "4+", new String[] { "4+" }),
   ES_6(CountryCode.ES, "6+", new String[] { "6+" }),
-  ES_7(CountryCode.ES, "7", new String[] { "7", "7/fig", "7/i", "7/i/fig" }),
+  ES_7(CountryCode.ES, "7", new String[] { "7", "7/fig", "7i", "7/i", "7/i/fig" }),
   ES_9(CountryCode.ES, "9+", new String[] { "9+" }),
-  ES_A(CountryCode.ES, "A", new String[] { "A", "A/fig", "A/i", "A/i/fig" }),
+  ES_A(CountryCode.ES, "A", new String[] { "A", "A/fig", "Ai", "A/i", "A/i/fig" }),
   ES_AL(CountryCode.ES, "AL", new String[] { "AL" }),
   ES_APTA(CountryCode.ES, "APTA", new String[] { "APTA" }),
   ES_Banned(CountryCode.ES, "Banned", new String[] { "Banned" }),
   ES_ER(CountryCode.ES, "ER", new String[] { "ER" }),
-  ES_ERI(CountryCode.ES, "ERI", new String[] { "ERI" }),
+  ES_ERI(CountryCode.ES, "ERI", new String[] { "ERI" }), // Specially recommended for younger children
   ES_PX(CountryCode.ES, "PX", new String[] { "PX" }),
   ES_T(CountryCode.ES, "T", new String[] { "T" }), // no ideas was T is: https://www.imdb.com/search/title/?certificates=ES:T
-  ES_TP(CountryCode.ES, "TP", new String[] { "TP" }),
+  ES_TP(CountryCode.ES, "TP", new String[] { "TP" }), // general/all (tous publics?)
   ES_X(CountryCode.ES, "X", new String[] { "X" }),
 
   FI_12(CountryCode.FI, "12", new String[] { "12" }),
@@ -373,7 +393,8 @@ public enum MediaCertification {
   FI_K18(CountryCode.FI, "K-18", new String[] { "K-18", "K18" }),
   FI_K7(CountryCode.FI, "K-7", new String[] { "K-7", "K7" }),
   FI_KE(CountryCode.FI, "K-E", new String[] { "K-E" }),
-  FI_S(CountryCode.FI, "S", new String[] { "S" }),
+  FI_KK(CountryCode.FI, "KK", new String[] { "KK" }), // banned
+  FI_S(CountryCode.FI, "S", new String[] { "S" }), // all
   FI_ST(CountryCode.FI, "S/T", new String[] { "S/T" }),
 
   FJ_A(CountryCode.FJ, "A", new String[] { "A" }),
@@ -395,9 +416,9 @@ public enum MediaCertification {
   FR_9(CountryCode.FR, "9+", new String[] { "9+" }),
   FR_Prohibited(CountryCode.FR, "Prohibited", new String[] { "Prohibited" }),
   FR_PublicAverti(CountryCode.FR, "Public Averti", new String[] { "Public Averti" }),
-  FR_TP(CountryCode.FR, "TP", new String[] { "TP", "Tous Publics", "Tous Publics avec avertissement" }),
+  FR_TP(CountryCode.FR, "TP", new String[] { "TP", "Tous Publics", "Tous Publics avec avertissement" }), // all
   FR_U(CountryCode.FR, "U", new String[] { "U" }),
-  FR_Unrated(CountryCode.FR, "Unrated", new String[] { "Unrated" }),
+  // FR_Unrated(CountryCode.FR, "Unrated", new String[] { "Unrated" }),
   FR_X(CountryCode.FR, "X", new String[] { "X" }),
 
   GH_12(CountryCode.GH, "12", new String[] { "12", "12+" }),
@@ -414,9 +435,12 @@ public enum MediaCertification {
   GR_18(CountryCode.GR, "18", new String[] { "18" }),
   GR_8(CountryCode.GR, "8", new String[] { "8" }),
   GR_E(CountryCode.GR, "E", new String[] { "E" }),
-  GR_K(CountryCode.GR, "K", new String[] { "K" }),
+  GR_K(CountryCode.GR, "K", new String[] { "K" }), // all
+  GR_K12(CountryCode.GR, "K-12", new String[] { "K-12", "K12" }),
   GR_K13(CountryCode.GR, "K-13", new String[] { "K-13", "K13" }),
+  GR_K15(CountryCode.GR, "K-15", new String[] { "K-15", "K15" }),
   GR_K17(CountryCode.GR, "K-17", new String[] { "K-17", "K17" }),
+  GR_K18(CountryCode.GR, "K-18", new String[] { "K-18", "K18" }),
   GR_Unrestricted(CountryCode.GR, "Unrestricted", new String[] { "Unrestricted" }),
 
   HK_13(CountryCode.HK, "13+", new String[] { "13+" }),
@@ -432,38 +456,40 @@ public enum MediaCertification {
   HK_IIB(CountryCode.HK, "IIB", new String[] { "IIB" }),
   HK_III(CountryCode.HK, "III", new String[] { "III" }),
   HK_M(CountryCode.HK, "M", new String[] { "M" }),
-  HK_NotRated(CountryCode.HK, "Not Rated", new String[] { "Not Rated" }),
+  // HK_NotRated(CountryCode.HK, "Not Rated", new String[] { "Not Rated" }),
   HK_PG(CountryCode.HK, "PG", new String[] { "PG" }),
-  HK_Unrated(CountryCode.HK, "Unrated", new String[] { "Unrated" }),
+  // HK_Unrated(CountryCode.HK, "Unrated", new String[] { "Unrated" }),
 
   HR_12(CountryCode.HR, "12", new String[] { "12" }),
   HR_15(CountryCode.HR, "15", new String[] { "15" }),
   HR_18(CountryCode.HR, "18", new String[] { "18" }),
-  HR_Unrated(CountryCode.HR, "Unrated", new String[] { "Unrated" }),
+  // HR_Unrated(CountryCode.HR, "Unrated", new String[] { "Unrated" }),
 
   HU_12(CountryCode.HU, "12", new String[] { "12" }),
   HU_16(CountryCode.HU, "16", new String[] { "16" }),
   HU_18(CountryCode.HU, "18", new String[] { "18" }),
   HU_6(CountryCode.HU, "6", new String[] { "6" }),
   HU_GY(CountryCode.HU, "GY", new String[] { "GY" }),
-  HU_KN(CountryCode.HU, "KN", new String[] { "KN" }),
-  HU_Unrated(CountryCode.HU, "Unrated", new String[] { "Unrated" }),
-  HU_X(CountryCode.HU, "X", new String[] { "X" }),
+  HU_Children(CountryCode.HU, "Children", new String[] { "Children" }),
+  HU_KN(CountryCode.HU, "KN", new String[] { "KN" }), // all
+  // HU_Unrated(CountryCode.HU, "Unrated", new String[] { "Unrated" }), // w/o restriction -> rated
+  HU_X(CountryCode.HU, "X", new String[] { "X" }), // adults
 
   ID_13(CountryCode.ID, "13+", new String[] { "13+" }),
   ID_15(CountryCode.ID, "15", new String[] { "15" }),
   ID_17(CountryCode.ID, "17+", new String[] { "17+" }),
   ID_21(CountryCode.ID, "21+", new String[] { "21+" }),
   ID_7(CountryCode.ID, "7+", new String[] { "7+" }),
-  ID_A(CountryCode.ID, "A", new String[] { "A" }),
+  ID_A(CountryCode.ID, "A", new String[] { "A" }), // 7-12
   ID_ABO(CountryCode.ID, "A–BO", new String[] { "A–BO" }),
-  ID_D(CountryCode.ID, "D", new String[] { "D" }),
+  ID_D(CountryCode.ID, "D", new String[] { "D" }), // 18+
   ID_G(CountryCode.ID, "G", new String[] { "G" }),
-  ID_NotRated(CountryCode.ID, "Not Rated", new String[] { "Not Rated" }),
-  ID_P(CountryCode.ID, "P", new String[] { "P" }),
+  // ID_NotRated(CountryCode.ID, "Not Rated", new String[] { "Not Rated" }),
+  ID_P(CountryCode.ID, "P", new String[] { "P" }), // preschoolers, 2-6
   ID_PBO(CountryCode.ID, "P–BO", new String[] { "P–BO" }),
   ID_RBO(CountryCode.ID, "R–BO", new String[] { "R–BO" }),
-  ID_SU(CountryCode.ID, "SU", new String[] { "SU" }),
+  ID_R(CountryCode.ID, "R", new String[] { "R" }), // 13-17
+  ID_SU(CountryCode.ID, "SU", new String[] { "SU" }), // all, 2+
   ID_Semua(CountryCode.ID, "Semua", new String[] { "Semua" }),
 
   IE_12(CountryCode.IE, "12", new String[] { "12" }),
@@ -478,30 +504,32 @@ public enum MediaCertification {
   IE_PG(CountryCode.IE, "PG", new String[] { "PG" }),
 
   IL_12(CountryCode.IL, "12", new String[] { "12", "12+" }),
-  IL_13(CountryCode.IL, "13", new String[] { "13" }),
-  IL_14(CountryCode.IL, "14", new String[] { "14" }),
-  IL_15(CountryCode.IL, "15+", new String[] { "15+" }),
-  IL_18(CountryCode.IL, "18+", new String[] { "18+" }),
+  IL_13(CountryCode.IL, "13", new String[] { "13", "13+" }),
+  IL_14(CountryCode.IL, "14", new String[] { "14", "14+" }),
+  IL_15(CountryCode.IL, "15", new String[] { "15", "15+" }),
+  IL_16(CountryCode.IL, "16", new String[] { "16", "16+" }),
+  IL_18(CountryCode.IL, "18+", new String[] { "18", "18+" }),
   IL_7(CountryCode.IL, "7+", new String[] { "7+" }),
   IL_8(CountryCode.IL, "8+", new String[] { "8+" }),
   IL_9(CountryCode.IL, "9+", new String[] { "9+" }),
   IL_AP(CountryCode.IL, "AP", new String[] { "AP" }),
   IL_All(CountryCode.IL, "All", new String[] { "All" }),
-  IL_E(CountryCode.IL, "E", new String[] { "E" }),
-  IL_NotRated(CountryCode.IL, "Not Rated", new String[] { "Not Rated" }),
-  IL_Unrated(CountryCode.IL, "Unrated", new String[] { "Unrated" }),
+  IL_E(CountryCode.IL, "E", new String[] { "E" }), // Exempt from classification
+  IL_G(CountryCode.IL, "G", new String[] { "G" }), // GA
+  // IL_NotRated(CountryCode.IL, "Not Rated", new String[] { "Not Rated" }),
+  // IL_Unrated(CountryCode.IL, "Unrated", new String[] { "Unrated" }),
 
   IN_12(CountryCode.IN, "12+", new String[] { "12+" }),
   IN_15(CountryCode.IN, "15+", new String[] { "15+" }),
-  IN_A(CountryCode.IN, "A", new String[] { "A" }),
+  IN_A(CountryCode.IN, "A", new String[] { "A" }), // 18+
   IN_All(CountryCode.IN, "All", new String[] { "All" }),
   IN_PG(CountryCode.IN, "PG", new String[] { "PG" }),
-  IN_S(CountryCode.IN, "S", new String[] { "S" }),
-  IN_U(CountryCode.IN, "U", new String[] { "U" }),
-  IN_UA(CountryCode.IN, "UA", new String[] { "UA" }),
-  IN_UA13(CountryCode.IN, "UA 13+", new String[] { "UA 13+" }),
-  IN_UA16(CountryCode.IN, "UA 16+", new String[] { "UA 16+" }),
-  IN_UA7(CountryCode.IN, "UA 7+", new String[] { "UA 7+" }),
+  IN_S(CountryCode.IN, "S", new String[] { "S" }), // "special class of persons"; whatever that means...?
+  IN_U(CountryCode.IN, "U", new String[] { "U" }), // all
+  IN_UA(CountryCode.IN, "UA", new String[] { "UA" }), // all, but under 12 accompanied
+  IN_UA13(CountryCode.IN, "UA 13+", new String[] { "UA 13+", "U/A 13+" }),
+  IN_UA16(CountryCode.IN, "UA 16+", new String[] { "UA 16+", "U/A 16+" }),
+  IN_UA7(CountryCode.IN, "UA 7+", new String[] { "UA 7+", "U/A 7+" }),
 
   IQ_15(CountryCode.IQ, "15+", new String[] { "15+" }),
   IQ_18(CountryCode.IQ, "18+", new String[] { "18+" }),
@@ -522,12 +550,14 @@ public enum MediaCertification {
   IS_L(CountryCode.IS, "L", new String[] { "L" }),
   IS_LH(CountryCode.IS, "LH", new String[] { "LH" }),
 
-  IT_12(CountryCode.IT, "12", new String[] { "12" }),
-  IT_14(CountryCode.IT, "14", new String[] { "14", "14+" }),
-  IT_18(CountryCode.IT, "18", new String[] { "18", "18+" }),
-  IT_6(CountryCode.IT, "6+", new String[] { "6+" }),
-  IT_BA(CountryCode.IT, "BA", new String[] { "BA" }),
-  IT_T(CountryCode.IT, "T", new String[] { "T" }),
+  IT_10(CountryCode.IT, "10+", new String[] { "10", "10+" }),
+  IT_12(CountryCode.IT, "12+", new String[] { "12", "12+" }),
+  IT_14(CountryCode.IT, "14+", new String[] { "14", "14+" }),
+  IT_18(CountryCode.IT, "18+", new String[] { "18", "18+" }),
+  IT_6(CountryCode.IT, "6+", new String[] { "6", "6+" }),
+  IT_BA(CountryCode.IT, "BA", new String[] { "BA" }), // Parental guidance suggested
+  IT_T(CountryCode.IT, "T", new String[] { "T" }), // all
+  IT_VM12(CountryCode.IT, "V.M.12", new String[] { "V.M.12", "VM12" }),
   IT_VM14(CountryCode.IT, "V.M.14", new String[] { "V.M.14", "VM14" }),
   IT_VM18(CountryCode.IT, "V.M.18", new String[] { "V.M.18", "VM18" }),
 
@@ -543,11 +573,11 @@ public enum MediaCertification {
   JP_B(CountryCode.JP, "B", new String[] { "B" }),
   JP_C(CountryCode.JP, "C", new String[] { "C" }),
   JP_D(CountryCode.JP, "D", new String[] { "D" }),
-  JP_G(CountryCode.JP, "G", new String[] { "G" }),
+  JP_G(CountryCode.JP, "G", new String[] { "G" }), // all
   JP_PG12(CountryCode.JP, "PG-12", new String[] { "PG-12", "PG12" }),
   JP_R15(CountryCode.JP, "R15+", new String[] { "R15+" }),
   JP_R18(CountryCode.JP, "R18+", new String[] { "R18+" }),
-  JP_Unrated(CountryCode.JP, "Unrated", new String[] { "Unrated" }),
+  // JP_Unrated(CountryCode.JP, "Unrated", new String[] { "Unrated" }),
   JP_Z(CountryCode.JP, "Z", new String[] { "Z" }),
 
   KE_16(CountryCode.KE, "16", new String[] { "16" }),
@@ -569,8 +599,8 @@ public enum MediaCertification {
   KR_7(CountryCode.KR, "7", new String[] { "7" }),
   KR_ALL(CountryCode.KR, "ALL", new String[] { "ALL", "All", "전체" }),
   KR_Exempt(CountryCode.KR, "Exempt", new String[] { "Exempt" }),
-  KR_NotRated(CountryCode.KR, "Not Rated", new String[] { "Not Rated" }),
-  KR_Restricted(CountryCode.KR, "Restricted", new String[] { "Restricted", "제한" }),
+  // KR_NotRated(CountryCode.KR, "Not Rated", new String[] { "Not Rated" }),
+  KR_Restricted(CountryCode.KR, "Restricted", new String[] { "Restricted", "제한", "Restricted Screening" }),
 
   KW_18(CountryCode.KW, "18+", new String[] { "18+" }),
   KW_E(CountryCode.KW, "E", new String[] { "E" }),
@@ -596,8 +626,15 @@ public enum MediaCertification {
   LT_N16(CountryCode.LT, "N-16", new String[] { "N-16" }),
   LT_N18(CountryCode.LT, "N-18", new String[] { "N-18" }),
   LT_N7(CountryCode.LT, "N-7", new String[] { "N-7" }),
-  LT_S(CountryCode.LT, "S", new String[] { "S" }),
-  LT_V(CountryCode.LT, "V", new String[] { "V" }),
+  LT_S(CountryCode.LT, "S", new String[] { "S" }), // 18+ tv like N-18 movies
+  LT_V(CountryCode.LT, "V", new String[] { "V" }), // all
+
+  LU_10(CountryCode.LU, "10", new String[] { "10" }),
+  LU_12(CountryCode.LU, "12", new String[] { "12" }),
+  LU_16(CountryCode.LU, "16", new String[] { "16" }),
+  LU_18(CountryCode.LU, "18", new String[] { "18" }),
+  LU_6(CountryCode.LU, "6", new String[] { "6" }),
+  LU_A(CountryCode.LU, "A", new String[] { "A", "Tous", "TP" }), // all
 
   LV_12(CountryCode.LV, "12+", new String[] { "12+" }),
   LV_16(CountryCode.LV, "16+", new String[] { "16+" }),
@@ -605,9 +642,9 @@ public enum MediaCertification {
   LV_7(CountryCode.LV, "7+", new String[] { "7+" }),
   LV_U(CountryCode.LV, "U", new String[] { "U" }),
 
-  MA_10(CountryCode.MA, "-10", new String[] { "-10" }),
-  MA_12(CountryCode.MA, "-12", new String[] { "-12" }),
-  MA_16(CountryCode.MA, "-16", new String[] { "-16" }),
+  MA_10(CountryCode.MA, "-10", new String[] { "-10", "10" }),
+  MA_12(CountryCode.MA, "-12", new String[] { "-12", "12" }),
+  MA_16(CountryCode.MA, "-16", new String[] { "-16", "16" }),
   MA_Allaudiences(CountryCode.MA, "All audiences", new String[] { "All audiences" }),
 
   MK_Bluetriangle(CountryCode.MK, "Blue triangle", new String[] { "Blue triangle" }),
@@ -615,6 +652,11 @@ public enum MediaCertification {
   MK_Orangesquare(CountryCode.MK, "Orange square", new String[] { "Orange square" }),
   MK_Redcross(CountryCode.MK, "Red cross", new String[] { "Red cross" }),
   MK_Yellowcircle(CountryCode.MK, "Yellow circle", new String[] { "Yellow circle" }),
+
+  MO_A(CountryCode.MO, "A", new String[] { "A" }), // ??
+  MO_B(CountryCode.MO, "B", new String[] { "B" }), // ??
+  MO_C(CountryCode.MO, "C", new String[] { "C" }), // ??
+  MO_D(CountryCode.MO, "D", new String[] { "D" }), // ??
 
   MT_12(CountryCode.MT, "12", new String[] { "12" }),
   MT_12A(CountryCode.MT, "12A", new String[] { "12A" }),
@@ -657,9 +699,10 @@ public enum MediaCertification {
 
   MY_13(CountryCode.MY, "13", new String[] { "13" }),
   MY_16(CountryCode.MY, "16", new String[] { "16" }),
-  MY_18(CountryCode.MY, "18", new String[] { "18", "18PA", "18PL", "18SG", "18SX" }),
+  MY_18(CountryCode.MY, "18", new String[] { "18", "18PA", "18PL", "18SG", "18SX" }), // all in one on our side
   MY_Banned(CountryCode.MY, "Banned", new String[] { "Banned" }),
   MY_P12(CountryCode.MY, "P12", new String[] { "P12" }),
+  MY_P13(CountryCode.MY, "P13", new String[] { "P13" }),
   MY_U(CountryCode.MY, "U", new String[] { "U" }),
 
   NG_12(CountryCode.NG, "12", new String[] { "12" }),
@@ -688,7 +731,7 @@ public enum MediaCertification {
   NO_6(CountryCode.NO, "6", new String[] { "6" }),
   NO_7(CountryCode.NO, "7", new String[] { "7" }),
   NO_9(CountryCode.NO, "9", new String[] { "9" }),
-  NO_A(CountryCode.NO, "A", new String[] { "A" }),
+  NO_A(CountryCode.NO, "A", new String[] { "A" }), // all
   NO_Notapproved(CountryCode.NO, "Not approved", new String[] { "Not approved" }),
 
   NZ_16(CountryCode.NZ, "16", new String[] { "16" }),
@@ -700,7 +743,7 @@ public enum MediaCertification {
   NZ_M(CountryCode.NZ, "M", new String[] { "M" }),
   NZ_Objectionable(CountryCode.NZ, "Objectionable", new String[] { "Objectionable" }),
   NZ_PG(CountryCode.NZ, "PG", new String[] { "PG" }),
-  NZ_R(CountryCode.NZ, "R", new String[] { "R" }),
+  NZ_R(CountryCode.NZ, "R", new String[] { "R" }), // particular class of persons, or for particular purposes, or both
   NZ_R13(CountryCode.NZ, "R13", new String[] { "R13" }),
   NZ_R15(CountryCode.NZ, "R15", new String[] { "R15" }),
   NZ_R16(CountryCode.NZ, "R16", new String[] { "R16" }),
@@ -717,7 +760,7 @@ public enum MediaCertification {
   PH_7(CountryCode.PH, "7+ ", new String[] { "7+ " }),
   PH_All(CountryCode.PH, "All", new String[] { "All" }),
   PH_G(CountryCode.PH, "G", new String[] { "G" }),
-  PH_NotRated(CountryCode.PH, "Not Rated", new String[] { "Not Rated" }),
+  // PH_NotRated(CountryCode.PH, "Not Rated", new String[] { "Not Rated" }),
   PH_PG(CountryCode.PH, "PG", new String[] { "PG" }),
   PH_PG13(CountryCode.PH, "PG-13", new String[] { "PG-13" }),
   PH_R13(CountryCode.PH, "R-13", new String[] { "R-13" }),
@@ -726,10 +769,12 @@ public enum MediaCertification {
   PH_SPG(CountryCode.PH, "SPG", new String[] { "SPG" }),
   PH_X(CountryCode.PH, "X", new String[] { "X" }),
 
+  PL_0(CountryCode.PL, "0", new String[] { "0" }),
   PL_10(CountryCode.PL, "10+", new String[] { "10+" }),
   PL_12(CountryCode.PL, "12", new String[] { "12" }),
   PL_15(CountryCode.PL, "15", new String[] { "15" }),
   PL_16(CountryCode.PL, "16", new String[] { "16" }),
+  PL_18(CountryCode.PL, "18", new String[] { "18" }),
   PL_21(CountryCode.PL, "21", new String[] { "21" }),
   PL_7(CountryCode.PL, "7", new String[] { "7" }),
   PL_AL(CountryCode.PL, "AL", new String[] { "AL" }),
@@ -737,11 +782,23 @@ public enum MediaCertification {
   PL_BOW(CountryCode.PL, "BOW", new String[] { "BOW" }),
   PL_G(CountryCode.PL, "G", new String[] { "G" }),
   PL_Keysymbol(CountryCode.PL, "Key symbol", new String[] { "Key symbol" }),
-  PL_NotRated(CountryCode.PL, "Not Rated", new String[] { "Not Rated" }),
+  // PL_NotRated(CountryCode.PL, "Not Rated", new String[] { "Not Rated" }),
 
-  PT_0(CountryCode.PT, "Para todos os públicos", new String[] { "Para todos os públicos" }),
-  PT_10AP(CountryCode.PT, "10AP", new String[] { "10AP" }),
-  PT_12AP(CountryCode.PT, "12AP", new String[] { "12AP" }),
+  PR_G(CountryCode.PR, "G", new String[] { "G", "Rated G" }),
+  PR_NC17(CountryCode.PR, "NC-17", new String[] { "NC-17", "Rated NC-17" }),
+  PR_PG(CountryCode.PR, "PG", new String[] { "PG", "Rated PG" }),
+  PR_PG13(CountryCode.PR, "PG-13", new String[] { "PG-13", "Rated PG-13" }),
+  PR_R(CountryCode.PR, "R", new String[] { "R", "Rated R" }),
+  PR_TV14(CountryCode.PR, "TV-14", new String[] { "TV-14" }),
+  PR_TVG(CountryCode.PR, "TV-G", new String[] { "TV-G" }),
+  PR_TVMA(CountryCode.PR, "TV-MA", new String[] { "TV-MA" }),
+  PR_TVPG(CountryCode.PR, "TV-PG", new String[] { "TV-PG" }),
+  PR_TVY(CountryCode.PR, "TV-Y", new String[] { "TV-Y" }),
+  PR_TVY7(CountryCode.PR, "TV-Y7", new String[] { "TV-Y7" }),
+
+  PT_0(CountryCode.PT, "Públicos", new String[] { "Para todos os públicos", "Públicos" }), // all Movies
+  PT_10AP(CountryCode.PT, "10AP", new String[] { "10AP", "10" }),
+  PT_12AP(CountryCode.PT, "12AP", new String[] { "12AP", "12" }),
   PT_16(CountryCode.PT, "16", new String[] { "16" }),
   PT_A(CountryCode.PT, "A", new String[] { "A" }),
   PT_M12(CountryCode.PT, "M/12", new String[] { "M/12", "M_12" }),
@@ -754,20 +811,21 @@ public enum MediaCertification {
   PT_M4(CountryCode.PT, "M/4", new String[] { "M/4" }),
   PT_M6(CountryCode.PT, "M/6", new String[] { "M/6", "M_6" }),
   PT_P(CountryCode.PT, "P", new String[] { "P" }),
-  PT_T(CountryCode.PT, "T", new String[] { "T" }),
+  PT_T(CountryCode.PT, "T", new String[] { "T" }), // all TV
 
   RO_12(CountryCode.RO, "12", new String[] { "12" }),
   RO_15(CountryCode.RO, "15", new String[] { "15" }),
   RO_18(CountryCode.RO, "18", new String[] { "18", "18*" }),
+  RO_18P(CountryCode.RO, "18+", new String[] { "18+" }),
   RO_AG(CountryCode.RO, "A.G.", new String[] { "A.G.", "AG" }),
   RO_AP(CountryCode.RO, "A.P.", new String[] { "A.P.", "AP" }),
   RO_AP12(CountryCode.RO, "AP-12", new String[] { "AP-12" }),
-  RO_IC(CountryCode.RO, "IC", new String[] { "IC" }),
+  RO_IC(CountryCode.RO, "IC", new String[] { "IC" }), // Prohibition of communication
   RO_IC14(CountryCode.RO, "IC-14", new String[] { "IC-14", "I.C.-14" }),
   RO_IM18(CountryCode.RO, "IM-18", new String[] { "IM-18", "I.M.-18" }),
   RO_IM18XXX(CountryCode.RO, "IM-18-XXX", new String[] { "IM-18-XXX" }),
   RO_N15(CountryCode.RO, "N-15", new String[] { "N-15" }),
-  RO_Unrated(CountryCode.RO, "Unrated", new String[] { "Unrated" }),
+  // RO_Unrated(CountryCode.RO, "Unrated", new String[] { "Unrated" }), // all (yes, according to TMDB?)
   RO_XXX(CountryCode.RO, "XXX", new String[] { "XXX" }),
 
   RU_0(CountryCode.RU, "0+", new String[] { "0+" }),
@@ -780,7 +838,7 @@ public enum MediaCertification {
   RU_Y(CountryCode.RU, "Y", new String[] { "Y" }),
 
   SA_G(CountryCode.SA, "G", new String[] { "G" }),
-  SA_NotRated(CountryCode.SA, "Not Rated", new String[] { "Not Rated" }),
+  // SA_NotRated(CountryCode.SA, "Not Rated", new String[] { "Not Rated" }),
   SA_PG(CountryCode.SA, "PG", new String[] { "PG" }),
   SA_PG12(CountryCode.SA, "PG12", new String[] { "PG12" }),
   SA_PG15(CountryCode.SA, "PG15", new String[] { "PG15" }),
@@ -790,11 +848,11 @@ public enum MediaCertification {
 
   SE_0(CountryCode.SE, "0+", new String[] { "0+" }),
   SE_10(CountryCode.SE, "10+", new String[] { "10+" }),
-  SE_11(CountryCode.SE, "11", new String[] { "11" }),
+  SE_11(CountryCode.SE, "11", new String[] { "11", "Från 11 år" }),
   SE_14(CountryCode.SE, "14", new String[] { "14" }),
-  SE_15(CountryCode.SE, "15", new String[] { "15" }),
+  SE_15(CountryCode.SE, "15", new String[] { "15", "Från 15 år" }),
   SE_6(CountryCode.SE, "6", new String[] { "6" }),
-  SE_7(CountryCode.SE, "7", new String[] { "7" }),
+  SE_7(CountryCode.SE, "7", new String[] { "7", "Från 7 år" }),
   SE_9(CountryCode.SE, "9+", new String[] { "9+" }),
   SE_Alla(CountryCode.SE, "Alla", new String[] { "Alla" }),
   SE_BTL(CountryCode.SE, "BTL", new String[] { "BTL" }),
@@ -803,7 +861,7 @@ public enum MediaCertification {
   SG_G(CountryCode.SG, "G", new String[] { "G" }),
   SG_M18(CountryCode.SG, "M18", new String[] { "M18" }),
   SG_NC16(CountryCode.SG, "NC16", new String[] { "NC16" }),
-  SG_NotRated(CountryCode.SG, "Not Rated", new String[] { "Not Rated" }),
+  // SG_NotRated(CountryCode.SG, "Not Rated", new String[] { "Not Rated" }),
   SG_PG(CountryCode.SG, "PG", new String[] { "PG" }),
   SG_PG13(CountryCode.SG, "PG13", new String[] { "PG13" }),
   SG_R21(CountryCode.SG, "R21", new String[] { "R21" }),
@@ -829,22 +887,22 @@ public enum MediaCertification {
   SV_D(CountryCode.SV, "D", new String[] { "D" }),
   SV_E(CountryCode.SV, "E", new String[] { "E" }),
 
-  TH_13(CountryCode.TH, "13+", new String[] { "13", "13+" }),
-  TH_15(CountryCode.TH, "15+", new String[] { "15", "15+" }),
-  TH_16(CountryCode.TH, "16+", new String[] { "16+" }),
-  TH_18(CountryCode.TH, "18+", new String[] { "18", "18+" }),
-  TH_20(CountryCode.TH, "20+", new String[] { "20", "20+" }),
+  TH_13(CountryCode.TH, "13+", new String[] { "13", "13+", "น 13+" }),
+  TH_15(CountryCode.TH, "15+", new String[] { "15", "15+", "น 15+" }),
+  TH_16(CountryCode.TH, "16+", new String[] { "16", "16+" }),
+  TH_18(CountryCode.TH, "18+", new String[] { "18", "18+", "น 18+" }),
+  TH_20(CountryCode.TH, "20+", new String[] { "20", "20+", "ฉ 20-" }),
   TH_5(CountryCode.TH, "5", new String[] { "5" }),
   TH_7(CountryCode.TH, "7+", new String[] { "7+" }),
   TH_Adults(CountryCode.TH, "Adults", new String[] { "Adults" }),
   TH_All(CountryCode.TH, "All", new String[] { "All" }),
-  TH_Banned(CountryCode.TH, "Banned", new String[] { "Banned" }),
+  TH_Banned(CountryCode.TH, "Banned", new String[] { "Banned", "-" }),
   TH_C(CountryCode.TH, "C", new String[] { "C" }),
   TH_Children(CountryCode.TH, "Children", new String[] { "Children" }),
-  TH_G(CountryCode.TH, "G", new String[] { "G" }),
+  TH_G(CountryCode.TH, "G", new String[] { "G", "ท" }),
   TH_General(CountryCode.TH, "General", new String[] { "General" }),
-  TH_NotRated(CountryCode.TH, "Not Rated", new String[] { "Not Rated" }),
-  TH_P(CountryCode.TH, "P", new String[] { "P" }),
+  // TH_NotRated(CountryCode.TH, "Not Rated", new String[] { "Not Rated" }),
+  TH_P(CountryCode.TH, "P", new String[] { "P", "ส" }), // educational
   TH_PG(CountryCode.TH, "PG", new String[] { "PG" }),
   TH_PG13(CountryCode.TH, "PG-13", new String[] { "PG-13", "PG 13" }),
   TH_PG18(CountryCode.TH, "PG 18", new String[] { "PG 18" }),
@@ -866,9 +924,12 @@ public enum MediaCertification {
   TR_Educationalpurposes(CountryCode.TR, "Educational purposes", new String[] { "Educational purposes" }),
   TR_Exempt(CountryCode.TR, "Exempt", new String[] { "Exempt" }),
   TR_General(CountryCode.TR, "General", new String[] { "General", "General Audience" }),
-  TR_NotRated(CountryCode.TR, "Not Rated", new String[] { "Not Rated" }),
+  // TR_NotRated(CountryCode.TR, "Not Rated", new String[] { "Not Rated" }),
   TR_Refusedclassification(CountryCode.TR, "Refused classification", new String[] { "Refused classification" }),
-  TR_genelzleyicikitlesi(CountryCode.TR, "genel Ä°zleyici kitlesi", new String[] { "genel Ä°zleyici kitlesi" }),
+  TR_genelzleyicikitlesi(
+      CountryCode.TR,
+      "genel Ä°zleyici kitlesi",
+      new String[] { "genel Ä°zleyici kitlesi", "Genel İzleyici", "Genel İzleyici Kitlesi" }),
 
   TW_0(CountryCode.TW, "0+", new String[] { "0+" }),
   TW_12(CountryCode.TW, "12+", new String[] { "12+" }),
@@ -884,13 +945,27 @@ public enum MediaCertification {
   TW_PG15(CountryCode.TW, "PG-15", new String[] { "PG-15" }),
   TW_R(CountryCode.TW, "R", new String[] { "R" }),
 
+  UA_0(CountryCode.UA, "0", new String[] { "0", "0+" }),
   UA_12(CountryCode.UA, "12", new String[] { "12", "12+" }),
   UA_16(CountryCode.UA, "16", new String[] { "16", "16+" }),
   UA_18(CountryCode.UA, "18", new String[] { "18", "18+" }),
+  UA_9(CountryCode.UA, "9", new String[] { "9", "9+" }),
   UA_DA(CountryCode.UA, "DA", new String[] { "DA", "ДА" }),
   UA_Denied(CountryCode.UA, "Denied", new String[] { "Denied" }),
-  UA_Unrated(CountryCode.UA, "Unrated", new String[] { "Unrated" }),
+  // UA_Unrated(CountryCode.UA, "Unrated", new String[] { "Unrated" }),
   UA_ZA(CountryCode.UA, "ZA", new String[] { "ZA", "ЗА" }),
+
+  VI_G(CountryCode.VI, "G", new String[] { "G", "Rated G" }),
+  VI_NC17(CountryCode.VI, "NC-17", new String[] { "NC-17", "Rated NC-17" }),
+  VI_PG(CountryCode.VI, "PG", new String[] { "PG", "Rated PG" }),
+  VI_PG13(CountryCode.VI, "PG-13", new String[] { "PG-13", "Rated PG-13" }),
+  VI_R(CountryCode.VI, "R", new String[] { "R", "Rated R" }),
+  VI_TV14(CountryCode.VI, "TV-14", new String[] { "TV-14" }),
+  VI_TVG(CountryCode.VI, "TV-G", new String[] { "TV-G" }),
+  VI_TVMA(CountryCode.VI, "TV-MA", new String[] { "TV-MA" }),
+  VI_TVPG(CountryCode.VI, "TV-PG", new String[] { "TV-PG" }),
+  VI_TVY(CountryCode.VI, "TV-Y", new String[] { "TV-Y" }),
+  VI_TVY7(CountryCode.VI, "TV-Y7", new String[] { "TV-Y7" }),
 
   VE_A(CountryCode.VE, "A", new String[] { "A" }),
   VE_AA(CountryCode.VE, "AA", new String[] { "AA" }),
@@ -908,18 +983,18 @@ public enum MediaCertification {
   VN_T16(CountryCode.VN, "T16", new String[] { "T16" }),
   VN_T18(CountryCode.VN, "T18", new String[] { "T18" }),
 
-  ZA_1012PG(CountryCode.ZA, "10-12 PG", new String[] { "10-12 PG", "10–12PG" }),
+  ZA_1012PG(CountryCode.ZA, "10-12 PG", new String[] { "10-12 PG", "10–12PG", "10-12PG" }),
   ZA_12(CountryCode.ZA, "12+", new String[] { "12+" }),
   ZA_13(CountryCode.ZA, "13", new String[] { "13" }),
   ZA_14(CountryCode.ZA, "14+", new String[] { "14+" }),
   ZA_16(CountryCode.ZA, "16", new String[] { "16", "16+" }),
   ZA_18(CountryCode.ZA, "18", new String[] { "18", "18+" }),
   ZA_6(CountryCode.ZA, "6+", new String[] { "6+" }),
-  ZA_79PG(CountryCode.ZA, "7–9PG", new String[] { "7–9PG", "7-9 PG" }),
+  ZA_79PG(CountryCode.ZA, "7–9PG", new String[] { "7–9PG", "7-9 PG", "7-9PG" }),
   ZA_9(CountryCode.ZA, "9+", new String[] { "9+" }),
   ZA_A(CountryCode.ZA, "A", new String[] { "A" }),
   ZA_All(CountryCode.ZA, "All", new String[] { "All" }),
-  ZA_NotRated(CountryCode.ZA, "Not Rated", new String[] { "Not Rated" }),
+  // ZA_NotRated(CountryCode.ZA, "Not Rated", new String[] { "Not Rated" }),
   ZA_PG(CountryCode.ZA, "PG", new String[] { "PG" }),
   ZA_PG13(CountryCode.ZA, "PG13", new String[] { "PG13" }),
   ZA_R18(CountryCode.ZA, "R18", new String[] { "R18" }),
@@ -1035,6 +1110,9 @@ public enum MediaCertification {
    * @return the certification
    */
   public static MediaCertification getCertification(String country, String name) {
+    if (country != null && country.equals("CA-QC")) {
+      country = "CA"; // downgrade Quebec; we only have countries in here (TMDB)
+    }
     CountryCode countryCode = CountryCode.getByCode(country);
     return getCertification(countryCode, name);
   }
@@ -1189,6 +1267,23 @@ public enum MediaCertification {
       }
     }
 
+    // not found? does it match our global NR/UR?!
+    for (MediaCertification cert : MediaCertification.getCertificationsforCountry(null)) {
+      if (cert.name().equalsIgnoreCase(name)) {
+        return cert;
+      }
+      if (cert.name().equalsIgnoreCase(alternateName)) {
+        return cert;
+      }
+      if (cert.getName().equalsIgnoreCase(name)) {
+        return cert;
+      }
+      for (String notation : cert.possibleNotations) {
+        if (notation.equalsIgnoreCase(name)) {
+          return cert;
+        }
+      }
+    }
     return UNKNOWN;
   }
 
