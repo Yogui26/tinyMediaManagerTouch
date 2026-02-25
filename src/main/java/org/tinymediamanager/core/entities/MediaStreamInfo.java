@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.tinymediamanager.core.AbstractModelObject;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class MediaStreamInfo extends AbstractModelObject {
@@ -32,6 +33,7 @@ public class MediaStreamInfo extends AbstractModelObject {
    */
   public enum Flags {
     // FLAG_NONE, // just empty
+    @JsonEnumDefaultValue
     FLAG_DEFAULT("Default"),
     FLAG_DUB("Dubbed"),
     FLAG_ORIGINAL("Original"),

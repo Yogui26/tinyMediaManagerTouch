@@ -19,10 +19,13 @@ import java.io.Serializable;
 import java.util.EnumMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 public class ArdSettings {
 
   public enum Mode {
     FAST,
+    @JsonEnumDefaultValue
     DEFAULT,
     ACCURATE
   }

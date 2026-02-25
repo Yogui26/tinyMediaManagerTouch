@@ -22,6 +22,9 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 /**
  * The enum Certification. This enum holds all (to tinyMediaManager) known certifications including some parsing information. You can parse a string
  * with {@link #findCertification(String) Certification.findCertification} or {@link #getCertification(String, String) Certification.getCertification}
@@ -38,8 +41,8 @@ public enum MediaCertification {
   // list generated with org.tinymediamanager.scraper.util.ITCertifications
 
   // Global NR/UR catch-all - ignore them, as they do not have a proper meaning...
-  NOT_RATED(null, "NR", new String[] { "Not Rated", "NR" }),
-  UNRATED(null, "UR", new String[] { "Unrated", "UR" }),
+  NOT_RATED(null, "Not rated", new String[] { "Not Rated", "NR" }),
+  UNRATED(null, "Unrated", new String[] { "Unrated", "UR" }),
 
   // well known / most used certifications will be on top
   US_APPROVED(CountryCode.US, "Approved", new String[] { "Approved" }),
@@ -1039,7 +1042,8 @@ public enum MediaCertification {
   ZA_XX(CountryCode.ZA, "XX", new String[] { "XX" }),
 
   // last but not least our representation of a "null" value
-  UNKNOWN(null, "unknown", new String[] { "unknown" });
+  @JsonEnumDefaultValue
+  UNKNOWN(null, "Unknown", new String[] { "Unknown" });
 
   private final CountryCode country;
   private final String      name;
@@ -1113,9 +1117,11 @@ public enum MediaCertification {
       }
     }
 
-    // at last - add unknown
-    if (!certifications.contains(UNKNOWN)) {
-      certifications.add(UNKNOWN);
+    // at last - add global unknown/not_rate/unrated
+    for (MediaCertification cert : MediaCertification.values()) {
+      if (cert.getCountry() == null) {
+        certifications.add(cert);
+      }
     }
 
     return certifications;
@@ -1360,6 +1366,32 @@ public enum MediaCertification {
 
       default:
         return "";
+    }
+  }
+
+  /**
+   * Called on de-serialization. Nice to migrate old ENUMs ;)
+   * 
+   * @param enumName
+   *          called with the ENUM name()
+   * @return
+   */
+  @JsonCreator
+  static MediaCertification mapDeprecated(String enumName) {
+    try {
+      // if it works, we had a valid ENUM
+      return MediaCertification.valueOf(enumName);
+    }
+    catch (Exception e) {
+      // else we migrate our LanguageGlobals to Globals ;)
+      if (enumName.contains("_NotRated") || enumName.contains("_Notrated")) {
+        return NOT_RATED;
+      }
+      if (enumName.contains("_Unrated")) {
+        return UNRATED;
+      }
+      // did we forgot something - return default
+      return UNKNOWN;
     }
   }
 }

@@ -36,6 +36,7 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
@@ -56,6 +57,7 @@ public class Person extends AbstractModelObject implements IPrintable {
     COMPOSER,
     EDITOR,
     CAMERA,
+    @JsonEnumDefaultValue
     OTHER;
 
     @Override

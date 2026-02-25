@@ -24,12 +24,19 @@ import org.tinymediamanager.core.CertificationStyle;
 
 public class MediaCertificationTest extends BasicTest {
 
-  // @Test
-  // public void testCertificationNames() {
-  // for (Certification cert : Certification.values()) {
-  // System.out.println(cert.name() + "\t" + cert.toString());
-  // }
-  // }
+  /**
+   * just to verify, if all certs can be rendered in all styles....
+   */
+  @Test
+  public void renderAll() {
+    for (CertificationStyle style : CertificationStyle.values()) {
+      for (MediaCertification cert : MediaCertification.values()) {
+        String s = CertificationStyle.formatCertification(cert, style);
+        System.out.print(s);
+      }
+      System.out.println();
+    }
+  }
 
   @Test
   public void testCertificationTemplate() {

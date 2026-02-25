@@ -157,6 +157,7 @@ public final class TvShowModuleManager implements ITmmModule {
         .configure(MapperFeature.AUTO_DETECT_SETTERS, false)
         .configure(MapperFeature.AUTO_DETECT_FIELDS, false)
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, true) // refactoring
         .addModule(new BlackbirdModule())
         .build();
     objectMapper.setTimeZone(TimeZone.getDefault());

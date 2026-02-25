@@ -17,12 +17,15 @@ package org.tinymediamanager.core.movie.connector;
 
 import java.nio.file.Path;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 /**
  * The Enum MovieSetConnectors.
  * 
  * @author Manuel Laggner
  */
 public enum MovieSetConnectors {
+  @JsonEnumDefaultValue
   KODI("Kodi"),
   EMBY("Emby");
 

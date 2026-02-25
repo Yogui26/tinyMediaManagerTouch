@@ -58,10 +58,20 @@ public enum CertificationStyle {
         return cert.getName();
 
       case MEDIUM:
-        return cert.getCountry().getAlpha2() + ": " + cert.getName();
+        if (cert.getCountry() != null) {
+          return cert.getCountry().getAlpha2() + ": " + cert.getName();
+        }
+        else {
+          return cert.getName();
+        }
 
       case MEDIUM_FULL:
-        return cert.getCountry().getName() + ": " + cert.getName();
+        if (cert.getCountry() != null) {
+          return cert.getCountry().getName() + ": " + cert.getName();
+        }
+        else {
+          return cert.getName();
+        }
 
       case LARGE:
         return MediaCertification.generateCertificationStringWithAlternateNames(cert);

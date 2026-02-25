@@ -18,12 +18,15 @@ package org.tinymediamanager.core.tvshow.connector;
 
 import java.nio.file.Path;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 /**
  * The Enum TvShowConnectors.
  *
  * @author Manuel Laggner
  */
 public enum TvShowConnectors {
+  @JsonEnumDefaultValue
   KODI("Kodi"),
   XBMC("Kodi / XBMC < v16"),
   EMBY("Emby"),
