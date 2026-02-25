@@ -1217,6 +1217,9 @@ public enum MediaCertification {
     if (cert == NOT_RATED) {
       return "NR";
     }
+    if (cert.getCountry() == null) {
+      withCountryName = false;
+    }
     String certstring = "";
     for (String notation : cert.getPossibleNotations()) {
       if (withCountryName) {
@@ -1227,7 +1230,12 @@ public enum MediaCertification {
           certstring += " / UK:" + notation;
         }
         else {
-          certstring += " / " + cert.getCountry().getAlpha2() + ":" + notation;
+          if (cert.getCountry() != null) {
+            certstring += " / " + cert.getCountry().getAlpha2() + ":" + notation;
+          }
+          else {
+            certstring += " / " + notation;
+          }
         }
       }
     }
