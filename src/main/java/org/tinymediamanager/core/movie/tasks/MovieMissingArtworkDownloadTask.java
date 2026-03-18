@@ -134,10 +134,15 @@ public class MovieMissingArtworkDownloadTask extends TmmThreadPool {
               LOGGER.info("Missing IDs for scraping '{}' with '{}'", movie.getTitle(), scraper.getId());
             }
             catch (ScrapeException e) {
-              LOGGER.error("Could not scrape movie artwork for '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
-              MessageManager.getInstance()
-                  .pushMessage(
-                      new Message(MessageLevel.ERROR, movie, "message.scrape.moviesetartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+              if (e.isInterruptedException()) {
+                LOGGER.debug("Interrupted while scraping movie artwork for '{}' with '{}'", movie.getTitle(), scraper.getId());
+              }
+              else {
+                LOGGER.error("Could not scrape movie artwork for '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
+                MessageManager.getInstance()
+                    .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.moviesetartworkfailed",
+                        new String[] { ":", e.getLocalizedMessage() }));
+              }
             }
             catch (Exception e) {
               LOGGER.error("Unforeseen error in movie artwork scrape for '{}'", movie.getTitle(), e);

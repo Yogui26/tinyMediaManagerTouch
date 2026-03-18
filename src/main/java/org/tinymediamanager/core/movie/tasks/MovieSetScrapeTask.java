@@ -123,10 +123,15 @@ public class MovieSetScrapeTask extends TmmThreadPool {
         LOGGER.warn("Missing IDs for scraping movie set '{}' with '{}'", movieSet.getTitle(), mediaMetadataScraper.getId());
       }
       catch (ScrapeException e) {
-        LOGGER.error("Could not scrape movie set '{}' with '{}' - '{}'", movieSet.getTitle(), mediaMetadataScraper.getId(), e.getMessage());
-        MessageManager.getInstance()
-            .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.metadatamoviesetfailed",
-                new String[] { ":", e.getLocalizedMessage() }));
+        if (e.isInterruptedException()) {
+          LOGGER.debug("Interrupted while scraping movie set '{}' with '{}'", movieSet.getTitle(), mediaMetadataScraper.getId());
+        }
+        else {
+          LOGGER.error("Could not scrape movie set '{}' with '{}' - '{}'", movieSet.getTitle(), mediaMetadataScraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.metadatamoviesetfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
+        }
       }
       catch (Exception e) {
         LOGGER.error("Unforeseen error in movie set scrape for '{}'", movieSet.getTitle(), e);
@@ -157,10 +162,15 @@ public class MovieSetScrapeTask extends TmmThreadPool {
           LOGGER.info("Missing IDs for scraping movie '{}' with '{}'", movieSet.getTitle(), scraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Could not scrape movie set artwork of '{}' with '{}' - '{}'", movieSet.getTitle(), scraper.getId(), e.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.movieartworkfailed",
-                  new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping movie set artwork of '{}' with '{}'", movieSet.getTitle(), scraper.getId());
+          }
+          else {
+            LOGGER.error("Could not scrape movie set artwork of '{}' with '{}' - '{}'", movieSet.getTitle(), scraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.movieartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
         catch (Exception e) {
           LOGGER.error("Unforeseen error in movie set artwork scrape for '{}'", movieSet.getTitle(), e);

@@ -244,10 +244,15 @@ public class MovieScrapeTask extends TmmThreadPool {
             MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "scraper.error.missingid"));
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not scrape movie '{}' with '{}' - '{}'", movie.getTitle(), mediaMetadataScraper.getId(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(
-                    new Message(MessageLevel.ERROR, movie, "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while scraping movie '{}' with '{}'", movie.getTitle(), mediaMetadataScraper.getId());
+            }
+            else {
+              LOGGER.error("Could not scrape movie '{}' with '{}' - '{}'", movie.getTitle(), mediaMetadataScraper.getId(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(
+                      new Message(MessageLevel.ERROR, movie, "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
           catch (Exception e) {
             LOGGER.error("Unforeseen error in movie scrape for '{}'", movie.getTitle(), e);
@@ -377,10 +382,15 @@ public class MovieScrapeTask extends TmmThreadPool {
           LOGGER.info("Missing IDs for scraping movie artwork of '{}' with '{}'", movie.getTitle(), scraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Could not scrape movie artwork of '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(
-                  new Message(MessageLevel.ERROR, movie, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping movie artwork of '{}' with '{}'", movie.getTitle(), scraper.getId());
+          }
+          else {
+            LOGGER.error("Could not scrape movie artwork of '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(MessageLevel.ERROR, movie, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
         catch (Exception e) {
           LOGGER.error("Unforeseen error in movie artwork scrape for '{}'", movie.getTitle(), e);
@@ -415,9 +425,14 @@ public class MovieScrapeTask extends TmmThreadPool {
           LOGGER.info("Missing IDs for scraping movie trailers of '{}' with '{}'", movie.getTitle(), trailerScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Could not scrape movie trailers of '{}' with '{}' - '{}'", movie.getTitle(), trailerScraper.getId(), e.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping movie trailers of '{}' with '{}'", movie.getTitle(), trailerScraper.getId());
+          }
+          else {
+            LOGGER.error("Could not scrape movie trailers of '{}' with '{}' - '{}'", movie.getTitle(), trailerScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
         catch (Exception e) {
           LOGGER.error("Unforeseen error in movie trailer scrape for '{}'", movie.getTitle(), e);

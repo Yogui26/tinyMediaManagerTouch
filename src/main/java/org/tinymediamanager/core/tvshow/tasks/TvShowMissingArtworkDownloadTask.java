@@ -187,10 +187,15 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             LOGGER.warn("Missing IDs for getting artwork of TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
-                    new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while scraping artwork for TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
+            }
+            else {
+              LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
           finally {
             lock.writeLock().unlock();
@@ -250,10 +255,15 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             LOGGER.warn("Missing IDs for getting artwork of TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
-                    new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while scraping artwork for TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
+            }
+            else {
+              LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
           finally {
             lock.writeLock().unlock();
@@ -324,11 +334,17 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
                 episode.getEpisode(), artworkScraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not scrape artwork for TV show '{}', episode S{} E{} with '{}' - '{}'", episode.getTvShow().getTitle(),
-                episode.getSeason(), episode.getEpisode(), artworkScraper.getId(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
-                    new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while scraping artwork for TV show '{}', episode S{} E{} with '{}'", episode.getTvShow().getTitle(),
+                  episode.getSeason(), episode.getEpisode(), artworkScraper.getId());
+            }
+            else {
+              LOGGER.error("Could not scrape artwork for TV show '{}', episode S{} E{} with '{}' - '{}'", episode.getTvShow().getTitle(),
+                  episode.getSeason(), episode.getEpisode(), artworkScraper.getId(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
         }
 

@@ -203,11 +203,17 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
             mediaScraper.getId());
       }
       catch (ScrapeException e) {
-        LOGGER.error("Could not scrape TV show '{}', episode '{}' with '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
-            mediaScraper.getId(), e.getMessage());
-        MessageManager.getInstance()
-            .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.metadataepisodefailed",
-                new String[] { ":", e.getLocalizedMessage() }));
+        if (e.isInterruptedException()) {
+          LOGGER.debug("Interrupted while scraping TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+              mediaScraper.getId());
+        }
+        else {
+          LOGGER.error("Could not scrape TV show '{}', episode '{}' with '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+              mediaScraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.metadataepisodefailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
+        }
       }
       catch (Exception e) {
         LOGGER.error("Unforeseen error in episode scrape for '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(), e);
@@ -273,11 +279,17 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
               artworkScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Could not scrape artwork for TV show '{}', episode '{}' with '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
-              artworkProvider.getId(), e.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
-                  new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping artwork for TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(),
+                episode.getTitle(), artworkProvider.getId());
+          }
+          else {
+            LOGGER.error("Could not scrape artwork for TV show '{}', episode '{}' with '{}' - '{}'", episode.getTvShow().getTitle(),
+                episode.getTitle(), artworkProvider.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
         catch (Exception e) {
           LOGGER.error("Unforeseen error in movie artwork scrape for TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(),

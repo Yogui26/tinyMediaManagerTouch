@@ -289,10 +289,15 @@ public class TvShowScrapeTask extends TmmThreadPool {
             MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not get episode list for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed",
-                    new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while getting episode list for TV show '{}'", tvShow.getTitle());
+            }
+            else {
+              LOGGER.error("Could not get episode list for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
           catch (Exception e) {
             LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
@@ -383,10 +388,15 @@ public class TvShowScrapeTask extends TmmThreadPool {
           LOGGER.debug("nothing found for '{}'", tvShow.getTitle());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
-          MessageManager.getInstance()
-              .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadatatvshowfailed",
-                  new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping TV show '{}'", tvShow.getTitle());
+          }
+          else {
+            LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadatatvshowfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
       }
 
@@ -434,10 +444,15 @@ public class TvShowScrapeTask extends TmmThreadPool {
           LOGGER.debug("did not find artwork for '{}'", tvShow.getTitle());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
-                  new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping artwork for TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
+          }
+          else {
+            LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
         catch (Exception e) {
           LOGGER.error("Unforeseen error in TV show artwork scrape for '{}'", tvShow.getTitle(), e);
@@ -474,9 +489,14 @@ public class TvShowScrapeTask extends TmmThreadPool {
           LOGGER.info("Missing IDs for scraping TV show trailer of '{}' with '{}'", tvShow.getTitle(), trailerScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("Could not scrape trailers for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), trailerScraper.getId(), e.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          if (e.isInterruptedException()) {
+            LOGGER.debug("Interrupted while scraping trailers for TV show '{}' with '{}'", tvShow.getTitle(), trailerScraper.getId());
+          }
+          else {
+            LOGGER.error("Could not scrape trailers for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), trailerScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          }
         }
         catch (Exception e) {
           LOGGER.error("Unforeseen error in TV show trailer scrape for '{}'", tvShow.getTitle(), e);

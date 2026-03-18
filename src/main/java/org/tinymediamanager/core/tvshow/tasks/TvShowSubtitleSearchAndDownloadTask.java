@@ -183,11 +183,16 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
                 episode.getEpisode(), scraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not scrape subtitle of TV show '{}', episode '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
-                e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(
-                    new Message(MessageLevel.ERROR, episode, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while scraping subtitle of TV show '{}', episode '{}'", episode.getTvShow().getTitle(), episode.getTitle());
+            }
+            else {
+              LOGGER.error("Could not scrape subtitle of TV show '{}', episode '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+                  e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(
+                      new Message(MessageLevel.ERROR, episode, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
           catch (Exception e) {
             LOGGER.error("Unforeseen error in subtitle scrape for TV show '{}', S{} E{}", episode.getTvShow().getTitle(), episode.getSeason(),

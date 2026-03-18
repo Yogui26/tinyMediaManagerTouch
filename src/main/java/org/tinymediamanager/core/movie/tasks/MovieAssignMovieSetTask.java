@@ -147,10 +147,15 @@ public class MovieAssignMovieSetTask extends TmmThreadPool {
               LOGGER.warn("Could not fetch movie set data - {}", e.getMessage());
             }
             catch (ScrapeException e) {
-              LOGGER.error("getMovieSet", e);
-              MessageManager.getInstance()
-                  .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
-                      new String[] { ":", e.getLocalizedMessage() }));
+              if (e.isInterruptedException()) {
+                LOGGER.debug("Interrupted while fetching movie set data for '{}'", movie.getTitle());
+              }
+              else {
+                LOGGER.error("getMovieSet", e);
+                MessageManager.getInstance()
+                    .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
+                        new String[] { ":", e.getLocalizedMessage() }));
+              }
             }
           }
 
@@ -176,10 +181,15 @@ public class MovieAssignMovieSetTask extends TmmThreadPool {
         LOGGER.info("No movie set data found for movie '{}'", movie.getTitle());
       }
       catch (ScrapeException e) {
-        LOGGER.error("Could not net movie set data for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
-        MessageManager.getInstance()
-            .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
-                new String[] { ":", e.getLocalizedMessage() }));
+        if (e.isInterruptedException()) {
+          LOGGER.debug("Interrupted while assigning movie set data for movie '{}'", movie.getTitle());
+        }
+        else {
+          LOGGER.error("Could not net movie set data for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
+        }
       }
     }
   }

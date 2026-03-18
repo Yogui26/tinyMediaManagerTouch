@@ -16,6 +16,8 @@
 
 package org.tinymediamanager.scraper.exceptions;
 
+import java.io.InterruptedIOException;
+
 /**
  * the class {@link ScrapeException} wraps the source {@link Exception} which occurred while scraping or searching
  *
@@ -24,9 +26,9 @@ package org.tinymediamanager.scraper.exceptions;
  */
 public class ScrapeException extends Exception {
   /**
-   * the package private constructor -> to be used in child classes
+   * the protected constructor -> to be used in child classes
    */
-  ScrapeException() {
+  protected ScrapeException() {
   }
 
   /**
@@ -36,7 +38,12 @@ public class ScrapeException extends Exception {
    *          the source {@link Exception}
    */
   public ScrapeException(Throwable cause) {
-    super(cause);
+    // do not nest a ScrapeException into a ScrapeException
+    Throwable rootCause = cause;
+    while (rootCause instanceof ScrapeException && rootCause.getCause() != null) {
+      rootCause = rootCause.getCause();
+    }
+    initCause(rootCause);
   }
 
   /**
@@ -47,5 +54,23 @@ public class ScrapeException extends Exception {
    */
   public ScrapeException(String message) {
     super(message);
+  }
+
+  /**
+   * is the cause an {@link InterruptedException} or an {@link InterruptedIOException}?
+   * 
+   * @return true/false
+   */
+  public boolean isInterruptedException() {
+    return getCause() instanceof InterruptedException || getCause() instanceof InterruptedIOException;
+  }
+
+  /**
+   * is the cause an {@link HttpException}
+   * 
+   * @return true/false
+   */
+  public boolean isHttpException() {
+    return getCause() instanceof HttpException;
   }
 }

@@ -167,9 +167,15 @@ public class MovieSubtitleSearchAndDownloadTask extends TmmThreadPool {
             LOGGER.info("Missing IDs for scraping movie subtitles of '{}' with '{}'", movie.getTitle(), scraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("Could not scrape movie subtitles of '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
+            if (e.isInterruptedException()) {
+              LOGGER.debug("Interrupted while scraping movie subtitles of '{}' with '{}'", movie.getTitle(), scraper.getId());
+            }
+            else {
+              LOGGER.error("Could not scrape movie subtitles of '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(
+                      new Message(MessageLevel.ERROR, movie, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
+            }
           }
         }
       }
