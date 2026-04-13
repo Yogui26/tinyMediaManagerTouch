@@ -20,6 +20,23 @@ public class ParserUtilsTest extends BasicTest {
   }
 
   @Test
+  public void testRemoveTrailingStopwords() {
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie.1080p"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie.1080p.x264.AC3"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie WEB-DL"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie Blu-Ray 1080p"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie (WEB-DL) [1080p]"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie [HDR] [2160p]"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie-extended"));
+    assertEqual("Movie", ParserUtils.removeTrailingStopwords("Movie [extended]"));
+
+    assertEqual("Doctor Who Extra Deep Breath", ParserUtils.removeTrailingStopwords("Doctor Who Extra Deep Breath 1080p Blu-Ray x265"));
+    assertEqual("Doctor Who Extra Deep Breath", ParserUtils.removeTrailingStopwords("Doctor Who Extra Deep Breath"));
+    assertEqual("Movie extra something", ParserUtils.removeTrailingStopwords("Movie extra something"));
+    assertEqual("VIDEO_TS", ParserUtils.removeTrailingStopwords("VIDEO_TS"));
+  }
+
+  @Test
   public void testNamingDetection() {
     setTraceLogging();
     assertEqual("VIDEO_TS", detectTY("VIDEO_TS")); // do NOT replace "ts"

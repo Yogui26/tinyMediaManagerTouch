@@ -922,7 +922,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           LOGGER.trace("UDS: video basename {} - {}", vidBasename, vid.getFile());
           for (MediaFile other : mfs) {
             // change asdf-poster.jpg -> asdf.jpg, to ease basename matching ;)
-            String imgBasename = FilenameUtils.getBaseName(Utils.cleanStackingMarkers(getMediaFileNameWithoutType(other)));
+            String imgBasename = getComparableEpisodeBasename(other);
             imgBasename = showDir.relativize(other.getFileAsPath().getParent()) + "/" + imgBasename;
 
             // we now got a match with same (generated) basename!
@@ -1447,6 +1447,41 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
 
       return ret;
+    }
+
+    /**
+     * Checks whether the given media file is an episode metadata sidecar.
+     * <p>
+     * Metadata sidecars must preserve their original basename during episode matching because titles containing words such as {@code Extra} or
+     * {@code Behind the Scenes} are valid episode titles.
+     * </p>
+     *
+     * @param mediaFile
+     *          the media file to inspect
+     * @return {@code true} if the file is an NFO, XML or VSMETA sidecar
+     */
+    private boolean isEpisodeMetadataSidecar(MediaFile mediaFile) {
+      String extension = mediaFile.getExtension();
+      return "nfo".equalsIgnoreCase(extension) || "xml".equalsIgnoreCase(extension) || "vsmeta".equalsIgnoreCase(extension);
+    }
+
+    /**
+     * Gets the comparable basename used for episode sidecar matching.
+     * <p>
+     * We intentionally keep the raw basename for metadata sidecars, because stripping the detected media file type would otherwise remove legitimate
+     * words from the episode title.
+     * </p>
+     *
+     * @param mediaFile
+     *          the media file to inspect
+     * @return the comparable basename for matching
+     */
+    private String getComparableEpisodeBasename(MediaFile mediaFile) {
+      if (isEpisodeMetadataSidecar(mediaFile)) {
+        return FilenameUtils.getBaseName(Utils.cleanStackingMarkers(mediaFile.getFilename()));
+      }
+
+      return FilenameUtils.getBaseName(Utils.cleanStackingMarkers(getMediaFileNameWithoutType(mediaFile)));
     }
 
     /**

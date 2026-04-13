@@ -85,10 +85,13 @@ public class MovieMediaFileTest extends BasicMovieTest {
     checkExtra("extras/someExtForSomeMovie", mft);
     checkExtra("extra/The.Amazing.World.of.Gumball.S03E06.720p.HDTV.x264", mft);
     checkExtra("bla-blubb-extra", mft);
-    checkExtra("bla-blubb-extra-something", mft);
-    checkExtra("bla-blubb-extra-", mft);
     checkExtra("", mft);
     checkExtra("Extras/another/someExtForSomeMovie-trailer", mft);
+
+    // should not be detected as EXTRA when the keyword is in the middle of the filename
+    mft = MediaFileType.VIDEO;
+    checkExtra("Red.Shoe.Diaries.S01.EXTRAS.DVDRip.X264", mft);
+    checkExtra("bla-blubb-extra-something", mft);
 
     // trailer
     // mft = MediaFileType.TRAILER;

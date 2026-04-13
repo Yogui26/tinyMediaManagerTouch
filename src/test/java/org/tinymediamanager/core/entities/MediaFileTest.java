@@ -46,6 +46,8 @@ public class MediaFileTest extends BasicTest {
   @Test
   public void testMediaFileTypeDetectionVideo() {
     checkMediaFileType("This.is.Trailer.park.Boys.mkv", MediaFileType.VIDEO);
+    checkMediaFileType("movie-extras-blabla.mkv", MediaFileType.VIDEO);
+    checkMediaFileType("Doctor.Who.(2005).S00E130.Doctor.Who.Extra.Deep.Breath.1080p.BluRay.AAC.2.0.x265-Panda.mkv", MediaFileType.VIDEO);
     checkMediaFileType("BDMV", MediaFileType.VIDEO);
     checkMediaFileType("VIDEO_TS", MediaFileType.VIDEO);
     checkMediaFileType("HVDVD_TS", MediaFileType.VIDEO);
@@ -68,10 +70,11 @@ public class MediaFileTest extends BasicTest {
     checkMediaFileType("This.is.Trailer.park.Boys.extras1.mkv", MediaFileType.EXTRA);
     checkMediaFileType("This.is.Trailer.park.Boys-extras2.mp4", MediaFileType.EXTRA);
     checkMediaFileType("This.is.Trailer.park.Boys_extras3.avi", MediaFileType.EXTRA);
-    checkMediaFileType("movie-extras-blabla.mkv", MediaFileType.EXTRA);
+
 
     checkMediaFileType("extras/scene2.mkv", MediaFileType.EXTRA);
     checkMediaFileType("extras/scene2.mkv", MediaFileType.EXTRA);
+    checkMediaFileType("extras/scene2.nfo", MediaFileType.EXTRA);
 
     checkMediaFileType("cool movie-behindthescenes.mkv", MediaFileType.EXTRA);
     checkMediaFileType("cool movie-behindthescenes2.mp4", MediaFileType.EXTRA);
@@ -106,11 +109,16 @@ public class MediaFileTest extends BasicTest {
     checkMediaFileType("other/credits.avi", MediaFileType.EXTRA);
     checkMediaFileType("others/credits2.avi", MediaFileType.EXTRA);
     checkMediaFileType("bloopers/hot.avi", MediaFileType.EXTRA);
+
+    checkMediaFileType("Red.Shoe.Diaries.S01.[EXTRAS].DVDRip.X264", MediaFileType.EXTRA);
+    checkMediaFileType("Red.Shoe.Diaries.S01.EXTRAS.DVDRip.X264", MediaFileType.EXTRA);
+    checkMediaFileType("movie.title.[behindthescenes].DVDRip.X264", MediaFileType.EXTRA);
   }
 
   @Test
   public void testMediaFileTypeNfo() {
     checkMediaFileType("movie.nfo", MediaFileType.NFO);
+    checkMediaFileType("movie-extra.nfo", MediaFileType.NFO);
     checkMediaFileType("This.is.Trailer.park.Boys.nfo", MediaFileType.NFO);
     checkMediaFileType("some-other-file.nfo", MediaFileType.NFO);
   }

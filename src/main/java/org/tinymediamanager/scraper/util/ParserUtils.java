@@ -77,6 +77,174 @@ public class ParserUtils {
   }
 
   /**
+   * Removes trailing release tokens from a basename without extension.
+   * <p>
+   * This utility strips trailing {@link #HARD_STOPWORDS}, {@link #SOFT_STOPWORDS}, and {@link #CLEANWORDS} as long as they are located at the end of
+   * the given string. Trailing tokens may be plain or wrapped in brackets. Once a non-removable trailing token is found, the cleanup stops so title
+   * parts in the middle of the filename are preserved.
+   * </p>
+   *
+   * @param filenameWithoutExtension
+   *          the filename basename without extension
+   * @return the cleaned basename without trailing release tokens
+   */
+  public static String removeTrailingStopwords(String filenameWithoutExtension) {
+    if (StringUtils.isBlank(filenameWithoutExtension)) {
+      return "";
+    }
+
+    String cleaned = filenameWithoutExtension.strip();
+    boolean changed;
+
+    do {
+      changed = false;
+
+      String withoutBracketedSuffix = removeTrailingBracketedSuffix(cleaned);
+      if (!withoutBracketedSuffix.equals(cleaned)) {
+        cleaned = stripTrailingDelimiters(withoutBracketedSuffix);
+        changed = true;
+        continue;
+      }
+
+      String trailingToken = getTrailingToken(cleaned);
+      if (StringUtils.isNotBlank(trailingToken) && isTrailingRemovableSequence(trailingToken)) {
+        cleaned = stripTrailingDelimiters(cleaned.substring(0, cleaned.length() - trailingToken.length()));
+        changed = true;
+      }
+    } while (changed && StringUtils.isNotBlank(cleaned));
+
+    return cleaned.strip();
+  }
+
+  /**
+   * Removes a trailing bracketed group if it only contains removable trailing tokens.
+   *
+   * @param value
+   *          the value to inspect
+   * @return the value without the trailing bracketed group or the original value if nothing was removed
+   */
+  private static String removeTrailingBracketedSuffix(String value) {
+    if (StringUtils.isBlank(value)) {
+      return value;
+    }
+
+    int end = value.length() - 1;
+    while (end >= 0 && Character.isWhitespace(value.charAt(end))) {
+      end--;
+    }
+
+    if (end < 0) {
+      return "";
+    }
+
+    char closingBracket = value.charAt(end);
+    char openingBracket;
+    switch (closingBracket) {
+      case ']':
+        openingBracket = '[';
+        break;
+
+      case ')':
+        openingBracket = '(';
+        break;
+
+      case '}':
+        openingBracket = '{';
+        break;
+
+      default:
+        return value;
+    }
+
+    int depth = 0;
+    for (int i = end; i >= 0; i--) {
+      char current = value.charAt(i);
+      if (current == closingBracket) {
+        depth++;
+      }
+      else if (current == openingBracket) {
+        depth--;
+        if (depth == 0) {
+          String content = value.substring(i + 1, end).strip();
+          if (isTrailingRemovableSequence(content)) {
+            return value.substring(0, i);
+          }
+          return value;
+        }
+      }
+    }
+
+    return value;
+  }
+
+  /**
+   * Gets the last trailing token from the given value.
+   *
+   * @param value
+   *          the value to inspect
+   * @return the trailing token or an empty string
+   */
+  private static String getTrailingToken(String value) {
+    if (StringUtils.isBlank(value)) {
+      return "";
+    }
+
+    Matcher matcher = Pattern.compile("^(.*?)([^\\[\\](){} _,.-]+)\\s*$").matcher(value);
+    if (matcher.matches()) {
+      return matcher.group(2);
+    }
+
+    return "";
+  }
+
+  /**
+   * Checks whether the given trailing token sequence only consists of removable release terms.
+   *
+   * @param value
+   *          the trailing token sequence to inspect
+   * @return {@code true} if the sequence is removable
+   */
+  private static boolean isTrailingRemovableSequence(String value) {
+    if (StringUtils.isBlank(value)) {
+      return false;
+    }
+
+    String normalized = value;
+    for (String cleanword : CLEANWORDS) {
+      normalized = normalized.replaceAll("(?i)" + cleanword, " ");
+    }
+
+    String[] tokens = normalized.split(DELIMITER + "+");
+    boolean foundToken = false;
+    for (String token : tokens) {
+      if (StringUtils.isBlank(token)) {
+        continue;
+      }
+
+      foundToken = true;
+
+      boolean hardStopword = Arrays.stream(HARD_STOPWORDS).anyMatch(stopword -> stopword.equalsIgnoreCase(token));
+      boolean softStopword = Arrays.stream(SOFT_STOPWORDS).anyMatch(stopword -> stopword.equalsIgnoreCase(token));
+      if (!hardStopword && !softStopword) {
+        return false;
+      }
+    }
+
+    return foundToken;
+  }
+
+  /**
+   * Removes dangling delimiters from the end of the given string.
+   *
+   * @param value
+   *          the value to clean
+   * @return the value without trailing delimiters
+   */
+  private static String stripTrailingDelimiters(String value) {
+    return value.replaceFirst("[ _,.-]+$", "").strip();
+  }
+
+  /**
    * Tries to get title and year from filename<br>
    * 1. splits string using common delimiters ".- ()"<br>
    * 2. searches for first occurrence of common stopwords<br>
