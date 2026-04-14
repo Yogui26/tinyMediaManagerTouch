@@ -687,6 +687,11 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
       calendar.setTime(complete.first_air_date);
       md.setYear(calendar.get(Calendar.YEAR));
     }
+    if (complete.last_air_date != null) {
+      Calendar calendar = Calendar.getInstance();
+      calendar.setTime(complete.last_air_date);
+      md.setYearEnd(calendar.get(Calendar.YEAR));
+    }
 
     if (complete.credits != null) {
       List<Person> creditsList = new ArrayList<>();
