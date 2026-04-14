@@ -1230,8 +1230,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     if (config.contains(TvShowScraperMetadataConfig.YEAR)) {
       if (metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
         setYear(metadata.getYear());
-      }
-      if (metadata.getYearEnd() > 0 && (overwriteExistingItems || getYearEnd() <= 0)) {
+        // if we set the year, we also ALWAYS set yearEnd
         setYearEnd(metadata.getYearEnd());
       }
     }
