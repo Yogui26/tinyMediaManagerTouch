@@ -62,22 +62,24 @@ public interface IAddon {
   default String getExecutablePath() {
     String executableFilename = getExecutableFilename();
 
-    // 1. look in the user addon folder
     Path executable = Paths.get(Globals.ADDON_FOLDER).toAbsolutePath().resolve(executableFilename);
-    if (Files.isExecutable(executable)) {
-      return executable.toString();
-    }
+    if (!Boolean.parseBoolean(System.getProperty("tmm.usepath"))) {
+      // 1. look in the user addon folder
+      if (Files.isExecutable(executable)) {
+        return executable.toString();
+      }
 
-    // 2. look in the shipped addon folder (legacy)
-    executable = Paths.get(TmmOsUtils.getNativeFolderName()).resolve("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.isExecutable(executable)) {
-      return executable.toString();
-    }
+      // 2. look in the shipped addon folder (legacy)
+      executable = Paths.get(TmmOsUtils.getNativeFolderName()).resolve("addons").toAbsolutePath().resolve(executableFilename);
+      if (Files.isExecutable(executable)) {
+        return executable.toString();
+      }
 
-    // 3. look in the addon folder in the tmm root (legacy)
-    executable = Paths.get("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.isExecutable(executable)) {
-      return executable.toString();
+      // 3. look in the addon folder in the tmm root (legacy)
+      executable = Paths.get("addons").toAbsolutePath().resolve(executableFilename);
+      if (Files.isExecutable(executable)) {
+        return executable.toString();
+      }
     }
 
     // 4. look in the PATH from the system
