@@ -125,7 +125,7 @@ public class MovieTrailerDownloadTask extends TmmTask {
       }
 
       // skip local files - we only want to download online trailers
-      if (StringUtils.isNotBlank(url) && !url.toLowerCase(Locale.ROOT).startsWith("http")) {
+      if (!StringUtils.isNotBlank(url) || !url.toLowerCase(Locale.ROOT).startsWith("http")) {
         continue;
       }
 
