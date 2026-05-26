@@ -494,7 +494,7 @@ public final class TinyMediaManager {
     }
 
     // check for external tools upgrade (force on upgrade and update check)
-    if (newVersion || TmmUIHelper.shouldCheckForUpdate()) {
+    if ((newVersion || TmmUIHelper.shouldCheckForUpdate()) && !Boolean.parseBoolean(System.getProperty("tmm.nixos"))) {
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("ffmpeg"));
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("yt-dlp"));
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("deno"));
