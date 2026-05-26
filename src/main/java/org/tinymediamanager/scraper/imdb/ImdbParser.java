@@ -138,6 +138,7 @@ abstract class ImdbParser {
   static final String                    INCLUDE_PREMIERE_DATE    = "includePremiereDate";
   static final String                    MAX_KEYWORD_COUNT        = "maxKeywordCount";
   static final String                    BROWSER_FALLBACK         = "browserFallback";
+  static final String                    USE_LOCAL_DATASETS       = "useLocalDatasets";
 
   protected final IMediaProvider         metadataProvider;
   protected final MediaType              type;
@@ -184,6 +185,15 @@ abstract class ImdbParser {
   }
 
   protected abstract MediaMetadata getMetadata(MediaSearchAndScrapeOptions options) throws ScrapeException;
+
+  /**
+   * Does the user want to utilize local IMDB datasets over scraped things?
+   *
+   * @return true/false
+   */
+  protected boolean isUsingLocalDatasets() {
+    return config.getValueAsBool(USE_LOCAL_DATASETS, false);
+  }
 
   /**
    * should we include TV movie results

@@ -19,8 +19,10 @@ import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
 import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.THUMB;
 
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -517,72 +519,95 @@ class ImdbTvShowParser extends ImdbParser {
 
     episodes = new ArrayList<>();
 
-    // we need to parse every season for its own _._
-    // get the page for the first season (this is available in 99,9% of all cases)
+    // NEW WORKFLOW:
+    // 1.) use dataset for getting them fast, and also for more-than-fifty-per-season
+    Map<String, MediaMetadata> datasetMetadata = new HashMap<>();
+    if (isUsingLocalDatasets()) {
+      ImdbDatasetUtils du = new ImdbDatasetUtils();
+      List<MediaMetadata> datasetEPs = du.getEpisodesByShowId(imdbId);
+      if (datasetEPs != null && datasetEPs.size() > 0) {
+        datasetEPs.stream().forEach(ep -> datasetMetadata.put(ep.getIdAsString(MediaMetadata.IMDB), ep));
+        datasetEPs.clear();
+      }
+    }
+    // if we would not need the episode titles, we could already return here!!!
+    // but lets continue and scrape as before...
+    // return datasetMetadata.values().stream().collect(Collectors.toList());
 
-    Document doc;
-    List<String> availableSeasons = new ArrayList<>();
+    List<Integer> availableSeasons = new ArrayList<>();
+    List<Integer> availableYears = new ArrayList<>();
 
-    try {
-      Callable<Document> worker = createImdbWorker(constructUrl("/title/", imdbId, "/episodes?season=1"), options.getLanguage().getLanguage(),
-          options.getCertificationCountry().getAlpha2());
-      doc = worker.call();
-      if (doc != null) {
-        ImdbEpisodeList epList = parseEpisodeListJSON(doc);
-        if (epList != null) {
-          // JSON parsing worked
-          episodes.addAll(epList.getEpisodes());
-          for (ImdbIdValueType season : ListUtils.nullSafe(epList.seasons)) {
-            if (!"1".equals(season.value)) {
-              availableSeasons.add(season.value);
+    // 2.) get episodes amount from show DETAIL page )
+    MediaMetadata show = options.getMetadata();
+    if (show != null) {
+      // 2a.) either from a previously scraped show
+      if (show.getExtraData("seasons") != null) {
+        availableSeasons.addAll((List<Integer>) show.getExtraData("seasons"));
+        Collections.sort(availableSeasons);
+      }
+      if (show.getExtraData("years") != null) {
+        availableYears.addAll((List<Integer>) show.getExtraData("years"));
+        Collections.sort(availableYears);
+      }
+    }
+
+    // 2b.) or - oldstyle - from webpage
+    if (availableSeasons.isEmpty() && availableYears.isEmpty()) {
+      try {
+        Callable<Document> worker = createImdbWorker(constructUrl("/title/", imdbId, "/episodes"), options.getLanguage().getLanguage(),
+            options.getCertificationCountry().getAlpha2());
+        Document doc = worker.call();
+        if (doc != null) {
+          ImdbEpisodeList epList = parseEpisodeListJSON(doc);
+          if (epList != null) {
+            // JSON parsing worked
+            episodes.addAll(epList.getEpisodes());
+            for (ImdbIdValueType season : ListUtils.nullSafe(epList.seasons)) {
+              availableSeasons.add(MetadataUtil.parseInt(season.value));
             }
           }
-        }
 
-        // no results via JSON? use old style...
-        if (availableSeasons.isEmpty() || episodes.isEmpty()) {
-          parseEpisodeList(1, episodes, doc);
-          // get the other seasons out of the select option
-          Element select = doc.getElementById("bySeason");
-          if (select != null) {
-            for (Element option : select.getElementsByTag("option")) {
-              String value = option.attr("value");
-              if (StringUtils.isNotBlank(value) && !"1".equals(value)) {
-                availableSeasons.add(value);
+          // no results via JSON? use old style...
+          if (availableSeasons.isEmpty() || episodes.isEmpty()) {
+            parseEpisodeList(1, episodes, doc);
+            // get the other seasons out of the select option
+            Element select = doc.getElementById("bySeason");
+            if (select != null) {
+              for (Element option : select.getElementsByTag("option")) {
+                String value = option.attr("value");
+                if (StringUtils.isNotBlank(value)) {
+                  availableSeasons.add(MetadataUtil.parseInt(value));
+                }
               }
             }
           }
         }
       }
-    }
-    catch (InterruptedException e) {
-      // do not swallow these Exceptions
-      Thread.currentThread().interrupt();
-    }
-    catch (ScrapeException e) {
-      throw e;
-    }
-    catch (Exception e) {
-      LOGGER.debug("problem scraping: {}", e.getMessage());
-      throw new ScrapeException(e);
+      catch (InterruptedException e) {
+        // do not swallow these Exceptions
+        Thread.currentThread().interrupt();
+      }
+      catch (ScrapeException e) {
+        throw e;
+      }
+      catch (Exception e) {
+        LOGGER.debug("problem scraping: {}", e.getMessage());
+        throw new ScrapeException(e);
+      }
     }
 
-    // then parse every season
-    for (String seasonAsString : availableSeasons) {
-      int season = MetadataUtil.parseInt(seasonAsString, -1);
+    // 3a.) parse every season
+    Document doc = null;
+    for (int season : availableSeasons) {
       if (season < 0) {
-        LOGGER.debug("could not parse season number - {}", seasonAsString);
+        LOGGER.debug("could not parse season number - {}", season);
         continue;
       }
 
       try {
-        Callable<Document> worker = createImdbWorker(constructUrl("/title/", imdbId, "/epdate?season=" + season), options.getLanguage().getLanguage(),
-            options.getCertificationCountry().getAlpha2());
+        Callable<Document> worker = createImdbWorker(constructUrl("/title/", imdbId, "/episodes?season=" + season),
+            options.getLanguage().getLanguage(), options.getCertificationCountry().getAlpha2());
         doc = worker.call();
-        if (doc == null) {
-          continue;
-        }
-
         ImdbEpisodeList epList = parseEpisodeListJSON(doc);
         if (epList != null && !epList.getEpisodes().isEmpty()) {
           episodes.addAll(epList.getEpisodes());
@@ -594,17 +619,56 @@ class ImdbTvShowParser extends ImdbParser {
           }
         }
       }
-      catch (InterruptedException e) {
-        // do not swallow these Exceptions
-        Thread.currentThread().interrupt();
+      catch (InterruptedException | InterruptedIOException e) {
+        break; // pressed 'abort' while scraping - no need to fetch the rest!
       }
       catch (Exception e) {
-        LOGGER.debug("problem parsing ep list: {}", e.getMessage());
+        // ignore?
+      }
+    }
+
+    // 3b.) if there were no season (like tt13158394) do the same with years
+    if (episodes.isEmpty() && !availableYears.isEmpty()) {
+      for (int year : availableYears) {
+        if (year < 0) {
+          LOGGER.debug("could not parse season number - {}", year);
+          continue;
+        }
+
+        try {
+          Callable<Document> worker = createImdbWorker(constructUrl("/title/", imdbId, "/episodes?year=" + year), options.getLanguage().getLanguage(),
+              options.getCertificationCountry().getAlpha2());
+          doc = worker.call();
+          ImdbEpisodeList epList = parseEpisodeListJSON(doc);
+          if (epList != null && !epList.getEpisodes().isEmpty()) {
+            episodes.addAll(epList.getEpisodes());
+          }
+          else {
+            // if the given season number and the parsed one does not match, break here
+            if (!parseEpisodeList(year, episodes, doc)) {
+              break;
+            }
+          }
+        }
+        catch (InterruptedException | InterruptedIOException e) {
+          break; // pressed 'abort' while scraping - no need to fetch the rest!
+        }
+        catch (Exception e) {
+          // ignore?
+        }
       }
     }
 
     // cache for further fast access
     if (!episodes.isEmpty()) {
+      // 4. since IMDB lists only first 50 EPs per season, add all the remaining ones from dataset
+      // remove all scraped EPs from dataset cache
+      for (MediaMetadata ep : episodes) {
+        datasetMetadata.remove(ep.getIdAsString(MediaMetadata.IMDB));
+      }
+      // add few remainders
+      episodes.addAll(datasetMetadata.values());
+
       EPISODE_LIST_CACHE_MAP.put(imdbId + "_" + options.getLanguage().getLanguage(), episodes);
     }
 

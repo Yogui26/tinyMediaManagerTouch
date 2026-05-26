@@ -22,6 +22,7 @@ import static org.tinymediamanager.scraper.imdb.ImdbParser.MAX_KEYWORD_COUNT;
 import static org.tinymediamanager.scraper.imdb.ImdbParser.SCRAPE_KEYWORDS_PAGE;
 import static org.tinymediamanager.scraper.imdb.ImdbParser.SCRAPE_LANGUAGE_NAMES;
 import static org.tinymediamanager.scraper.imdb.ImdbParser.SCRAPE_UNCREDITED_ACTORS;
+import static org.tinymediamanager.scraper.imdb.ImdbParser.USE_LOCAL_DATASETS;
 
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,7 @@ public final class ImdbTvShowMetadataProvider extends ImdbMetadataProvider imple
     providerInfo.getConfig().addBoolean(SCRAPE_LANGUAGE_NAMES, true);
     providerInfo.getConfig().addBoolean(SCRAPE_KEYWORDS_PAGE, false);
     providerInfo.getConfig().addInteger(MAX_KEYWORD_COUNT, 5); // 5 on detail page, more on KW page
+    providerInfo.getConfig().addBoolean(USE_LOCAL_DATASETS, false);
 
     providerInfo.getConfig().load();
 
