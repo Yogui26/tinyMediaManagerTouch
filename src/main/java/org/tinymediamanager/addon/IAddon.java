@@ -64,20 +64,26 @@ public interface IAddon {
 
     // 1. look in the user addon folder
     Path executable = Paths.get(Globals.ADDON_FOLDER).toAbsolutePath().resolve(executableFilename);
-    if (Files.isExecutable(executable)) {
-      return executable.toString();
-    }
 
-    // 2. look in the shipped addon folder (legacy)
-    executable = Paths.get(TmmOsUtils.getNativeFolderName()).resolve("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.isExecutable(executable)) {
-      return executable.toString();
-    }
+    Boolean isNixos = Boolean.parseBoolean(System.getProperty("tmm.nixos"));
+    Boolean isShippedBin = executableFilename.equals("ffmpeg") || executableFilename.equals("yt-dlp") || executableFilename.equals("deno");
+    // If it is nixos skip only for defined binary paths and don't skip if the used specified them in the options
+    if (!isNixos || !isShippedBin) {
+      if (Files.isExecutable(executable)) {
+        return executable.toString();
+      }
 
-    // 3. look in the addon folder in the tmm root (legacy)
-    executable = Paths.get("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.isExecutable(executable)) {
-      return executable.toString();
+      // 2. look in the shipped addon folder (legacy)
+      executable = Paths.get(TmmOsUtils.getNativeFolderName()).resolve("addons").toAbsolutePath().resolve(executableFilename);
+      if (Files.isExecutable(executable)) {
+        return executable.toString();
+      }
+
+      // 3. look in the addon folder in the tmm root (legacy)
+      executable = Paths.get("addons").toAbsolutePath().resolve(executableFilename);
+      if (Files.isExecutable(executable)) {
+        return executable.toString();
+      }
     }
 
     // 4. look in the PATH from the system
