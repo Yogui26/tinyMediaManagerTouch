@@ -753,7 +753,7 @@ public class Utils {
           LOGGER.error("ACCESS DENIED (move folder) for '{}' to '{}' - '{}' [{}]", srcDir, destDir, e.getMessage(), e.getClass().getSimpleName());
         }
         catch (AtomicMoveNotSupportedException e) {
-          LOGGER.warn("Atomic move not supported - '{}'", e.getMessage());
+          LOGGER.debug("Atomic move not supported - '{}'", e.getMessage());
           atomicMoveSupported = false; // no need to try it 5 times, just remember this
         }
         catch (IOException e) {
@@ -900,7 +900,7 @@ public class Utils {
           LOGGER.error("ACCESS DENIED (move file) for '{}' to '{}' - '{}' [{}]", srcFile, destFile, e.getMessage(), e.getClass().getSimpleName());
         }
         catch (AtomicMoveNotSupportedException e) {
-          LOGGER.warn("Atomic move not supported - '{}'", e.getMessage());
+          LOGGER.debug("Atomic move not supported - '{}'", e.getMessage());
           atomicMoveSupported = false; // no need to try it 5 times, just remember this
         }
         catch (IOException e) {
