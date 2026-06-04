@@ -733,20 +733,23 @@ public class Utils {
             if (caseOnlyRename) {
               // On case-insensitive filesystems a direct move may not change the
               // case, so we do a two-step rename via a temporary name to force it
+
+              // Move temp file to the target partition (so it's on the same file store)
               Files.move(srcDir, tempDir, StandardCopyOption.REPLACE_EXISTING);
-              Thread.sleep(100); // needed?
-              Files.move(tempDir, destDir, StandardCopyOption.REPLACE_EXISTING);
+              try {
+                // Attempt atomic move first (guaranteed instant rename if on the same drive)
+                Files.move(tempDir, destDir, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+              }
+              catch (AtomicMoveNotSupportedException ee) {
+                // Fallback for SMB shares etc, cross-device, or unsupported network filesystems
+                Files.move(tempDir, destDir, StandardCopyOption.REPLACE_EXISTING);
+              }
             }
             else {
               Files.move(srcDir, destDir);
             }
           }
           rename = true;// no exception
-        }
-        catch (InterruptedException e) {
-          // we will not let the JVM abort the thread here -> just finish the logic without waiting any longer
-          LOGGER.debug("I'm so excited - could not sleep"); // NOSONAR
-          break;
         }
         catch (AccessDeniedException e) {
           // propagate to UI by logging with error
