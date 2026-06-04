@@ -714,11 +714,6 @@ public class Utils {
       // detect case-only rename for case-insensitive filesystems
       // !srcStr.equals(dstStr) has been checked above already
       boolean caseOnlyRename = srcDir.equals(destDir) && srcStr.equalsIgnoreCase(dstStr);
-      Path tempDir = null;
-      if (caseOnlyRename) {
-        tempDir = destDir.resolveSibling(destDir.getFileName().toString() + ".tmm_" + Long.toHexString(System.nanoTime()));
-        LOGGER.debug("case-only rename on case-insensitive filesystem, using two-step rename via '{}'", tempDir);
-      }
 
       // rename folder; try 5 times and wait a sec
       boolean rename = false;
@@ -733,6 +728,8 @@ public class Utils {
             if (caseOnlyRename) {
               // On case-insensitive filesystems a direct move may not change the
               // case, so we do a two-step rename via a temporary name to force it
+              Path tempDir = destDir.resolveSibling(destDir.getFileName().toString() + ".tmm_" + Long.toHexString(System.nanoTime()));
+              LOGGER.debug("case-only rename on case-insensitive filesystem, using two-step rename via '{}'", tempDir);
 
               // Move temp file to the target partition (so it's on the same file store)
               Files.move(srcDir, tempDir, StandardCopyOption.REPLACE_EXISTING);
@@ -741,7 +738,7 @@ public class Utils {
                 Files.move(tempDir, destDir, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
               }
               catch (AtomicMoveNotSupportedException ee) {
-                // Fallback for SMB shares etc, cross-device, or unsupported network filesystems
+                // Fallback for SMB shares, cross-device, or unsupported network filesystems
                 Files.move(tempDir, destDir, StandardCopyOption.REPLACE_EXISTING);
               }
             }
@@ -864,39 +861,39 @@ public class Utils {
       // detect case-only rename for case-insensitive filesystems
       // !srcStr.equals(dstStr) has been checked above already
       boolean caseOnlyRename = srcFile.equals(destFile) && srcStr.equalsIgnoreCase(dstStr);
-      Path tempFile = null;
-      if (caseOnlyRename) {
-        tempFile = destFile.resolveSibling(destFile.getFileName().toString() + ".tmm_" + Long.toHexString(System.nanoTime()));
-        LOGGER.debug("case-only rename on case-insensitive filesystem, using two-step rename via '{}'", tempFile);
-      }
 
       // rename folder; try 5 times and wait a sec
       boolean rename = false;
       boolean atomicMoveSupported = true;
       for (int i = 0; i < 5; i++) {
         try {
-          if (caseOnlyRename) {
-            // On case-insensitive filesystems a direct move may not change the
-            // case, so we do a two-step rename via a temporary name to force it
-            Files.move(srcFile, tempFile, StandardCopyOption.REPLACE_EXISTING);
-            Thread.sleep(500);
-            Files.move(tempFile, destFile, StandardCopyOption.REPLACE_EXISTING);
+          if (atomicMoveSupported) {
+            Files.move(srcFile, destFile, StandardCopyOption.ATOMIC_MOVE);
           }
           else {
-            // need atomic fs move for changing cASE
-            if (atomicMoveSupported) {
-              Files.move(srcFile, destFile, StandardCopyOption.ATOMIC_MOVE);
+            if (caseOnlyRename) {
+              // On case-insensitive filesystems a direct move may not change the
+              // case, so we do a two-step rename via a temporary name to force it
+              Path tempFile = destFile.resolveSibling(destFile.getFileName().toString() + ".tmm_" + Long.toHexString(System.nanoTime()));
+              LOGGER.debug("case-only rename on case-insensitive filesystem, using two-step rename via '{}'", tempFile);
+
+              // Move temp file to the target partition (so it's on the same file store)
+              Files.move(srcFile, tempFile, StandardCopyOption.REPLACE_EXISTING);
+              try {
+                // Attempt atomic move first (guaranteed instant rename if on the same drive)
+                Files.move(tempFile, destFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+              }
+              catch (AtomicMoveNotSupportedException ee) {
+                // Fallback for SMB shares, cross-device, or unsupported network filesystems
+                Files.move(tempFile, destFile, StandardCopyOption.REPLACE_EXISTING);
+              }
             }
             else {
+              // need atomic fs move for changing cASE
               Files.move(srcFile, destFile);
             }
           }
           rename = true;// no exception
-        }
-        catch (InterruptedException e) {
-          // we will not let the JVM abort the thread here -> just finish the logic without waiting any longer
-          LOGGER.debug("I'm so excited - could not sleep"); // NOSONAR
-          break;
         }
         catch (AccessDeniedException e) {
           // propagate to UI by logging with error
