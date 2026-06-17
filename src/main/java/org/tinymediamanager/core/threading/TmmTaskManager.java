@@ -418,12 +418,14 @@ public class TmmTaskManager implements TmmTaskListener {
   private boolean checkForThreadAlive(String contains) {
     // ignore local thread
     Thread local = Thread.currentThread();
+    boolean ret = false;
     for (Thread t : getAllThreads()) {
       if (t != local && t.isAlive() && getThreadName(t).contains(contains)) {
-        return true;
+        System.out.println("running: " + getThreadName(t));
+        ret = true;
       }
     }
-    return false;
+    return ret;
   }
 
   /**

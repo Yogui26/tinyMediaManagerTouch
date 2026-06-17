@@ -899,9 +899,9 @@ public final class MovieList extends AbstractModelObject {
    *           any {@link ScrapeException} occurred while searching
    * @return the list
    */
-  public List<MediaSearchResult> searchMovie(String searchTerm, int year, Map<String, Object> ids, MediaScraper metadataScraper)
-      throws ScrapeException {
-    return searchMovie(searchTerm, year, ids, metadataScraper, MovieModuleManager.getInstance().getSettings().getScraperLanguage());
+  public List<MediaSearchResult> searchMovie(String searchTerm, int year, Map<String, Object> ids, Map<String, String> checksums,
+      MediaScraper metadataScraper) throws ScrapeException {
+    return searchMovie(searchTerm, year, ids, checksums, metadataScraper, MovieModuleManager.getInstance().getSettings().getScraperLanguage());
   }
 
   /**
@@ -921,8 +921,8 @@ public final class MovieList extends AbstractModelObject {
    *           any {@link ScrapeException} occurred while searching
    * @return the list
    */
-  public List<MediaSearchResult> searchMovie(String searchTerm, int year, Map<String, Object> ids, MediaScraper mediaScraper, MediaLanguages language)
-      throws ScrapeException {
+  public List<MediaSearchResult> searchMovie(String searchTerm, int year, Map<String, Object> ids, Map<String, String> checksums,
+      MediaScraper mediaScraper, MediaLanguages language) throws ScrapeException {
 
     if (mediaScraper == null || !mediaScraper.isEnabled()) {
       return Collections.emptyList();
@@ -943,6 +943,7 @@ public final class MovieList extends AbstractModelObject {
     if (ids != null) {
       options.setIds(ids);
     }
+    options.setChecksums(checksums);
 
     if (!searchTerm.isEmpty()) {
       String query = searchTerm.toLowerCase(Locale.ROOT);
