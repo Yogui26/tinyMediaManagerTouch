@@ -42,11 +42,15 @@ public final class VideoPHash {
       return "";
     }
     double durationSeconds = FFprobe.detectDurationSeconds(videoFile);
+    LOGGER.trace("Got duration [{}] for {}", durationSeconds, videoFile);
     if (durationSeconds <= 0) {
       LOGGER.warn("Duration from FFProbe invalid.");
       return "";
     }
-    LOGGER.trace("Got duration [{}] for {}", durationSeconds, videoFile);
+    if (durationSeconds <= 25) {
+      LOGGER.warn("Duration is too low to produce valid results"); // 5x5 images, every sec... meh.
+      return "";
+    }
     // System.out.println(durationSeconds);
     BufferedImage sprite = generateSprite(videoFile, durationSeconds);
     // debugDumpImage("java_sprite.bmp", sprite);
@@ -379,6 +383,18 @@ public final class VideoPHash {
     return rgb;
   }
 
+  /**
+   * compute the distance between 2 hashes.<br>
+   * 0 = 99-100% perfect match<br>
+   * 1-2 = 95% confident to be the same<br>
+   * 5+ = probably not the same vid
+   * 
+   * @param a
+   *          pHash1
+   * @param b
+   *          pHash 2
+   * @return calculated distance to be same
+   */
   public static int hammingDistance(long a, long b) {
     return Long.bitCount(a ^ b);
   }

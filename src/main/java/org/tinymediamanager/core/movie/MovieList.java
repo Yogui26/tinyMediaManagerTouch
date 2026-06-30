@@ -1619,7 +1619,7 @@ public final class MovieList extends AbstractModelObject {
       // duplicates.put(nameYear, movie);
       // }
 
-      // check video HASH
+      // check video CRC32 checksum
       String crc = movie.getCRC32();
       if (!crc.isEmpty()) {
         if (duplicates.containsKey(crc)) {
@@ -1631,6 +1631,21 @@ public final class MovieList extends AbstractModelObject {
         }
         else {
           duplicates.put(crc, movie);
+        }
+      }
+
+      // check video PHASH checksum if same; TODO: hammingDistance
+      String phash = movie.getPHash();
+      if (!phash.isEmpty()) {
+        if (duplicates.containsKey(phash)) {
+          movie.setDuplicate();
+          Movie movie2 = duplicates.get(phash);
+          movie2.setDuplicate();
+          LOGGER.info("Duplicate check: files have the same hash ({}): {} <=> {}", phash, movie.getMainFile().getFileAsPath().toAbsolutePath(),
+              movie2.getMainFile().getFileAsPath().toAbsolutePath());
+        }
+        else {
+          duplicates.put(phash, movie);
         }
       }
     }
