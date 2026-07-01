@@ -54,6 +54,7 @@ import org.tinymediamanager.scraper.exceptions.HttpException;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
+import org.tinymediamanager.scraper.imdb.datasets.ImdbDatasetEpisodes;
 import org.tinymediamanager.scraper.imdb.entities.ImdbEpisodeList;
 import org.tinymediamanager.scraper.imdb.entities.ImdbIdValueType;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
@@ -523,8 +524,8 @@ class ImdbTvShowParser extends ImdbParser {
     // 1.) use dataset for getting them fast, and also for more-than-fifty-per-season
     Map<String, MediaMetadata> datasetMetadata = new HashMap<>();
     if (isUsingLocalDatasets()) {
-      ImdbDatasetUtils du = new ImdbDatasetUtils();
-      List<MediaMetadata> datasetEPs = du.getEpisodesByShowId(imdbId);
+      ImdbDatasetEpisodes de = new ImdbDatasetEpisodes();
+      List<MediaMetadata> datasetEPs = de.getEpisodesByShowId(imdbId);
       if (datasetEPs != null && datasetEPs.size() > 0) {
         datasetEPs.stream().forEach(ep -> datasetMetadata.put(ep.getIdAsString(MediaMetadata.IMDB), ep));
         datasetEPs.clear();
