@@ -131,8 +131,6 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
     catch (Exception e) {
       LOGGER.debug("could not read the MVstore - '{}'", e.getMessage());
       shutdown();
-      dbMapEpisodes = null;
-      javaMapEpisodes = null;
       Utils.deleteFileSafely(getDatabaseFile());
     }
     return Collections.emptyList();
@@ -157,5 +155,12 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
       catch (NumberFormatException e) {
       }
     }
+  }
+
+  @Override
+  protected void shutdown() {
+    super.shutdown();
+    dbMapEpisodes = null;
+    javaMapEpisodes = null;
   }
 }

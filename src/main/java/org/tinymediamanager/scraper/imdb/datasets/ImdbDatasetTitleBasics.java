@@ -81,11 +81,10 @@ public class ImdbDatasetTitleBasics extends ImdbAbstractDataset {
   }
 
   /**
-   * Returns a List of all known IMDB episode Ids.<br>
-   * Might be outdated
+   * gets the title from IMDB
    * 
-   * @param showId
-   * @return empty list or list of episodeIds - but never NULL
+   * @param imdbId
+   * @return title or empty sting - but never NULL
    */
   public String getTitleById(String imdbId) {
     init();

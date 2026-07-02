@@ -101,6 +101,13 @@ public abstract class ImdbAbstractDataset {
     return Files.getLastModifiedTime(databaseFile).to(TimeUnit.SECONDS) < cut;
   }
 
+  /**
+   * Downloads and extracts dataset (d'oh)
+   * 
+   * @return path of extracted file, or NULL when download failed
+   * @throws IOException
+   *           on any error
+   */
   protected Path downloadAndExtractDataset() throws IOException {
     boolean ok = downloadDataset();
     if (!ok) {
@@ -144,12 +151,17 @@ public abstract class ImdbAbstractDataset {
     String dataset = getConfiguredDataset();
     getLogger().debug("Unpacking dataset {}", dataset);
     Path downloadedFile = Paths.get(Globals.CACHE_FOLDER, dataset + ".gz");
+    Path extractedTempFile = Paths.get(Globals.CACHE_FOLDER, dataset + ".tmp");
     Path extractedFile = Paths.get(Globals.CACHE_FOLDER, dataset);
-    Utils.deleteFileSafely(extractedFile);
+    Utils.deleteFileSafely(extractedTempFile);
     try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream(downloadedFile.toFile()))) {
-      Files.copy(gis, extractedFile);
+      Files.copy(gis, extractedTempFile);
     }
+    // DL+extraction worked w/o error, NOW its the time to kill the old file
     Utils.deleteFileSafely(downloadedFile);
+    Utils.deleteFileSafely(extractedFile);
+    Utils.moveFileSafe(extractedTempFile, extractedFile);
+
     return extractedFile;
   }
 
