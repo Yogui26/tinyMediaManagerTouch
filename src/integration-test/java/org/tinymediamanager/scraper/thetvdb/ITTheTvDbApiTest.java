@@ -25,17 +25,17 @@ import org.tinymediamanager.core.BasicITest;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
-import org.tinymediamanager.scraper.thetvdb.entities.AllSeriesResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.BaseResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.BaseResponseList;
 import org.tinymediamanager.scraper.thetvdb.entities.ContentRating;
-import org.tinymediamanager.scraper.thetvdb.entities.ContentRatingResponse;
-import org.tinymediamanager.scraper.thetvdb.entities.EpisodeBaseResponse;
-import org.tinymediamanager.scraper.thetvdb.entities.EpisodeExtendedResponse;
-import org.tinymediamanager.scraper.thetvdb.entities.SeasonBaseResponse;
-import org.tinymediamanager.scraper.thetvdb.entities.SeasonExtendedResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.EpisodeBaseRecord;
+import org.tinymediamanager.scraper.thetvdb.entities.EpisodeExtendedRecord;
+import org.tinymediamanager.scraper.thetvdb.entities.SeasonBaseRecord;
+import org.tinymediamanager.scraper.thetvdb.entities.SeasonExtendedRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.SeasonType;
-import org.tinymediamanager.scraper.thetvdb.entities.SeriesBaseResponse;
-import org.tinymediamanager.scraper.thetvdb.entities.SeriesEpisodesResponse;
-import org.tinymediamanager.scraper.thetvdb.entities.SeriesExtendedResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.SeriesBaseRecord;
+import org.tinymediamanager.scraper.thetvdb.entities.SeriesEpisodesRecord;
+import org.tinymediamanager.scraper.thetvdb.entities.SeriesExtendedRecord;
 
 import retrofit2.Response;
 
@@ -58,7 +58,7 @@ public class ITTheTvDbApiTest extends BasicITest {
     int cntCerts = 0;
     int unknownCerts = 0;
 
-    Response<ContentRatingResponse> response = mp.tvdb.getConfigService().getCertifications().execute();
+    Response<BaseResponseList<ContentRating>> response = mp.tvdb.getConfigService().getCertifications().execute();
     if (response.isSuccessful()) {
       for (ContentRating cert : response.body().data) {
         cntCerts++;
@@ -90,13 +90,13 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testAllSeries() throws Exception {
-    AllSeriesResponse response = theTvDbController.getSeriesService().getAllSeries(1).execute().body();
+    BaseResponseList<SeriesBaseRecord> response = theTvDbController.getSeriesService().getAllSeries(1).execute().body();
     assertThat(response.data).isNotEmpty();
   }
 
   @Test
   public void testSeriesBase() throws Exception {
-    SeriesBaseResponse response = theTvDbController.getSeriesService().getSeriesBase(79335).execute().body();
+    BaseResponse<SeriesBaseRecord> response = theTvDbController.getSeriesService().getSeriesBase(79335).execute().body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.id).isEqualTo(79335);
     assertThat(response.data.name).isEqualTo("Psych");
@@ -104,7 +104,7 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testSeriesExtended() throws Exception {
-    SeriesExtendedResponse response = theTvDbController.getSeriesService().getSeriesExtended(79335).execute().body();
+    BaseResponse<SeriesExtendedRecord> response = theTvDbController.getSeriesService().getSeriesExtended(79335).execute().body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.id).isEqualTo(79335);
     assertThat(response.data.name).isEqualTo("Psych");
@@ -112,7 +112,10 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testSeriesEpisodes() throws Exception {
-    SeriesEpisodesResponse response = theTvDbController.getSeriesService().getSeriesEpisodes(79335, SeasonType.DEFAULT, 0).execute().body();
+    BaseResponse<SeriesEpisodesRecord> response = theTvDbController.getSeriesService()
+        .getSeriesEpisodes(79335, SeasonType.DEFAULT, 0)
+        .execute()
+        .body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.series).isNotNull();
     assertThat(response.data.series.id).isEqualTo(79335);
@@ -122,7 +125,7 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testSeasonsBase() throws Exception {
-    SeasonBaseResponse response = theTvDbController.getSeasonsService().getSeasonBase(16284).execute().body();
+    BaseResponse<SeasonBaseRecord> response = theTvDbController.getSeasonsService().getSeasonBase(16284).execute().body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.number).isEqualTo(1);
     assertThat(response.data.seriesId).isEqualTo(79335);
@@ -130,7 +133,7 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testSeasonsExtended() throws Exception {
-    SeasonExtendedResponse response = theTvDbController.getSeasonsService().getSeasonExtended(16284).execute().body();
+    BaseResponse<SeasonExtendedRecord> response = theTvDbController.getSeasonsService().getSeasonExtended(16284).execute().body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.number).isEqualTo(1);
     assertThat(response.data.seriesId).isEqualTo(79335);
@@ -141,7 +144,7 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testEpisodesBase() throws Exception {
-    EpisodeBaseResponse response = theTvDbController.getEpisodesService().getEpisodeBase(307497).execute().body();
+    BaseResponse<EpisodeBaseRecord> response = theTvDbController.getEpisodesService().getEpisodeBase(307497).execute().body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.episodeNumber).isEqualTo(1);
     assertThat(response.data.seasonNumber).isEqualTo(1);
@@ -149,7 +152,7 @@ public class ITTheTvDbApiTest extends BasicITest {
 
   @Test
   public void testEpisodesExtended() throws Exception {
-    EpisodeExtendedResponse response = theTvDbController.getEpisodesService().getEpisodeExtended(307497).execute().body();
+    BaseResponse<EpisodeExtendedRecord> response = theTvDbController.getEpisodesService().getEpisodeExtended(307497).execute().body();
     assertThat(response.data).isNotNull();
     assertThat(response.data.episodeNumber).isEqualTo(1);
     assertThat(response.data.seasonNumber).isEqualTo(1);
