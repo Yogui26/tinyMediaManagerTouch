@@ -55,6 +55,7 @@ import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.imdb.datasets.ImdbDatasetEpisodes;
+import org.tinymediamanager.scraper.imdb.datasets.ImdbDatasetTitleBasics;
 import org.tinymediamanager.scraper.imdb.entities.ImdbEpisodeList;
 import org.tinymediamanager.scraper.imdb.entities.ImdbIdValueType;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
@@ -526,14 +527,25 @@ class ImdbTvShowParser extends ImdbParser {
     if (isUsingLocalDatasets()) {
       ImdbDatasetEpisodes de = new ImdbDatasetEpisodes();
       List<MediaMetadata> datasetEPs = de.getEpisodesByShowId(imdbId);
+
+      // dataset EPs have no title - but we might need one for EP search/groups
+      ImdbDatasetTitleBasics basic = new ImdbDatasetTitleBasics();
+      for (MediaMetadata md : datasetEPs) {
+        String eptitle = basic.getTitleById(md.getIdAsString(MediaMetadata.IMDB));
+        if (!eptitle.isEmpty()) {
+          md.setTitle(eptitle);
+        }
+      }
+
       if (datasetEPs != null && datasetEPs.size() > 0) {
         datasetEPs.stream().forEach(ep -> datasetMetadata.put(ep.getIdAsString(MediaMetadata.IMDB), ep));
         datasetEPs.clear();
       }
+
+      episodes.addAll(datasetMetadata.values());
+      // id, s, ep, title - we have the minimum; lets return
+      return episodes;
     }
-    // if we would not need the episode titles, we could already return here!!!
-    // but lets continue and scrape as before...
-    // return datasetMetadata.values().stream().collect(Collectors.toList());
 
     List<Integer> availableSeasons = new ArrayList<>();
     List<Integer> availableYears = new ArrayList<>();
