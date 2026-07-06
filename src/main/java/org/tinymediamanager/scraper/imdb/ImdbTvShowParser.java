@@ -540,11 +540,10 @@ class ImdbTvShowParser extends ImdbParser {
       if (datasetEPs != null && datasetEPs.size() > 0) {
         datasetEPs.stream().forEach(ep -> datasetMetadata.put(ep.getIdAsString(MediaMetadata.IMDB), ep));
         datasetEPs.clear();
+        episodes.addAll(datasetMetadata.values());
+        // id, s, ep, title - we have the minimum; lets return
+        return episodes;
       }
-
-      episodes.addAll(datasetMetadata.values());
-      // id, s, ep, title - we have the minimum; lets return
-      return episodes;
     }
 
     List<Integer> availableSeasons = new ArrayList<>();
