@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the record for an artwork type
  */
-public class ArtworkTypeRecord {
+public class ArtworkTypeRecord extends BaseJsonEntity {
   @SerializedName("height")
   public Integer height;
 

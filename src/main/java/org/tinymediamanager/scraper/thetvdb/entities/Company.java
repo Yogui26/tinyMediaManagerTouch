@@ -17,45 +17,47 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * a full company record
  */
-public class Company {
+public class Company extends BaseJsonEntity {
   @SerializedName("activeDate")
-  public String               activeDate           = null;
+  public String          activeDate           = null;
 
   @SerializedName("aliases")
-  public List<Alias>          aliases              = null;
+  public List<Alias>     aliases              = null;
 
   @SerializedName("country")
-  public String               country              = null;
+  public String          country              = null;
 
   @SerializedName("id")
-  public Integer              id                   = null;
+  public Integer         id                   = null;
 
   @SerializedName("inactiveDate")
-  public String               inactiveDate         = null;
+  public String          inactiveDate         = null;
 
   @SerializedName("name")
-  public String               name                 = null;
+  public String          name                 = null;
 
   @SerializedName("nameTranslations")
-  public List<String>         nameTranslations     = null;
+  public List<String>    nameTranslations     = null;
 
   @SerializedName("overviewTranslations")
-  public List<String>         overviewTranslations = null;
+  public List<String>    overviewTranslations = null;
 
   @SerializedName("primaryCompanyType")
-  public Integer              primaryCompanyType   = null;
+  public Integer         primaryCompanyType   = null;
 
   @SerializedName("slug")
-  public String               slug                 = null;
+  public String          slug                 = null;
 
   @SerializedName("parentCompany")
-  public ParentCompany        parentCompany        = null;
+  public ParentCompany   parentCompany        = null;
 
   @SerializedName("tagOptions")
-  public List<TagOption>      tagOptions           = null;
+  public List<TagOption> tagOptions           = null;
 }

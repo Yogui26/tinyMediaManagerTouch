@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * a company type record
  */
-public class CompanyType {
+public class CompanyType extends BaseJsonEntity {
   @SerializedName("companyTypeId")
   public Integer companyTypeId   = null;
 

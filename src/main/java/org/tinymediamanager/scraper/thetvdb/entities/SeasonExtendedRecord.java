@@ -19,9 +19,11 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class SeasonExtendedRecord {
+public class SeasonExtendedRecord extends BaseJsonEntity {
   @SerializedName("abbreviation")
   public String                  abbreviation         = null;
 

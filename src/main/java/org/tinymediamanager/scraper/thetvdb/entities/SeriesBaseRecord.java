@@ -18,9 +18,11 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class SeriesBaseRecord {
+public class SeriesBaseRecord extends BaseJsonEntity {
   @SerializedName("abbreviation")
   public String                  abbreviation         = null;
 

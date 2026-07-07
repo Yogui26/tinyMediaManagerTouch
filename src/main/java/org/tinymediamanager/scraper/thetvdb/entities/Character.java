@@ -14,69 +14,71 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class Character {
+public class Character extends BaseJsonEntity {
   @SerializedName("aliases")
-  public List<Alias>  aliases              = null;
+  public List<Alias>     aliases              = null;
 
   @SerializedName("episode")
-  public RecordInfo   episode              = null;
+  public RecordInfo      episode              = null;
 
   @SerializedName("episodeId")
-  public Integer      episodeId            = null;
+  public Integer         episodeId            = null;
 
   @SerializedName("id")
-  public Integer      id                   = null;
+  public Integer         id                   = null;
 
   @SerializedName("image")
-  public String       image                = null;
+  public String          image                = null;
 
   @SerializedName("isFeatured")
-  public Boolean      isFeatured           = null;
+  public Boolean         isFeatured           = null;
 
   @SerializedName("movieId")
-  public Integer      movieId              = null;
+  public Integer         movieId              = null;
 
   @SerializedName("movie")
-  public RecordInfo   movie                = null;
+  public RecordInfo      movie                = null;
 
   @SerializedName("name")
-  public String       name                 = null;
+  public String          name                 = null;
 
   @SerializedName("nameTranslations")
-  public List<String> nameTranslations     = null;
+  public List<String>    nameTranslations     = null;
 
   @SerializedName("overviewTranslations")
-  public List<String> overviewTranslations = null;
+  public List<String>    overviewTranslations = null;
 
   @SerializedName("peopleId")
-  public Integer      peopleId             = null;
+  public Integer         peopleId             = null;
 
   @SerializedName("personImgURL")
-  public String       personImgURL         = null;
+  public String          personImgURL         = null;
 
   @SerializedName("seriesId")
-  public Integer      seriesId             = null;
+  public Integer         seriesId             = null;
 
   @SerializedName("series")
-  public RecordInfo   series               = null;
+  public RecordInfo      series               = null;
 
   @SerializedName("sort")
-  public Integer      sort                 = null;
+  public Integer         sort                 = null;
 
   @SerializedName("tagOptions")
-  public List<TagOption> tagOptions        = null;
+  public List<TagOption> tagOptions           = null;
 
   @SerializedName("type")
-  public Integer      type                 = null;
+  public Integer         type                 = null;
 
   @SerializedName("url")
-  public String       url                  = null;
+  public String          url                  = null;
 
   @SerializedName("personName")
-  public String       personName           = null;
+  public String          personName           = null;
 
   @SerializedName("peopleType")
-  public String       peopleType           = null;
+  public String          peopleType           = null;
 }

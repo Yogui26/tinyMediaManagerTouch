@@ -17,12 +17,14 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the extended award record
  */
-public class AwardExtendedRecord {
+public class AwardExtendedRecord extends BaseJsonEntity {
   @SerializedName("categories")
   public List<AwardCategoryBaseRecord> categories = null;
 

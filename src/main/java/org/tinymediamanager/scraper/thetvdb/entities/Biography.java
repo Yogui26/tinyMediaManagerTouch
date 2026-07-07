@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the biography record for a person
  */
-public class Biography {
+public class Biography extends BaseJsonEntity {
   @SerializedName("biography")
   public String biography = null;
 

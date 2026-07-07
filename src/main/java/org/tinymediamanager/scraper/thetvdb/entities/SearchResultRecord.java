@@ -18,9 +18,11 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 import java.util.List;
 import java.util.Map;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class SearchResultRecord {
+public class SearchResultRecord extends BaseJsonEntity {
   @SerializedName("aliases")
   public List<String>        aliases         = null;
 

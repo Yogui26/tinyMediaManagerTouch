@@ -17,72 +17,74 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the extended artwork record
  */
-public class ArtworkExtendedRecord {
+public class ArtworkExtendedRecord extends BaseJsonEntity {
   @SerializedName("episodeId")
-  public Integer           episodeId        = null;
+  public Integer         episodeId       = null;
 
   @SerializedName("height")
-  public Integer           height           = null;
+  public Integer         height          = null;
 
   @SerializedName("id")
-  public Integer           id               = null;
+  public Integer         id              = null;
 
   @SerializedName("image")
-  public String            image            = null;
+  public String          image           = null;
 
   @SerializedName("includesText")
-  public Boolean           includesText     = null;
+  public Boolean         includesText    = null;
 
   @SerializedName("language")
-  public String            language         = null;
+  public String          language        = null;
 
   @SerializedName("movieId")
-  public Integer           movieId          = null;
+  public Integer         movieId         = null;
 
   @SerializedName("networkId")
-  public Integer           networkId        = null;
+  public Integer         networkId       = null;
 
   @SerializedName("peopleId")
-  public Integer           peopleId         = null;
+  public Integer         peopleId        = null;
 
   @SerializedName("score")
-  public Double            score            = null;
+  public Double          score           = null;
 
   @SerializedName("seasonId")
-  public Integer           seasonId         = null;
+  public Integer         seasonId        = null;
 
   @SerializedName("seriesId")
-  public Integer           seriesId         = null;
+  public Integer         seriesId        = null;
 
   @SerializedName("seriesPeopleId")
-  public Integer           seriesPeopleId   = null;
+  public Integer         seriesPeopleId  = null;
 
   @SerializedName("status")
-  public ArtworkStatus     status           = null;
+  public ArtworkStatus   status          = null;
 
   @SerializedName("tagOptions")
-  public List<TagOption>   tagOptions       = null;
+  public List<TagOption> tagOptions      = null;
 
   @SerializedName("thumbnail")
-  public String            thumbnail        = null;
+  public String          thumbnail       = null;
 
   @SerializedName("thumbnailHeight")
-  public Integer           thumbnailHeight  = null;
+  public Integer         thumbnailHeight = null;
 
   @SerializedName("thumbnailWidth")
-  public Integer           thumbnailWidth   = null;
+  public Integer         thumbnailWidth  = null;
 
   @SerializedName("type")
-  public Integer           type             = null;
+  public Integer         type            = null;
 
   @SerializedName("updatedAt")
-  public Long              updatedAt        = null;
+  public Long            updatedAt       = null;
 
   @SerializedName("width")
-  public Integer           width            = null;
+  public Integer         width           = null;
 }

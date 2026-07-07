@@ -16,9 +16,11 @@
 
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class Trailer {
+public class Trailer extends BaseJsonEntity {
   @SerializedName("id")
   public Integer id       = null;
 

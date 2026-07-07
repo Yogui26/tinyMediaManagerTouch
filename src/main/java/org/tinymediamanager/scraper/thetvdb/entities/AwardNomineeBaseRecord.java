@@ -15,39 +15,41 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the base award nominee record
  */
-public class AwardNomineeBaseRecord {
+public class AwardNomineeBaseRecord extends BaseJsonEntity {
   @SerializedName("category")
-  public String          category  = null;
+  public String            category  = null;
 
   @SerializedName("character")
-  public Character       character = null;
+  public Character         character = null;
 
   @SerializedName("details")
-  public String          details   = null;
+  public String            details   = null;
 
   @SerializedName("episode")
-  public EpisodeBaseRecord episode  = null;
+  public EpisodeBaseRecord episode   = null;
 
   @SerializedName("id")
-  public Integer         id        = null;
+  public Integer           id        = null;
 
   @SerializedName("isWinner")
-  public Boolean         isWinner  = null;
+  public Boolean           isWinner  = null;
 
   @SerializedName("movie")
-  public MovieBaseRecord movie     = null;
+  public MovieBaseRecord   movie     = null;
 
   @SerializedName("name")
-  public String          name      = null;
+  public String            name      = null;
 
   @SerializedName("series")
-  public SeriesBaseRecord series   = null;
+  public SeriesBaseRecord  series    = null;
 
   @SerializedName("year")
-  public String          year      = null;
+  public String            year      = null;
 }

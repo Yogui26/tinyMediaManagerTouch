@@ -15,11 +15,12 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
 import org.tinymediamanager.scraper.tmdb.entities.Company;
 
 import com.google.gson.annotations.SerializedName;
 
-public class SearchByRemoteIdResult {
+public class SearchByRemoteIdResult extends BaseJsonEntity {
 
   @SerializedName("series")
   public SeriesBaseRecord  series  = null;

@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the base award category record
  */
-public class AwardCategoryBaseRecord {
+public class AwardCategoryBaseRecord extends BaseJsonEntity {
   @SerializedName("allowCoNominees")
   public Boolean         allowCoNominees = null;
 

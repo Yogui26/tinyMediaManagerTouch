@@ -15,9 +15,11 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class Release {
+public class Release extends BaseJsonEntity {
   @SerializedName("country")
   public String country = null;
 

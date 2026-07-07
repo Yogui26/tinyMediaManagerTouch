@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * a base record info (image, name, year) used as a lightweight reference
  */
-public class RecordInfo {
+public class RecordInfo extends BaseJsonEntity {
   @SerializedName("image")
   public String image = null;
 

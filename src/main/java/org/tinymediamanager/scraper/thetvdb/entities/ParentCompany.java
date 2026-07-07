@@ -15,18 +15,20 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * a parent company record
  */
-public class ParentCompany {
+public class ParentCompany extends BaseJsonEntity {
   @SerializedName("id")
-  public Integer              id       = null;
+  public Integer             id       = null;
 
   @SerializedName("name")
-  public String               name     = null;
+  public String              name     = null;
 
   @SerializedName("relation")
-  public CompanyRelationShip  relation = null;
+  public CompanyRelationShip relation = null;
 }

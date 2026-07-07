@@ -16,9 +16,11 @@
 
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class RemoteID {
+public class RemoteID extends BaseJsonEntity {
   @SerializedName("id")
   public String  id         = null;
 

@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * a production country record
  */
-public class ProductionCountry {
+public class ProductionCountry extends BaseJsonEntity {
   @SerializedName("id")
   public Integer id      = null;
 

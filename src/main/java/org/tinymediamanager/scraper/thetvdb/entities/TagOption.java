@@ -16,9 +16,11 @@
 
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class TagOption {
+public class TagOption extends BaseJsonEntity {
   @SerializedName("helpText")
   public String  helpText = null;
 

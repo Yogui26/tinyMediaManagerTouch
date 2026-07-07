@@ -15,12 +15,14 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
  * the artwork status record
  */
-public class ArtworkStatus {
+public class ArtworkStatus extends BaseJsonEntity {
   @SerializedName("id")
   public Integer id   = null;
 

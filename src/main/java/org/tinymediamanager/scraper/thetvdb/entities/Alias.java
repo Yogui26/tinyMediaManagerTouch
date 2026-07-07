@@ -15,9 +15,11 @@
  */
 package org.tinymediamanager.scraper.thetvdb.entities;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class Alias {
+public class Alias extends BaseJsonEntity {
   @SerializedName("language")
   public String language = null;
 

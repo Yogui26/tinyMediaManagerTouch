@@ -17,9 +17,11 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
 import com.google.gson.annotations.SerializedName;
 
-public class MovieBaseRecord {
+public class MovieBaseRecord extends BaseJsonEntity {
   @SerializedName("aliases")
   public List<Alias>  aliases              = null;
 

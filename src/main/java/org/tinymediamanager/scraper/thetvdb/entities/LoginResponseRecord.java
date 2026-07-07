@@ -17,7 +17,7 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 
 import com.google.gson.annotations.SerializedName;
 
-public class LoginResponseRecord {
+public class LoginResponseRecord {// extends BaseJsonEntity // NOPE!!
   @SerializedName("token")
   public String token = null;
 }
