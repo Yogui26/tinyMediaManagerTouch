@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -440,22 +441,24 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         return null;
     }
 
-    // extract image sizes
-    ArtworkTypeRecord artworkType = getArtworkType(image.type);
-    if (artworkType != null) {
-      int width = artworkType.width;
-      int height = artworkType.height;
-      int sizeOrder = getSizeOrder(ma.getType(), width);
-
-      ma.addImageSize(width, height, image.image, sizeOrder);
+    // extract image sizes - prefer direct
+    if (Optional.ofNullable(image.height).orElse(0) > 0 && Optional.ofNullable(image.width).orElse(0) > 0) {
+      int sizeOrder = getSizeOrder(ma.getType(), image.width);
+      ma.addImageSize(image.width, image.height, image.image, sizeOrder);
+    }
+    else {
+      ArtworkTypeRecord artworkType = getArtworkType(image.type);
+      if (artworkType != null) {
+        int width = artworkType.width;
+        int height = artworkType.height;
+        int sizeOrder = getSizeOrder(ma.getType(), width);
+        ma.addImageSize(width, height, image.image, sizeOrder);
+      }
     }
 
     ma.setOriginalUrl(image.image);
     if (StringUtils.isNotBlank(image.thumbnail)) {
       ma.setPreviewUrl(image.thumbnail);
-    }
-    else {
-      ma.setPreviewUrl(ma.getOriginalUrl());
     }
 
     if (StringUtils.isBlank(image.language)) {
