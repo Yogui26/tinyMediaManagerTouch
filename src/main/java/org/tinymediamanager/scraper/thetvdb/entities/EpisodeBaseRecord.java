@@ -21,8 +21,23 @@ import java.util.List;
 import com.google.gson.annotations.SerializedName;
 
 public class EpisodeBaseRecord {
+  @SerializedName("absoluteNumber")
+  public Integer                absoluteNumber       = null;
+
   @SerializedName("aired")
   public String                 aired                = null;
+
+  @SerializedName("airsAfterSeason")
+  public Integer                airsAfterSeason      = null;
+
+  @SerializedName("airsBeforeEpisode")
+  public Integer                airsBeforeEpisode    = null;
+
+  @SerializedName("airsBeforeSeason")
+  public Integer                airsBeforeSeason     = null;
+
+  @SerializedName("finaleType")
+  public String                 finaleType           = null;
 
   @SerializedName("id")
   public Integer                id                   = null;
@@ -35,6 +50,12 @@ public class EpisodeBaseRecord {
 
   @SerializedName("isMovie")
   public Integer                isMovie              = null;
+
+  @SerializedName("lastUpdated")
+  public String                 lastUpdated          = null;
+
+  @SerializedName("linkedMovie")
+  public Integer                linkedMovie          = null;
 
   @SerializedName("name")
   public String                 name                 = null;
@@ -66,4 +87,10 @@ public class EpisodeBaseRecord {
 
   @SerializedName("seasonNumber")
   public Integer                seasonNumber         = null;
+
+  @SerializedName("seasonName")
+  public String                 seasonName           = null;
+
+  @SerializedName("year")
+  public String                 year                 = null;
 }

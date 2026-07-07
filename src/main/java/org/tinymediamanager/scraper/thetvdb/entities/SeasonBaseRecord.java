@@ -36,6 +36,9 @@ public class SeasonBaseRecord {
   @SerializedName("imageType")
   public Integer          imageType            = null;
 
+  @SerializedName("lastUpdated")
+  public String           lastUpdated          = null;
+
   @SerializedName("name")
   public String           name                 = null;
 
@@ -56,4 +59,7 @@ public class SeasonBaseRecord {
 
   @SerializedName("type")
   public SeasonTypeRecord type                 = null;
+
+  @SerializedName("year")
+  public String           year                 = null;
 }

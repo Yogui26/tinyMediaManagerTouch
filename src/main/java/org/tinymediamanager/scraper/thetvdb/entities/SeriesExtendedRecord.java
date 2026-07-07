@@ -47,6 +47,9 @@ public class SeriesExtendedRecord {
   @SerializedName("seasonTypes")
   public List<SeasonTypeRecord>    seasonTypes          = null;
 
+  @SerializedName("episodes")
+  public List<EpisodeBaseRecord>   episodes             = null;
+
   @SerializedName("firstAired")
   public String                    firstAired           = null;
 
@@ -92,6 +95,9 @@ public class SeriesExtendedRecord {
   @SerializedName("originalLanguage")
   public String                    originalLanguage     = null;
 
+  @SerializedName("overview")
+  public String                    overview             = null;
+
   @SerializedName("overviewTranslations")
   public List<String>              overviewTranslations = null;
 
@@ -112,6 +118,15 @@ public class SeriesExtendedRecord {
 
   @SerializedName("trailers")
   public List<Trailer>             trailers             = null;
+
+  @SerializedName("lists")
+  public List<ListBaseRecord>      lists                = null;
+
+  @SerializedName("tags")
+  public List<TagOption>           tags                 = null;
+
+  @SerializedName("translations")
+  public TranslationExtended       translations         = null;
 
   @SerializedName("averageRuntime")
   public Integer                   averageRuntime       = null;

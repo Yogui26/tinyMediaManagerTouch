@@ -37,4 +37,7 @@ public class Translation {
 
   @SerializedName("overview")
   public String       overview  = null;
+
+  @SerializedName("tagline")
+  public String       tagline   = null;
 }

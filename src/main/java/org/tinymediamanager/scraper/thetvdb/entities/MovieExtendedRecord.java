@@ -35,6 +35,9 @@ public class MovieExtendedRecord {
   @SerializedName("boxOffice")
   public String                    boxOffice            = null;
 
+  @SerializedName("boxOfficeUS")
+  public String                    boxOfficeUS          = null;
+
   @SerializedName("budget")
   public String                    budget               = null;
 
@@ -50,6 +53,9 @@ public class MovieExtendedRecord {
   @SerializedName("franchises")
   public List<FranchiseBaseRecord> franchises           = null;
 
+  @SerializedName("first_release")
+  public Release                   firstRelease         = null;
+
   @SerializedName("genres")
   public List<GenreBaseRecord>     genres               = null;
 
@@ -58,6 +64,15 @@ public class MovieExtendedRecord {
 
   @SerializedName("image")
   public String                    image                = null;
+
+  @SerializedName("inspirations")
+  public List<Inspiration>         inspirations         = null;
+
+  @SerializedName("lastUpdated")
+  public String                    lastUpdated          = null;
+
+  @SerializedName("lists")
+  public List<ListBaseRecord>      lists                = null;
 
   @SerializedName("name")
   public String                    name                 = null;
@@ -74,6 +89,9 @@ public class MovieExtendedRecord {
   @SerializedName("overviewTranslations")
   public List<String>              overviewTranslations = null;
 
+  @SerializedName("production_countries")
+  public List<ProductionCountry>   productionCountries  = null;
+
   @SerializedName("releases")
   public List<Release>             releases             = null;
 
@@ -89,6 +107,9 @@ public class MovieExtendedRecord {
   @SerializedName("slug")
   public String                    slug                 = null;
 
+  @SerializedName("spoken_languages")
+  public List<String>              spokenLanguages      = null;
+
   @SerializedName("status")
   public Status                    status               = null;
 
@@ -98,6 +119,15 @@ public class MovieExtendedRecord {
   @SerializedName("subtitleLanguages")
   public List<String>              subtitleLanguages    = null;
 
+  @SerializedName("tagOptions")
+  public List<TagOption>           tagOptions           = null;
+
   @SerializedName("trailers")
   public List<Trailer>             trailers             = null;
+
+  @SerializedName("translations")
+  public TranslationExtended       translations         = null;
+
+  @SerializedName("year")
+  public String                    year                 = null;
 }

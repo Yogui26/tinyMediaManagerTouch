@@ -29,6 +29,9 @@ public class MovieBaseRecord {
   @SerializedName("image")
   public String       image                = null;
 
+  @SerializedName("lastUpdated")
+  public String       lastUpdated          = null;
+
   @SerializedName("name")
   public Object       name                 = null;
 
@@ -46,4 +49,10 @@ public class MovieBaseRecord {
 
   @SerializedName("status")
   public Status       status               = null;
+
+  @SerializedName("runtime")
+  public Integer      runtime              = null;
+
+  @SerializedName("year")
+  public String       year                 = null;
 }

@@ -20,6 +20,9 @@ public class Character {
   @SerializedName("aliases")
   public List<Alias>  aliases              = null;
 
+  @SerializedName("episode")
+  public RecordInfo   episode              = null;
+
   @SerializedName("episodeId")
   public Integer      episodeId            = null;
 
@@ -35,6 +38,9 @@ public class Character {
   @SerializedName("movieId")
   public Integer      movieId              = null;
 
+  @SerializedName("movie")
+  public RecordInfo   movie                = null;
+
   @SerializedName("name")
   public String       name                 = null;
 
@@ -47,11 +53,20 @@ public class Character {
   @SerializedName("peopleId")
   public Integer      peopleId             = null;
 
+  @SerializedName("personImgURL")
+  public String       personImgURL         = null;
+
   @SerializedName("seriesId")
   public Integer      seriesId             = null;
 
+  @SerializedName("series")
+  public RecordInfo   series               = null;
+
   @SerializedName("sort")
   public Integer      sort                 = null;
+
+  @SerializedName("tagOptions")
+  public List<TagOption> tagOptions        = null;
 
   @SerializedName("type")
   public Integer      type                 = null;

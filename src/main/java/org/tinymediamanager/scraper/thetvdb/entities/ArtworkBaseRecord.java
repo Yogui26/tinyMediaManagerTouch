@@ -19,24 +19,33 @@ package org.tinymediamanager.scraper.thetvdb.entities;
 import com.google.gson.annotations.SerializedName;
 
 public class ArtworkBaseRecord {
-  @SerializedName("id")
-  public Integer id        = null;
+  @SerializedName("height")
+  public Integer  height       = null;
 
-  @SerializedName("seasonId")
-  public Integer season    = null;
+  @SerializedName("id")
+  public Integer  id           = null;
 
   @SerializedName("image")
-  public String  image     = null;
+  public String   image        = null;
+
+  @SerializedName("includesText")
+  public Boolean  includesText = null;
 
   @SerializedName("language")
-  public String  language  = null;
+  public String   language     = null;
 
   @SerializedName("score")
-  public Integer score     = null;
+  public Integer  score        = null;
+
+  @SerializedName("seasonId")
+  public Integer  season       = null;
 
   @SerializedName("thumbnail")
-  public String  thumbnail = null;
+  public String   thumbnail    = null;
 
   @SerializedName("type")
-  public Integer type      = null;
+  public Integer  type         = null;
+
+  @SerializedName("width")
+  public Integer  width        = null;
 }

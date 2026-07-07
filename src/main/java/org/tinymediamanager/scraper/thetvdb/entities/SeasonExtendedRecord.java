@@ -28,6 +28,9 @@ public class SeasonExtendedRecord {
   @SerializedName("artwork")
   public List<ArtworkBaseRecord> artwork              = null;
 
+  @SerializedName("companies")
+  public Companies               companies            = null;
+
   @SerializedName("country")
   public String                  country              = null;
 
@@ -42,6 +45,9 @@ public class SeasonExtendedRecord {
 
   @SerializedName("imageType")
   public BigDecimal              imageType            = null;
+
+  @SerializedName("lastUpdated")
+  public String                  lastUpdated          = null;
 
   @SerializedName("name")
   public String                  name                 = null;
@@ -64,6 +70,15 @@ public class SeasonExtendedRecord {
   @SerializedName("trailers")
   public List<Trailer>           trailers             = null;
 
+  @SerializedName("tagOptions")
+  public List<TagOption>         tagOptions           = null;
+
+  @SerializedName("translations")
+  public TranslationExtended     translations         = null;
+
   @SerializedName("type")
   public SeasonTypeRecord        type                 = null;
+
+  @SerializedName("year")
+  public String                  year                 = null;
 }
