@@ -1,14 +1,12 @@
 package org.tinymediamanager.scraper.imdb.datasets;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
@@ -17,7 +15,6 @@ import org.h2.mvstore.MVStore;
 import org.slf4j.Logger;
 import org.tinymediamanager.Globals;
 import org.tinymediamanager.core.Utils;
-import org.tinymediamanager.scraper.http.OnDiskCachedUrl;
 import org.tinymediamanager.scraper.http.Url;
 
 public abstract class ImdbAbstractDataset {
@@ -37,12 +34,7 @@ public abstract class ImdbAbstractDataset {
   /**
    * the opened DB map
    */
-  protected MVMap<String, String> dbMap;
-  /**
-   * java shadow map for adding/updating <br>
-   * doing that directly inside M2 map is waaay to slow...
-   */
-  protected Map<String, String>   javaMap;
+  protected MVMap<String, Object> dbMap;
 
   /**
    * the DB table name
@@ -75,7 +67,6 @@ public abstract class ImdbAbstractDataset {
     }
     finally {
       mvStore = null;
-      javaMap = null;
       dbMap = null;
     }
   }
@@ -138,7 +129,7 @@ public abstract class ImdbAbstractDataset {
     Path downloadedFile = Paths.get(Globals.CACHE_FOLDER, dataset + ".gz");
     Utils.deleteFileSafely(downloadedFile);
     try {
-      Url imdbUrl = new OnDiskCachedUrl("https://datasets.imdbws.com/" + dataset + ".gz", getConfiguredCacheDays(), TimeUnit.DAYS);
+      Url imdbUrl = new Url("https://datasets.imdbws.com/" + dataset + ".gz");
       return imdbUrl.download(downloadedFile);
     }
     catch (Exception e) {
@@ -147,7 +138,7 @@ public abstract class ImdbAbstractDataset {
     }
   }
 
-  protected Path unpackDataset() throws FileNotFoundException, IOException {
+  protected Path unpackDataset() throws IOException {
     String dataset = getConfiguredDataset();
     getLogger().debug("Unpacking dataset {}", dataset);
     Path downloadedFile = Paths.get(Globals.CACHE_FOLDER, dataset + ".gz");
@@ -157,7 +148,7 @@ public abstract class ImdbAbstractDataset {
     try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream(downloadedFile.toFile()))) {
       Files.copy(gis, extractedTempFile);
     }
-    // DL+extraction worked w/o error, NOW its the time to kill the old file
+    // DL+extraction worked w/o error, NOW it's the time to kill the old file
     Utils.deleteFileSafely(downloadedFile);
     Utils.deleteFileSafely(extractedFile);
     Utils.moveFileSafe(extractedTempFile, extractedFile);

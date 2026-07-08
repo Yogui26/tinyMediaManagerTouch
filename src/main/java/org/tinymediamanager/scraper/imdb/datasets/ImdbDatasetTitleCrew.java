@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
-import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,22 +47,22 @@ public class ImdbDatasetTitleCrew extends ImdbAbstractDataset {
           // ***************************** DUMMY IMPL
           // ***************************************
           LOGGER.debug("Parsing dataset...");
-          javaMap = new TreeMap<>();
+
+          openWritableDatabase(databaseFile);
+          dbMap = mvStore.openMap(dbTable);
+
           try (var stream = Files.lines(extractedFile, StandardCharsets.UTF_8)) {
             stream.skip(1).forEach(line -> {
               // TODO: tconst
               String[] data = line.split("\t");
-              javaMap.put(data[0], data[2]);
+              dbMap.put(data[0], data[2]);
             });
           }
 
           LOGGER.debug("Copying map to database...");
-          openWritableDatabase(databaseFile);
-          dbMap = mvStore.openMap(dbTable);
-          dbMap.putAll(javaMap);
           mvStore.commit();
-          javaMap.clear();
-          javaMap = null;
+
+          Files.delete(extractedFile);
 
           LOGGER.debug("Done!");
           // ***************************************

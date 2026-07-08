@@ -7,10 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-import org.h2.mvstore.MVMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Utils;
@@ -42,16 +39,6 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
     return "imdbEpisodes";
   }
 
-  /**
-   * the opened DB map
-   */
-  private MVMap<String, List<String>> dbMapEpisodes;
-  /**
-   * java shadow map for adding/updating <br>
-   * doing that directly inside M2 map is waaay to slow...
-   */
-  private Map<String, List<String>>   javaMapEpisodes;
-
   @Override
   protected void initDataset() {
     Path databaseFile = getDatabaseFile();
@@ -63,35 +50,37 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
         Path extractedFile = downloadAndExtractDataset();
         if (extractedFile != null) {
           LOGGER.debug("Parsing dataset...");
-          javaMapEpisodes = new TreeMap<>();
+
+          openWritableDatabase(databaseFile);
+          dbMap = mvStore.openMap(dbTable);
+          dbMap.clear();
+
           try (var stream = Files.lines(extractedFile, StandardCharsets.UTF_8)) {
             stream.skip(1).forEach(line -> {
               // EP, show, S, E
               String[] data = line.split("\t");
-              javaMapEpisodes.computeIfAbsent(data[1], k -> new ArrayList<>()).add(line);
+              List<String> episodes = (List<String>) dbMap.computeIfAbsent(data[1], k -> new ArrayList<>());
+              episodes.add(line);
             });
           }
 
           LOGGER.debug("Copying map to database...");
-          openWritableDatabase(databaseFile);
-          dbMapEpisodes = mvStore.openMap(dbTable);
-          dbMapEpisodes.putAll(javaMapEpisodes);
           mvStore.commit();
-          javaMapEpisodes.clear();
-          javaMapEpisodes = null;
+
+          Files.delete(extractedFile);
 
           LOGGER.debug("Done!");
         }
         else if (Files.exists(databaseFile)) {
           LOGGER.debug("download failed - using old copy");
           openReadOnlyDatabase(databaseFile);
-          dbMapEpisodes = mvStore.openMap(dbTable);
+          dbMap = mvStore.openMap(dbTable);
         }
       }
       else {
         LOGGER.debug("Dataset young enough, no need to download...");
         openReadOnlyDatabase(databaseFile);
-        dbMapEpisodes = mvStore.openMap(dbTable);
+        dbMap = mvStore.openMap(dbTable);
       }
     }
     catch (Exception e) {
@@ -110,23 +99,27 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
   public List<MediaMetadata> getEpisodesByShowId(String showId) {
     init();
     try {
-      List<String> epsTsv = dbMapEpisodes.get(showId);
-      if (epsTsv == null || epsTsv.isEmpty()) {
-        return Collections.emptyList();
+      Object obj = dbMap.get(showId);
+      if (obj instanceof List<?> list) {
+        if (list.isEmpty()) {
+          return Collections.emptyList();
+        }
+
+        List<String> epsTsv = (List<String>) list;
+        List<MediaMetadata> ret = new ArrayList<>();
+        epsTsv.forEach(ep -> {
+          // EP, show, S, E
+          String[] tsv = ep.split("\t");
+          DatasetEpisode data = new DatasetEpisode(tsv[0], tsv[2], tsv[3]);
+          MediaMetadata md = new MediaMetadata(MediaMetadata.IMDB);
+          md.setId(MediaMetadata.IMDB, data.id);
+          MediaEpisodeNumber see = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, data.s, data.e);
+          md.setEpisodeNumber(see);
+          md.setTitle("found S" + see.season() + " E" + see.episode() + " - title will be scraped later");
+          ret.add(md);
+        });
+        return ret;
       }
-      List<MediaMetadata> ret = new ArrayList<>();
-      epsTsv.forEach(ep -> {
-        // EP, show, S, E
-        String[] tsv = ep.split("\t");
-        DatasetEpisode data = new DatasetEpisode(tsv[0], tsv[2], tsv[3]);
-        MediaMetadata md = new MediaMetadata(MediaMetadata.IMDB);
-        md.setId(MediaMetadata.IMDB, data.id);
-        MediaEpisodeNumber see = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, data.s, data.e);
-        md.setEpisodeNumber(see);
-        md.setTitle("found S" + see.season() + " E" + see.episode() + " - title will be scraped later");
-        ret.add(md);
-      });
-      return ret;
     }
     catch (Exception e) {
       LOGGER.debug("could not read the MVstore - '{}'", e.getMessage());
@@ -137,10 +130,9 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
   }
 
   static class DatasetEpisode implements Serializable {
-    private static final long serialVersionUID = 1L;
-    String                    id;
-    int                       s                = -1;
-    int                       e                = -1;
+    String id;
+    int    s = -1;
+    int    e = -1;
 
     public DatasetEpisode(String episodeId, String seasonNr, String episodeNr) {
       id = episodeId;
@@ -148,19 +140,14 @@ public class ImdbDatasetEpisodes extends ImdbAbstractDataset {
         s = Integer.parseInt(seasonNr); // do not use our utils method - too slow
       }
       catch (NumberFormatException e) {
+        // ignored
       }
       try {
         e = Integer.parseInt(episodeNr);
       }
       catch (NumberFormatException e) {
+        // ignored
       }
     }
-  }
-
-  @Override
-  protected void shutdown() {
-    super.shutdown();
-    dbMapEpisodes = null;
-    javaMapEpisodes = null;
   }
 }
