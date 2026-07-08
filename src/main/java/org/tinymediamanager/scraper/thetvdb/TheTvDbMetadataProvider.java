@@ -315,6 +315,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
     for (RemoteID remote : ListUtils.nullSafe(ids)) {
       switch (remote.type) {
         case 1: // ???
+          LOGGER.trace("************ unknown ID: {}", remote);
           break;
 
         case 2: // IMDB
@@ -333,7 +334,15 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         case 7: // Reddit
         case 8: // Fan Site
         case 9: // Instagram
-        case 10: // ???
+          break;
+
+        case 10: // TheMovieDB.com again? Got from DjangoUnchained
+          int tid2 = MetadataUtil.parseInt(remote.id, -1);
+          if (tid2 > 0) {
+            ret.put(MediaMetadata.TMDB, tid2); // save as INT
+          }
+          break;
+
         case 11: // Youtube
           break;
 
@@ -352,6 +361,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         case 15: // ???
         case 16: // ???
         case 17: // ???
+          LOGGER.trace("************ unknown ID: {}", remote);
           break;
 
         case 18: // Wikidata
@@ -369,6 +379,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         case 21: // ???
         case 22: // ???
         case 23: // ???
+          LOGGER.trace("************ unknown ID: {}", remote);
         case 24: // Wikipedia
         default:
           break;
