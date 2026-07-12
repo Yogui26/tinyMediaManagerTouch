@@ -140,6 +140,8 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   @JsonProperty
   private int                                     runtime                    = 0;
   @JsonProperty
+  protected int                                   yearEnd                    = 0;
+  @JsonProperty
   @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
   private Date                                    firstAired                 = null;
   @JsonProperty
@@ -257,6 +259,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     setRuntime(runtime == 0 || force ? other.runtime : runtime);
     setFirstAired(firstAired == null || force ? other.firstAired : firstAired);
     setStatus(status == MediaAiredStatus.UNKNOWN || force ? other.status : status);
+    setYearEnd(yearEnd == 0 || force ? other.yearEnd : yearEnd);
     setCertification(certification == MediaCertification.UNKNOWN || force ? other.certification : certification);
     setCountry(StringUtils.isEmpty(country) || force ? other.country : country);
     setTop250(top250 == 0 || force ? other.top250 : top250);
@@ -1224,8 +1227,12 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       setTagline(metadata.getTagline());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.YEAR) && metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
-      setYear(metadata.getYear());
+    if (config.contains(TvShowScraperMetadataConfig.YEAR)) {
+      if (metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
+        setYear(metadata.getYear());
+        // if we set the year, we also ALWAYS set yearEnd
+        setYearEnd(metadata.getYearEnd());
+      }
     }
 
     if (config.contains(TvShowScraperMetadataConfig.RATING)) {
@@ -1313,6 +1320,9 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       setCrew(metadata.getCastMembers(Person.Type.DIRECTOR));
       setCrew(metadata.getCastMembers(Person.Type.WRITER));
       setCrew(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.COMPOSER));
+      setCrew(metadata.getCastMembers(Person.Type.EDITOR));
+      setCrew(metadata.getCastMembers(Person.Type.CAMERA));
       setCrew(metadata.getCastMembers(Person.Type.OTHER));
     }
 
@@ -1420,7 +1430,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     writeNFO();
 
     // also force to write all season NFO files
-    seasons.forEach(TvShowSeason::writeNfo);
+    seasons.forEach(TvShowSeason::writeNFO);
 
     saveToDb();
   }
@@ -1696,6 +1706,24 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   }
 
   /**
+   * Series has ended when yearEnd>0
+   * 
+   * @return
+   */
+  public int getYearEnd() {
+    return yearEnd;
+  }
+
+  /**
+   * Set year when series has ended
+   * 
+   * @param yearEnd
+   */
+  public void setYearEnd(int yearEnd) {
+    this.yearEnd = yearEnd;
+  }
+
+  /**
    * Gets the runtime.
    *
    * @return the runtime
@@ -1938,6 +1966,11 @@ public class TvShow extends MediaEntity implements IMediaInformation {
         episodeFound = true;
         watched = watched && episode.isWatched();
       }
+
+      // short-cut = episode is found and at least one episode not watched - abort
+      if (episodeFound && !watched) {
+        break;
+      }
     }
 
     // at least 1 non-dummy found -> pass the collected watched state
@@ -2103,7 +2136,8 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    */
   public String getTrailerFilename(@NotNull TvShowTrailerNaming trailer) {
     // basename is the TV show title itself
-    return FilenameUtils.removeExtension(TvShowRenamer.replaceInvalidCharacters(trailer.getFilename(getTitle(), "ext")));
+    return FilenameUtils.removeExtension(TvShowRenamer.replaceInvalidCharacters(trailer.getFilename(getTitle(), "ext"),
+        TvShowModuleManager.getInstance().getSettings().getDefaultRenamerProfile()));
   }
 
   /**

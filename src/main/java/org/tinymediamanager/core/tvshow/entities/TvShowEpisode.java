@@ -102,6 +102,7 @@ import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -1196,6 +1197,9 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       setCrew(metadata.getCastMembers(Person.Type.DIRECTOR));
       setCrew(metadata.getCastMembers(Person.Type.WRITER));
       setCrew(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.COMPOSER));
+      setCrew(metadata.getCastMembers(Person.Type.EDITOR));
+      setCrew(metadata.getCastMembers(Person.Type.CAMERA));
       setCrew(metadata.getCastMembers(Person.Type.OTHER));
     }
 
@@ -1475,8 +1479,16 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     this.lastWatched = lastWatched;
   }
 
+  public Map<String, String> getChecksums() {
+    return getMainVideoFile().getChecksums();
+  }
+
   public String getCRC32() {
     return getMainVideoFile().getCRC32();
+  }
+
+  public String getPHash() {
+    return getMainVideoFile().getPHash();
   }
 
   /**
@@ -1662,6 +1674,21 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       if (StringUtils.isNotBlank(originalTitle)) {
         setOriginalTitle(originalTitle);
         dirty = true;
+      }
+
+      String imdb = mediaFile.getExtraData().get("imdbId");
+      if (StringUtils.isNotBlank(imdb)) {
+        setId(MediaMetadata.IMDB, imdb);
+        dirty = true;
+      }
+
+      String tmdb = mediaFile.getExtraData().get("tmdbId");
+      if (StringUtils.isNotBlank(tmdb)) {
+        int id = MetadataUtil.parseInt(tmdb, 0);
+        if (id > 0) {
+          setId(MediaMetadata.TMDB, id);
+          dirty = true;
+        }
       }
 
       String plot = mediaFile.getExtraData().get("plot");
@@ -2049,6 +2076,18 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
     return runtime == 0 ? runtimeFromMi : runtime;
+  }
+
+  /**
+   * returns the relative path to the TV show root as {@link String}
+   * 
+   * @return the relative path to the TV show root
+   */
+  public String getFolderName() {
+    if (getTvShow() == null) {
+      return "";
+    }
+    return getTvShow().getPathNIO().relativize(getMainVideoFile().getFile().getParent()).toString();
   }
 
   /**

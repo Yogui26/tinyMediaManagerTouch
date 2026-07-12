@@ -573,7 +573,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
 
           // automatic rename?
           if (MovieModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-            model.addTask(new MovieRenameTask(Collections.singletonList(movieToScrape)));
+            model.addTask(new MovieRenameTask(Collections.singletonList(movieToScrape),
+                MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile()));
           }
 
           // write actor images after possible rename (to have a good folder structure)
@@ -900,7 +901,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     public Void doInBackground() {
       startProgressBar(TmmResourceBundle.getString("chooser.searchingfor") + " " + searchTerm);
       try {
-        searchResult = movieList.searchMovie(searchTerm, movie.getYear(), withIds ? movie.getIds() : null, mediaScraper, language);
+        searchResult = movieList.searchMovie(searchTerm, movie.getYear(), withIds ? movie.getIds() : null, movie.getChecksums(), mediaScraper,
+            language);
       }
       catch (Exception e) {
         error = e;

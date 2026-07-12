@@ -19,6 +19,7 @@ package org.tinymediamanager.ui.tvshows.dialogs;
 import static org.tinymediamanager.ui.TmmFontHelper.L1;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -81,6 +82,7 @@ import org.tinymediamanager.ui.tvshows.filters.TvShowEmptyFilter;
 import org.tinymediamanager.ui.tvshows.filters.TvShowEpisodeCountFilter;
 import org.tinymediamanager.ui.tvshows.filters.TvShowEpisodeCrc32Filter;
 import org.tinymediamanager.ui.tvshows.filters.TvShowEpisodeNoteFilter;
+import org.tinymediamanager.ui.tvshows.filters.TvShowEpisodePathFilter;
 import org.tinymediamanager.ui.tvshows.filters.TvShowEpisodeTagFilter;
 import org.tinymediamanager.ui.tvshows.filters.TvShowFanartSizeFilter;
 import org.tinymediamanager.ui.tvshows.filters.TvShowFilenameFilter;
@@ -139,6 +141,7 @@ public class TvShowFilterDialog extends TmmDialog {
   public TvShowFilterDialog(TmmTreeTable treeTable) {
     super(TmmResourceBundle.getString("movieextendedsearch.options") + " - " + TmmResourceBundle.getString("tmm.tvshows"), "tvShowFilter");
     setModalityType(ModalityType.MODELESS);
+    setMinimumSize(new Dimension(500, 500));
 
     this.treeTable = treeTable;
     this.filterMap = new HashMap<>();
@@ -255,6 +258,7 @@ public class TvShowFilterDialog extends TmmDialog {
         addFilter(new TvShowVideoFilesizeFilter(), panelOthers);
         addFilter(new TvShowRuntimeFilter(), panelOthers);
         addFilter(new TvShowPathFilter(), panelOthers);
+        addFilter(new TvShowEpisodePathFilter(), panelOthers);
         addFilter(new TvShowSubtitleCountFilter(), panelOthers);
         addFilter(new TvShowSubtitleLanguageFilter(), panelOthers);
         addFilter(new TvShowSubtitleFormatFilter(), panelOthers);

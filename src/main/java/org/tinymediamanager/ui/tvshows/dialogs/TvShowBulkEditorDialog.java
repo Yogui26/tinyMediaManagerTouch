@@ -44,13 +44,17 @@ import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
-import javax.swing.SpinnerDateModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jdesktop.beansbinding.AutoBinding;
+import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
+import org.jdesktop.beansbinding.BeanProperty;
+import org.jdesktop.beansbinding.Bindings;
+import org.jdesktop.beansbinding.Property;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.MediaAiredStatus;
 import org.tinymediamanager.core.TmmResourceBundle;
@@ -60,13 +64,13 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.jmte.JmteUtils;
-import org.tinymediamanager.core.movie.MovieRenamer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeEdition;
 import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowRenamer;
+import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
@@ -77,6 +81,7 @@ import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.datepicker.DatePicker;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.tabbedpane.TmmTabbedPane;
 import org.tinymediamanager.ui.components.table.MediaRatingTable;
@@ -106,6 +111,7 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public class TvShowBulkEditorDialog extends TmmDialog {
+  private final TvShowSettings            settings;
   private final TvShowList                tvShowList      = TvShowModuleManager.getInstance().getTvShowList();
   private final Collection<TvShow>        tvShowsToEdit;
   private final Collection<TvShowEpisode> tvShowEpisodesToEdit;
@@ -118,6 +124,8 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
   private boolean                         episodesChanged = false;
   private boolean                         tvShowsChanged  = false;
+  private DatePicker                      dpLastWatched;
+  private JCheckBox                       chckbxWatched;
 
   /**
    * Instantiates a new movie batch editor.
@@ -129,6 +137,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
    */
   public TvShowBulkEditorDialog(final Collection<TvShow> tvShows, final Collection<TvShowEpisode> episodes) {
     super(TmmResourceBundle.getString("tvshow.bulkedit"), "tvShowBulkEditor");
+    settings = TvShowModuleManager.getInstance().getSettings();
 
     tvShowsToEdit = tvShows;
     tvShowEpisodesToEdit = episodes;
@@ -195,6 +204,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.genre"));
         });
 
         JButton btnRemoveGenre = new SquareIconButton(IconManager.REMOVE_INV);
@@ -207,6 +217,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.removeGenre(genre);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.genre"));
         });
 
         JButton btnRemoveAllGenres = new SquareIconButton(IconManager.DELETE);
@@ -219,6 +230,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               tvShow.removeAllGenres();
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.genre"));
           }
         });
         panelContent.add(btnRemoveAllGenres, "cell 3 0");
@@ -253,6 +265,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.addToTags(Collections.singletonList(tag));
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.tags"));
         });
 
         JButton btnRemoveTag = new SquareIconButton(IconManager.REMOVE_INV);
@@ -265,6 +278,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.removeFromTags(tag);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.tags"));
         });
 
         JButton btnRemoveAllTags = new SquareIconButton(IconManager.DELETE);
@@ -277,6 +291,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               tvShow.removeAllTags();
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.tags"));
           }
         });
         panelContent.add(btnRemoveAllTags, "cell 3 1");
@@ -298,6 +313,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.setCountry(tfCountry.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.country"));
         });
       }
 
@@ -317,6 +333,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.setProductionCompany(tfStudio.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.studio"));
         });
       }
 
@@ -335,6 +352,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.setNote(tfTvShowNote.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.note"));
         });
         panelContent.add(btnTvShowNote, "cell 2 4");
       }
@@ -343,8 +361,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
         panelContent.add(lblCertificationT, "cell 0 5, alignx right");
 
         JComboBox<MediaCertification> cbCertification = new JComboBox<>();
-        for (MediaCertification cert : MediaCertification
-            .getCertificationsforCountry(TvShowModuleManager.getInstance().getSettings().getCertificationCountry())) {
+        for (MediaCertification cert : MediaCertification.getCertificationsforCountry(settings.getCertificationCountry())) {
           cbCertification.addItem(cert);
         }
         panelContent.add(cbCertification, "cell 1 5, growx");
@@ -358,6 +375,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvshow.setCertification(cert);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.certification"));
         });
         panelContent.add(btnCertification, "cell 2 5");
       }
@@ -381,23 +399,25 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.setStatus(status);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.status"));
         });
       }
       {
         JLabel lblDateAddedT = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
         panelContent.add(lblDateAddedT, "cell 0 7,alignx right");
 
-        JSpinner spDateAdded = new JSpinner(new SpinnerDateModel());
-        panelContent.add(spDateAdded, "cell 1 7");
+        DatePicker dpDateAdded = new DatePicker();
+        panelContent.add(dpDateAdded, "cell 1 7");
 
         JButton btnDateAdded = new SquareIconButton(IconManager.APPLY_INV);
         btnDateAdded.addActionListener(e -> {
           tvShowsChanged = true;
           setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
           for (TvShow tvShow : tvShowsToEdit) {
-            tvShow.setDateAdded((Date) spDateAdded.getValue());
+            tvShow.setDateAdded(dpDateAdded.getDate());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.dateadded"));
         });
         panelContent.add(btnDateAdded, "cell 2 7");
       }
@@ -429,6 +449,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
                 tvShow.setRating(mr);
               }
               setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+              showSuccessToast(getToastMessage("metatag.ratings"));
             }
           });
 
@@ -445,6 +466,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.setRatings(Collections.emptyMap());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.ratings"));
         });
         panelContent.add(btnRemoveExternalRatings, "cell 1 8");
 
@@ -456,6 +478,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             tvShow.removeRating(MediaRating.USER);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.ratings"));
         });
         panelContent.add(btnRemovePersonalRating, "cell 1 8");
 
@@ -544,6 +567,8 @@ public class TvShowBulkEditorDialog extends TmmDialog {
           setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
           tvShowValuesEventList.forEach(TvShowValues::applyValue);
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          BulkEditorProperty prop = (BulkEditorProperty) cbTvShowProperty.getSelectedItem();
+          showSuccessToast(TmmResourceBundle.getString("bulkedit.changed").replace("{}", prop.description));
         });
         panelContent.add(btnApply, "cell 1 4,alignx right");
       }
@@ -575,8 +600,12 @@ public class TvShowBulkEditorDialog extends TmmDialog {
         JLabel lblWatched = new TmmLabel(TmmResourceBundle.getString("metatag.watched"));
         panelContent.add(lblWatched, "cell 0 1,alignx right");
 
-        JCheckBox chckbxWatched = new JCheckBox("");
-        panelContent.add(chckbxWatched, "cell 1 1");
+        chckbxWatched = new JCheckBox("");
+        panelContent.add(chckbxWatched, "flowx,cell 1 1");
+
+        dpLastWatched = new DatePicker(new Date());
+        dpLastWatched.setAllowNull(true);
+        panelContent.add(dpLastWatched, "cell 1 1");
 
         JButton btnWatched = new SquareIconButton(IconManager.APPLY_INV);
         panelContent.add(btnWatched, "cell 2 1");
@@ -589,7 +618,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               episode.setWatched(true);
               if (episode.getPlaycount() == 0) {
                 episode.setPlaycount(1);
-                episode.setLastWatched(new Date());
+                episode.setLastWatched(dpLastWatched.getDate());
               }
             }
             else {
@@ -599,6 +628,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.watched"));
         });
       }
 
@@ -630,6 +660,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.season"));
         });
       }
 
@@ -663,6 +694,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               episodesChanged = true;
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.edition"));
           }
         });
       }
@@ -695,6 +727,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.addToTags(Collections.singletonList(tag));
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.tags"));
         });
 
         JButton btnRemoveTagEpisode = new SquareIconButton(IconManager.REMOVE_INV);
@@ -707,6 +740,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.removeFromTags(tag);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.tags"));
         });
 
         JButton btnRemoveAllTagsEpisode = new SquareIconButton(IconManager.DELETE);
@@ -719,6 +753,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               episode.removeAllTags();
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.tags"));
           }
         });
         panelContent.add(btnRemoveAllTagsEpisode, "cell 3 5");
@@ -742,6 +777,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               episode.setMediaSource(mediaSource);
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.source"));
           }
         });
       }
@@ -761,6 +797,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.setNote(tfEpisodeNote.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.note"));
         });
         panelContent.add(btnEpisodeNote, "cell 2 7");
       }
@@ -779,6 +816,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.setPlot(tfEpisodePlot.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.plot"));
         });
         panelContent.add(btnEpisodePlot, "cell 2 8");
       }
@@ -786,17 +824,18 @@ public class TvShowBulkEditorDialog extends TmmDialog {
         JLabel lblDateAdded = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
         panelContent.add(lblDateAdded, "cell 0 9,alignx right");
 
-        JSpinner spDateAdded = new JSpinner(new SpinnerDateModel());
-        panelContent.add(spDateAdded, "cell 1 9");
+        DatePicker dpDateAdded = new DatePicker();
+        panelContent.add(dpDateAdded, "cell 1 9");
 
         JButton btnDateAdded = new SquareIconButton(IconManager.APPLY_INV);
         btnDateAdded.addActionListener(e -> {
           episodesChanged = true;
           setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
           for (TvShowEpisode episode : tvShowEpisodesToEdit) {
-            episode.setDateAdded((Date) spDateAdded.getValue());
+            episode.setDateAdded(dpDateAdded.getDate());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.dateadded"));
         });
         panelContent.add(btnDateAdded, "cell 2 9");
 
@@ -814,6 +853,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.setOriginalFilename("");
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.originalfile"));
         });
         panelContent.add(btnDeleteOriginalFilename, "cell 1 10");
       }
@@ -843,6 +883,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
                 episode.addToActors(actors);
               }
               setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+              showSuccessToast(TmmResourceBundle.getString("cast.actor.add"));
             }
           });
 
@@ -871,6 +912,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
                 episode.addToCrew(Collections.singletonList(new Person(person)));
               }
               setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+              showSuccessToast(TmmResourceBundle.getString("cast.crew.add"));
             }
           });
 
@@ -909,6 +951,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
                 episode.setRating(mr);
               }
               setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+              showSuccessToast(getToastMessage("metatag.ratings"));
             }
           });
 
@@ -925,6 +968,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.setRatings(Collections.emptyMap());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.ratings"));
         });
         panelContent.add(btnRemoveExternalRatings, "cell 1 12");
 
@@ -936,6 +980,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             episode.removeRating(MediaRating.USER);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.ratings"));
         });
         panelContent.add(btnRemovePersonalRating, "cell 1 12");
       }
@@ -957,6 +1002,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               episode.getMainFile().addSubtitle(subtitle);
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(TmmResourceBundle.getString("subtitle.add"));
           });
 
           MediaFileSubtitleEditorPanel subtitleEditorPanel = new MediaFileSubtitleEditorPanel(subtitle);
@@ -989,16 +1035,16 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
           }
 
-          if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
+          if (settings.getSyncTrakt()) {
             Set<TvShow> tvShows1 = new HashSet<>();
             for (TvShowEpisode episode : tvShowEpisodesToEdit) {
               tvShows1.add(episode.getTvShow());
             }
             tvShows1.addAll(tvShowsToEdit);
             TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(new ArrayList<>(tvShows1));
-            task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktCollection());
-            task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
-            task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+            task.setSyncCollection(settings.getSyncTraktCollection());
+            task.setSyncWatched(settings.getSyncTraktWatched());
+            task.setSyncRating(settings.getSyncTraktRating());
 
             TmmTaskManager.getInstance().addUnnamedTask(task);
           }
@@ -1119,6 +1165,8 @@ public class TvShowBulkEditorDialog extends TmmDialog {
           setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
           episodeValuesEventList.forEach(EpisodeValues::applyValue);
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          BulkEditorProperty prop = (BulkEditorProperty) cbEpisodeProperty.getSelectedItem();
+          showSuccessToast(TmmResourceBundle.getString("bulkedit.changed").replace("{}", prop.description));
         });
         panelContent.add(btnApply, "cell 1 4,alignx right");
       }
@@ -1133,6 +1181,11 @@ public class TvShowBulkEditorDialog extends TmmDialog {
         scrollPane.setViewportView(tableValues);
       }
     }
+    initDataBindings();
+  }
+
+  private String getToastMessage(String field) {
+    return TmmResourceBundle.getString("bulkedit.changed").replace("{}", TmmResourceBundle.getString(field));
   }
 
   private boolean isDeleteConfirmed(String attribute) {
@@ -1158,6 +1211,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
   private static class TvShowValues extends AbstractModelObject {
     private final TvShow tvShow;
+    private final Engine engine;
 
     private String       property;
     private String       propertyValue = "";
@@ -1165,6 +1219,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
     public TvShowValues(TvShow tvShow) {
       this.tvShow = tvShow;
+      this.engine = TvShowRenamer.createEngine(TvShowModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
     }
 
     public void changeProperty(String property) {
@@ -1195,7 +1250,6 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
     private String getPatternValue(String pattern) {
       try {
-        Engine engine = TvShowRenamer.createEngine();
         Map<String, Object> root = new HashMap<>();
         root.put("tvShow", tvShow);
         return engine.transform(JmteUtils.morphTemplate(pattern, TvShowRenamer.getTokenMap()), root);
@@ -1258,6 +1312,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
   private static class EpisodeValues extends AbstractModelObject {
     private final TvShowEpisode episode;
+    private final Engine        engine;
 
     private String              property;
     private String              propertyValue = "";
@@ -1265,6 +1320,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
     public EpisodeValues(TvShowEpisode tvShowEpisode) {
       this.episode = tvShowEpisode;
+      this.engine = TvShowRenamer.createEngine(TvShowModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
     }
 
     public void changeProperty(String property) {
@@ -1295,7 +1351,6 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
     private String getPatternValue(String pattern) {
       try {
-        Engine engine = MovieRenamer.createEngine();
         Map<String, Object> root = new HashMap<>();
         root.put("tvShow", episode.getTvShow());
         root.put("episode", episode);
@@ -1355,5 +1410,13 @@ public class TvShowBulkEditorDialog extends TmmDialog {
       col = new Column(TmmResourceBundle.getString("bulkedit.newvalue"), "newValue", EpisodeValues::getPatternValue, String.class);
       addColumn(col);
     }
+  }
+
+  protected void initDataBindings() {
+    Property jCheckBoxBeanProperty = BeanProperty.create("selected");
+    Property jCheckBoxBeanProperty_1 = BeanProperty.create("enabled");
+    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxWatched, jCheckBoxBeanProperty, dpLastWatched,
+        jCheckBoxBeanProperty_1);
+    autoBinding.bind();
   }
 }

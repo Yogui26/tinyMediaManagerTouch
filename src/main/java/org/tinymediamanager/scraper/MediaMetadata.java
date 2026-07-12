@@ -112,8 +112,10 @@ public class MediaMetadata {
   private String                                           englishTitle        = "";
   private String                                           originalLanguage    = "";
   private int                                              year                = 0;
+  private int                                              yearEnd             = 0;
   private Date                                             releaseDate         = null;
   private String                                           plot                = "";
+  private String                                           outline             = "";
   private String                                           tagline             = "";
   private int                                              runtime             = 0;
 
@@ -165,8 +167,10 @@ public class MediaMetadata {
     originalLanguage = merge(originalLanguage, md.getOriginalLanguage());
     englishTitle = merge(englishTitle, md.getEnglishTitle());
     year = merge(year, md.getYear());
+    yearEnd = merge(yearEnd, md.getYearEnd());
     releaseDate = merge(releaseDate, md.getReleaseDate());
     plot = merge(plot, md.getPlot());
+    outline = merge(outline, md.getOutline());
     tagline = merge(tagline, md.getTagline());
     runtime = merge(runtime, md.getRuntime());
     collectionName = merge(collectionName, md.getCollectionName());
@@ -910,6 +914,37 @@ public class MediaMetadata {
   }
 
   /**
+   * Get the year, where the show ended.
+   * 
+   * @return the year
+   */
+  public int getYearEnd() {
+    return yearEnd;
+  }
+
+  /**
+   * Set the year
+   *
+   * @param yearEnd
+   *          the year to be set
+   */
+  public void setYearEnd(int yearEnd) {
+    this.yearEnd = yearEnd;
+  }
+
+  /**
+   * Set the end year - nullsafe
+   *
+   * @param yearEnd
+   *          the year to be set
+   */
+  public void setYearEnd(Integer yearEnd) {
+    if (yearEnd != null) {
+      setYearEnd(yearEnd.intValue());
+    }
+  }
+
+  /**
    * Get the release date
    * 
    * @return the release date
@@ -947,6 +982,25 @@ public class MediaMetadata {
    */
   public void setPlot(String plot) {
     this.plot = StrgUtils.getNonNullString(plot);
+  }
+
+  /**
+   * Get the outline
+   * 
+   * @return the outline
+   */
+  public String getOutline() {
+    return outline;
+  }
+
+  /**
+   * Set the outline
+   * 
+   * @param outline
+   *          the outline to be set
+   */
+  public void setOutline(String outline) {
+    this.outline = StrgUtils.getNonNullString(outline);
   }
 
   /**

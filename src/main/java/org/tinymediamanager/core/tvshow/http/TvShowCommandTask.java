@@ -49,6 +49,7 @@ import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowExporter;
 import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowRenamerProfile;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
@@ -77,13 +78,13 @@ import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
  * @author Manuel Laggner
  */
 class TvShowCommandTask extends TmmThreadPool {
-  private static final Logger                        LOGGER         = LoggerFactory.getLogger(TvShowCommandTask.class);
+  private static final Logger                        LOGGER      = LoggerFactory.getLogger(TvShowCommandTask.class);
 
   private final List<AbstractCommandHandler.Command> commands;
-  private final TvShowList                           tvShowList     = TvShowModuleManager.getInstance().getTvShowList();
-  private final TvShowSettings                       tvShowSettings = TvShowModuleManager.getInstance().getSettings();
-  private final List<TvShow>                         newTvShows     = new ArrayList<>();
-  private final List<TvShowEpisode>                  newEpisodes    = new ArrayList<>();
+  private final TvShowList                           tvShowList  = TvShowModuleManager.getInstance().getTvShowList();
+  private final TvShowSettings                       settings    = TvShowModuleManager.getInstance().getSettings();
+  private final List<TvShow>                         newTvShows  = new ArrayList<>();
+  private final List<TvShowEpisode>                  newEpisodes = new ArrayList<>();
 
   private TmmTask                                    activeTask;
 
@@ -122,8 +123,7 @@ class TvShowCommandTask extends TmmThreadPool {
   }
 
   private void updateDataSources() {
-    Set<String> dataSources = new TreeSet<>();
-    Set<TvShow> tvShowFolders = new HashSet<>();
+    Set<Path> dataSources = new TreeSet<>();
 
     List<TvShow> existingTvShows = new ArrayList<>(tvShowList.getTvShows());
     List<TvShowEpisode> existingEpisodes = new ArrayList<>();
@@ -134,7 +134,6 @@ class TvShowCommandTask extends TmmThreadPool {
     for (AbstractCommandHandler.Command command : commands) {
       if ("update".equals(command.action)) {
         dataSources.addAll(getDataSourcesForScope(command.scope));
-        tvShowFolders.addAll(getTvShowFoldersForScope(command.scope));
       }
     }
 
@@ -143,17 +142,6 @@ class TvShowCommandTask extends TmmThreadPool {
       publishState(TmmResourceBundle.getString("update.datasource"), getProgressDone());
 
       activeTask = new TvShowUpdateDatasourceTask(dataSources);
-      activeTask.run(); // blocking
-
-      // done
-      activeTask = null;
-    }
-
-    if (!tvShowFolders.isEmpty()) {
-      setTaskName(TmmResourceBundle.getString("update.datasource"));
-      publishState(TmmResourceBundle.getString("update.datasource"), getProgressDone());
-
-      activeTask = new TvShowUpdateDatasourceTask(new ArrayList<>(tvShowFolders));
       activeTask.run(); // blocking
 
       // done
@@ -174,8 +162,8 @@ class TvShowCommandTask extends TmmThreadPool {
     }
   }
 
-  private List<String> getDataSourcesForScope(CommandScope scope) {
-    List<String> dataSources = new ArrayList<>();
+  private Set<Path> getDataSourcesForScope(CommandScope scope) {
+    Set<Path> dataSources = new TreeSet<>();
 
     if (StringUtils.isBlank(scope.name)) {
       scope.name = "all";
@@ -183,21 +171,42 @@ class TvShowCommandTask extends TmmThreadPool {
 
     switch (scope.name) {
       case "all":
-        dataSources.addAll(tvShowSettings.getTvShowDataSource());
+        for (String datasource : settings.getTvShowDataSource()) {
+          if (StringUtils.isNotBlank(datasource)) {
+            dataSources.add(Paths.get(datasource).toAbsolutePath());
+          }
+        }
         break;
 
       case "single":
         for (String index : ListUtils.nullSafe(Arrays.asList(scope.args))) {
           try {
             int i = Integer.parseInt(index);
-            if (tvShowSettings.getTvShowDataSource().size() >= i - 1) {
-              dataSources.add(tvShowSettings.getTvShowDataSource().get(i - 1));
+            if (settings.getTvShowDataSource().size() >= i - 1) {
+              dataSources.add(Paths.get(settings.getTvShowDataSource().get(i - 1)).toAbsolutePath());
             }
 
           }
           catch (Exception e) {
             LOGGER.debug("Could not parse index from command - {}", e.getMessage());
           }
+        }
+        break;
+
+      case "show":
+        for (String path : ListUtils.nullSafe(Arrays.asList(scope.args))) {
+          for (TvShow tvShow : tvShowList.getTvShows()) {
+            if (tvShow.getPathNIO().toAbsolutePath().toString().equals(path)) {
+              dataSources.add(tvShow.getPathNIO().toAbsolutePath());
+              break;
+            }
+          }
+        }
+        break;
+
+      case "path":
+        for (String path : ListUtils.nullSafe(Arrays.asList(scope.args))) {
+          dataSources.add(Paths.get(path.strip()).toAbsolutePath());
         }
         break;
 
@@ -247,25 +256,6 @@ class TvShowCommandTask extends TmmThreadPool {
     }
   }
 
-  private List<TvShow> getTvShowFoldersForScope(CommandScope scope) {
-    List<TvShow> tvShows = new ArrayList<>();
-
-    switch (scope.name) {
-      case "show":
-        for (String path : ListUtils.nullSafe(Arrays.asList(scope.args))) {
-          for (TvShow tvShow : tvShowList.getTvShows()) {
-            if (tvShow.getPathNIO().toAbsolutePath().toString().equals(path)) {
-              tvShows.add(tvShow);
-              break;
-            }
-          }
-        }
-        break;
-    }
-
-    return tvShows;
-  }
-
   private void scrape() {
     Set<TvShow> tvShowsToScrape = new LinkedHashSet<>();
     Set<TvShowEpisode> episodesToScrape = new LinkedHashSet<>();
@@ -290,13 +280,13 @@ class TvShowCommandTask extends TmmThreadPool {
       publishState(TmmResourceBundle.getString("tvshow.scraping"), getProgressDone());
 
       TvShowSearchAndScrapeOptions options = new TvShowSearchAndScrapeOptions();
-      List<TvShowScraperMetadataConfig> tvShowScraperMetadataConfig = tvShowSettings.getTvShowScraperMetadataConfig();
-      List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = tvShowSettings.getEpisodeScraperMetadataConfig();
+      List<TvShowScraperMetadataConfig> tvShowScraperMetadataConfig = settings.getTvShowScraperMetadataConfig();
+      List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = settings.getEpisodeScraperMetadataConfig();
       options.loadDefaults();
 
       TvShowScrapeTask.TvShowScrapeParams tvShowScrapeParams = new TvShowScrapeTask.TvShowScrapeParams(new ArrayList<>(tvShowsToScrape), options,
           tvShowScraperMetadataConfig, episodeScraperMetadataConfig);
-      tvShowScrapeParams.setOverwriteExistingItems(!tvShowSettings.isDoNotOverwriteExistingData());
+      tvShowScrapeParams.setOverwriteExistingItems(!settings.isDoNotOverwriteExistingData());
 
       activeTask = new TvShowScrapeTask(tvShowScrapeParams);
       activeTask.run(); // blocking
@@ -392,7 +382,7 @@ class TvShowCommandTask extends TmmThreadPool {
       setTaskName(TmmResourceBundle.getString("tvshow.fetchratings"));
       publishState(TmmResourceBundle.getString("tvshow.fetchratings"), getProgressDone());
 
-      activeTask = new TvShowFetchRatingsTask(tvShowsToScrape, episodesToScrape, tvShowSettings.getFetchRatingSources());
+      activeTask = new TvShowFetchRatingsTask(tvShowsToScrape, episodesToScrape, settings.getFetchRatingSources());
       activeTask.run(); // blocking
 
       // wait for other tmm threads (artwork download et all)
@@ -463,7 +453,7 @@ class TvShowCommandTask extends TmmThreadPool {
 
         // no language yet? take the setting
         if (mediaLanguages == null) {
-          mediaLanguages = tvShowSettings.getScraperLanguage();
+          mediaLanguages = settings.getScraperLanguage();
         }
 
         List<TvShowEpisode> episodesToProcess = new ArrayList<>();
@@ -574,24 +564,43 @@ class TvShowCommandTask extends TmmThreadPool {
   }
 
   private void rename() {
-    Set<TvShow> tvShowsToRename = new LinkedHashSet<>();
-    Set<TvShowEpisode> episodesToRename = new LinkedHashSet<>();
+    // process all renaming tasks in the order the user wants to
+    // we need that to let the user call a rename task with different profile per call
     for (AbstractCommandHandler.Command command : commands) {
       if ("rename".equals(command.action)) {
-        tvShowsToRename.addAll(getTvShowsForScope(command.scope));
-        episodesToRename.addAll(getEpisodesForScope(command.scope));
+        // get the profile
+        String profileName = TvShowRenamerProfile.DEFAULT_RENAMER_PROFILE;
+
+        String arg = command.args.get("profile");
+        if (StringUtils.isNotBlank(arg)) {
+          profileName = arg;
+        }
+
+        // get all TV shows/episodes from the scope
+        List<TvShow> tvShowsToRename = getTvShowsForScope(command.scope);
+        List<TvShowEpisode> episodesToRename = getEpisodesForScope(command.scope);
+
+        if (!tvShowsToRename.isEmpty() || !episodesToRename.isEmpty()) {
+          setTaskName(TmmResourceBundle.getString("tvshow.rename"));
+          publishState(TmmResourceBundle.getString("tvshow.rename"), getProgressDone());
+
+          TvShowRenamerProfile renamerProfile;
+          if (settings.getRenamerProfiles().containsKey(profileName)) {
+            renamerProfile = settings.getRenamerProfiles().get(profileName);
+          }
+          else {
+            // we need to fall back here, since the user can send unavailable renamer profile names in the API!
+            LOGGER.warn("given profile '{}' not found, using default profile", profileName);
+            renamerProfile = settings.getDefaultRenamerProfile();
+          }
+
+          activeTask = new TvShowRenameTask(tvShowsToRename, episodesToRename, renamerProfile);
+          activeTask.run(); // blocking
+
+          // done
+          activeTask = null;
+        }
       }
-    }
-
-    if (!tvShowsToRename.isEmpty() || !episodesToRename.isEmpty()) {
-      setTaskName(TmmResourceBundle.getString("tvshow.rename"));
-      publishState(TmmResourceBundle.getString("tvshow.rename"), getProgressDone());
-
-      activeTask = new TvShowRenameTask(tvShowsToRename, episodesToRename);
-      activeTask.run(); // blocking
-
-      // done
-      activeTask = null;
     }
   }
 

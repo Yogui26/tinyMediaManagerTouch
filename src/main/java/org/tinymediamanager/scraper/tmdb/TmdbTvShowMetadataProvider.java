@@ -15,9 +15,6 @@
  */
 package org.tinymediamanager.scraper.tmdb;
 
-import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
-import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
-import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 import static org.tinymediamanager.scraper.MediaMetadata.IMDB;
 import static org.tinymediamanager.scraper.MediaMetadata.TMDB;
 import static org.tinymediamanager.scraper.MediaMetadata.TVDB;
@@ -44,6 +41,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.MediaAiredStatus;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.Person;
@@ -79,7 +77,6 @@ import org.tinymediamanager.scraper.tmdb.entities.BaseTvShow;
 import org.tinymediamanager.scraper.tmdb.entities.CastMember;
 import org.tinymediamanager.scraper.tmdb.entities.Certifications;
 import org.tinymediamanager.scraper.tmdb.entities.ContentRating;
-import org.tinymediamanager.scraper.tmdb.entities.CrewMember;
 import org.tinymediamanager.scraper.tmdb.entities.FindResults;
 import org.tinymediamanager.scraper.tmdb.entities.Genre;
 import org.tinymediamanager.scraper.tmdb.entities.Image;
@@ -245,6 +242,9 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
           }
 
           maxPage = httpResponse.body().total_pages;
+          if (maxPage > 5) {
+            maxPage = 5; // 5 http calls á 20 results (it could be up to 500 pages!!!)
+          }
           page++;
         } while (page <= maxPage);
 
@@ -516,9 +516,6 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
             }
             break;
         }
-        if (fallbackLanguage2 == FALLBACK_LANGUAGE.NONE) {
-          // nothing to do
-        }
       }
 
       // original title
@@ -543,9 +540,25 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
         md.setPlot(fallback.getPlot());
       }
 
-      // try to get from original
-      if (StringUtils.isBlank(md.getPlot()) && original != null && StringUtils.isNotBlank(original.getPlot())) {
-        md.setPlot(original.getPlot());
+      // try to get from the second fallback
+      if (StringUtils.isBlank(md.getPlot())) {
+        switch (fallbackLanguage2) {
+          case NONE:
+            // nothing to do
+            break;
+
+          case ENGLISH:
+            if (english != null && StringUtils.isNotBlank(english.getPlot())) {
+              md.setPlot(english.getPlot());
+            }
+            break;
+
+          case ORIGINAL:
+            if (original != null && StringUtils.isNotBlank(original.getPlot())) {
+              md.setPlot(original.getPlot());
+            }
+            break;
+        }
       }
 
       episodes.add(md);
@@ -690,6 +703,11 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
       Calendar calendar = Calendar.getInstance();
       calendar.setTime(complete.first_air_date);
       md.setYear(calendar.get(Calendar.YEAR));
+    }
+    if (md.getStatus() == MediaAiredStatus.ENDED && complete.last_air_date != null) {
+      Calendar calendar = Calendar.getInstance();
+      calendar.setTime(complete.last_air_date);
+      md.setYearEnd(calendar.get(Calendar.YEAR));
     }
 
     if (complete.credits != null) {
@@ -1023,32 +1041,8 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
     }
 
     // crew
-    for (CrewMember crewMember : ListUtils.nullSafe(episode.crew)) {
-      Person cm = new Person();
-      if ("Director".equals(crewMember.job)) {
-        cm.setType(DIRECTOR);
-      }
-      else if ("Writing".equals(crewMember.department)) {
-        cm.setType(WRITER);
-      }
-      else if ("Production".equals(crewMember.department)) {
-        cm.setType(PRODUCER);
-      }
-      else {
-        continue;
-      }
-      cm.setRole(crewMember.job);
-      cm.setId(getProviderInfo().getId(), crewMember.id);
-      cm.setName(crewMember.name);
-
-      if (StringUtils.isNotBlank(crewMember.profile_path)) {
-        cm.setThumbUrl(artworkBaseUrl + "h632" + crewMember.profile_path);
-      }
-      if (crewMember.id != null) {
-        cm.setProfileUrl("https://www.themoviedb.org/person/" + crewMember.id);
-      }
-
-      md.addCastMember(cm);
+    for (Person crew : parseCrew(episode.crew)) {
+      md.addCastMember(crew);
     }
 
     // Thumbs
@@ -1392,6 +1386,33 @@ public final class TmdbTvShowMetadataProvider extends TmdbMetadataProvider imple
       }
       if (StringUtils.isBlank(val[1])) {
         val[1] = temp[1];
+      }
+
+      // second fallback
+      if (StringUtils.isNotBlank(getProviderInfo().getConfig().getValue("titleFallbackLanguage2"))) {
+        try {
+          FALLBACK_LANGUAGE fallbackLanguage2 = FALLBACK_LANGUAGE.valueOf(getProviderInfo().getConfig().getValue("titleFallbackLanguage2"));
+
+          Locale locale;
+          switch (fallbackLanguage2) {
+            case ORIGINAL -> locale = Locale.forLanguageTag(show.original_language);
+            case ENGLISH -> locale = Locale.forLanguageTag("en-US");
+            default -> locale = null;
+          }
+
+          if (locale != null) {
+            temp = getValuesFromTranslation(show.translations, locale);
+            if (StringUtils.isBlank(val[0])) {
+              val[0] = temp[0];
+            }
+            if (StringUtils.isBlank(val[1])) {
+              val[1] = temp[1];
+            }
+          }
+        }
+        catch (Exception ignored) {
+          // stick to default
+        }
       }
 
       // finally SET the values

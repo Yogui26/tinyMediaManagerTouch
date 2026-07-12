@@ -13,52 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.tinymediamanager.ui.movies.actions;
+package org.tinymediamanager.ui.tvshows.actions;
 
 import java.awt.event.ActionEvent;
-import java.util.List;
-
-import javax.swing.JOptionPane;
+import java.util.Set;
 
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
-import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
-import org.tinymediamanager.ui.MainWindow;
+import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.ui.actions.TmmAction;
-import org.tinymediamanager.ui.movies.MovieUIModule;
+import org.tinymediamanager.ui.tvshows.TvShowSelectionModel.SelectedObjects;
+import org.tinymediamanager.ui.tvshows.TvShowUIModule;
 
-public class MovieChecksumAction extends TmmAction {
+public class TvshowChecksumCRC32Action extends TmmAction {
   private static final long serialVersionUID = 1L;
 
-  public MovieChecksumAction() {
+  public TvshowChecksumCRC32Action() {
     putValue(NAME, TmmResourceBundle.getString("checksum.crc32.calculate"));
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("checksum.crc32.calculate"));
   }
 
   @Override
   protected void processAction(ActionEvent e) {
-    List<Movie> selectedMovies = MovieUIModule.getInstance().getSelectionModel().getSelectedMovies(true);
+    SelectedObjects sel = TvShowUIModule.getInstance().getSelectionModel().getSelectedObjects(false, false);
 
-    if (selectedMovies.isEmpty()) {
-      JOptionPane.showMessageDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tmm.nothingselected"));
-      return;
-    }
-
-    TmmTask task = new TmmTask(TmmResourceBundle.getString("checksum.crc32.calculate"), selectedMovies.size(),
+    TmmTask task = new TmmTask(TmmResourceBundle.getString("checksum.crc32.calculate"), sel.getEpisodes().size(),
         TmmTaskHandle.TaskType.BACKGROUND_TASK) {
       @Override
       protected void doInBackground() {
-        for (Movie movie : selectedMovies) {
-          MediaFile main = movie.getMainVideoFile();
-          String crc = Utils.getCRC32(main.getFileAsPath());
-          if (!crc.isEmpty()) {
-            main.setCRC32(crc);
-            movie.saveToDb();
+        Set<TvShowEpisode> selectedEpisodes = sel.getEpisodesRecursive(); // all EPs, even when show/Season clicked!
+        int i = 0;
+        for (TvShowEpisode ep : selectedEpisodes) {
+          if (cancel) {
+            break;
           }
+
+          MediaFile main = ep.getMainVideoFile();
+          if (main.getCRC32().isEmpty()) {
+            String crc = Utils.getCRC32(main.getFileAsPath());
+            if (!crc.isEmpty()) {
+              main.setCRC32(crc);
+              ep.saveToDb();
+            }
+          }
+
+          publishState(++i);
         }
       }
     };

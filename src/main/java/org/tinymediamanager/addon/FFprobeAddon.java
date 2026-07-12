@@ -13,15 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.tinymediamanager.addon;
 
-package org.tinymediamanager.scraper.thetvdb.entities;
+import org.apache.commons.lang3.SystemUtils;
 
-import com.google.gson.annotations.SerializedName;
+/**
+ * the class {@link FFprobeAddon} provides native integration of FFprobe
+ * 
+ * @author Myron Boyle
+ */
+public class FFprobeAddon implements IAddon {
+  private static final String ADDON_NAME = "ffprobe";
 
-public class TranslationResponse {
-  @SerializedName("data")
-  public Translation data   = null;
+  @Override
+  public String getAddonName() {
+    return ADDON_NAME;
+  }
 
-  @SerializedName("status")
-  public String      status = null;
+  @Override
+  public String getExecutableFilename() {
+    if (SystemUtils.IS_OS_WINDOWS) {
+      return "ffprobe.exe";
+    }
+    return "ffprobe";
+  }
 }

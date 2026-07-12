@@ -295,7 +295,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchResults = new JPanel();
         splitPane.setLeftComponent(panelSearchResults);
-        panelSearchResults.setLayout(new MigLayout("", "[350lp:400lp,grow]", "[150lp:300lp,grow]"));
+        panelSearchResults.setLayout(new MigLayout("", "[350lp:400lp,grow]", "[150lp:200lp,grow]"));
         {
           JScrollPane scrollPane = new JScrollPane();
           panelSearchResults.add(scrollPane, "cell 0 0,grow");
@@ -309,7 +309,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         JPanel panelSearchDetail = new JPanel();
         splitPane.setRightComponent(panelSearchDetail);
         panelSearchDetail.setLayout(
-            new MigLayout("", "[150lp:15%:25%,grow][15lp!][300lp:500lp,grow]", "[][][8lp!][][15lp!][150lp:25%:50%,grow][100lp:25%:35%,grow]"));
+            new MigLayout("", "[150lp:15%:25%,grow][15lp!][300lp:500lp,grow]", "[][][8lp!][][15lp!][100lp:25%:50%,grow][100lp:25%:35%,grow]"));
         {
           lblTtitle = new JLabel("");
           TmmFontHelper.changeFont(lblTtitle, 1.166, Font.BOLD);
@@ -668,7 +668,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
 
           // automatic rename? rename the TV show itself
           if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-            model.addTask(new TvShowRenameTask(tvShowToScrape));
+            model.addTask(new TvShowRenameTask(tvShowToScrape, TvShowModuleManager.getInstance().getSettings().getDefaultRenamerProfile()));
           }
 
           // write actor images after possible rename (to have a good folder structure)
@@ -788,7 +788,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
               // rewrite show NFO to get the urls into
               tvShowToScrape.writeNFO();
               // also force to write all season NFO files
-              tvShowToScrape.getSeasons().forEach(TvShowSeason::writeNfo);
+              tvShowToScrape.getSeasons().forEach(TvShowSeason::writeNFO);
               tvShowToScrape.saveToDb();
             }
             else {

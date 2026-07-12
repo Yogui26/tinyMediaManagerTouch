@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.tinymediamanager.scraper.thetvdb.entities;
+
+import org.tinymediamanager.scraper.tmdb.entities.Company;
 
 import com.google.gson.annotations.SerializedName;
 
-public class SeriesExtendedResponse {
-  @SerializedName("data")
-  public SeriesExtendedRecord data   = null;
+public class SearchByRemoteIdResult {
 
-  @SerializedName("status")
-  public String               status = null;
+  @SerializedName("series")
+  public SeriesBaseRecord  series  = null;
+  @SerializedName("people")
+  public PeopleBaseRecord  people  = null;
+  @SerializedName("movie")
+  public MovieBaseRecord   movie   = null;
+  @SerializedName("episode")
+  public EpisodeBaseRecord episode = null;
+  @SerializedName("company")
+  public Company           company = null;
 }

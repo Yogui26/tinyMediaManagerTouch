@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.tinymediamanager</groupId>
     <artifactId>tinyMediaManager</artifactId>
-    <version>5.2.13-SNAPSHOT</version>
+    <version>5.3.0-SNAPSHOT</version>
     <name>tinyMediaManager</name>
     <description>a media management tool written in Java</description>
     <url>https://www.tinymediamanager.org/</url>
@@ -55,7 +55,7 @@
         <url>https://gitlab.com/tinyMediaManager/${project.artifactId}</url>
         <connection>scm:git:git@gitlab.com:tinyMediaManager/${project.artifactId}.git</connection>
         <developerConnection>scm:git:git@gitlab.com:tinyMediaManager/${project.artifactId}.git</developerConnection>
-        <tag>tinyMediaManager-5.2.5</tag>
+        <tag>HEAD</tag>
     </scm>
     <ciManagement>
         <system>GitLab CI</system>
@@ -80,9 +80,10 @@
         <okhttp.version>4.12.0</okhttp.version>
         <slf4j.version>2.0.9</slf4j.version>
         <release.version>3.1.1</release.version>
-        <jre.version>21.0.10-b1163</jre.version>
-        <launcher.version>5.2.4</launcher.version>
-        <flatlaf.version>3.7.1</flatlaf.version>
+        <jre.version>25.0.3-b508</jre.version>
+        <jre.version.macosx64>21.0.11-b1163</jre.version.macosx64>
+        <launcher.version>5.2.5</launcher.version>
+        <flatlaf.version>3.7.2</flatlaf.version>
         <jackson.version>2.21.2</jackson.version>
         <sonar.java.source>17</sonar.java.source>
     </properties>
@@ -90,7 +91,7 @@
         <dependency>
             <groupId>org.tinymediamanager</groupId>
             <artifactId>license</artifactId>
-            <version>5.2.5</version>
+            <version>5.3.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -180,7 +181,7 @@
         <dependency>
             <groupId>org.tinymediamanager</groupId>
             <artifactId>kodi-json-rpc</artifactId>
-            <version>5.0</version>
+            <version>5.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.tinymediamanager</groupId>
@@ -195,7 +196,7 @@
         <dependency>
             <groupId>com.uwetrottmann.trakt5</groupId>
             <artifactId>trakt-java</artifactId>
-            <version>6.18.0</version>
+            <version>6.20.1</version>
         </dependency>
         <dependency>
             <groupId>it.tidalwave.betterbeansbinding</groupId>
@@ -718,7 +719,7 @@
                 <!-- https://docs.sonarsource.com/sonarqube-server/latest/analyzing-source-code/scanners/sonarscanner-for-maven/ -->
                 <groupId>org.sonarsource.scanner.maven</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
-                <version>5.1.0.4751</version>
+                <version>5.7.0.6970</version>
             </plugin>
         </plugins>
         <extensions>
@@ -859,7 +860,6 @@
                             <sigfile>tmm</sigfile>
                             <keypass>${CODE_SIGN_PASS}</keypass>
                             <storepass>${CODE_SIGN_PASS}</storepass>
-                            <tsa>http://timestamp.sectigo.com</tsa>
                         </configuration>
                     </plugin>
                     <plugin>
@@ -913,7 +913,7 @@
                                         <artifactItem>
                                             <groupId>org.tinymediamanager.jre</groupId>
                                             <artifactId>macos_x64</artifactId>
-                                            <version>${jre.version}</version>
+                                            <version>${jre.version.macosx64}</version>
                                             <type>tar.xz</type>
                                         </artifactItem>
                                         <artifactItem>

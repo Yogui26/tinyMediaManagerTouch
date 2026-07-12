@@ -210,7 +210,8 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("Could not write movie NFO file '{}' - '{}'", movie.getPathNIO().resolve(nfoFilename), e.getMessage());
+        LOGGER.error("Could not write movie NFO file '{}' - '{}' [{}]", movie.getPathNIO().resolve(nfoFilename), e.getMessage(),
+            e.getClass().getSimpleName());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
@@ -377,8 +378,12 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
    */
   protected void addOutline() {
     String outlineText = "";
-    if (settings.isCreateOutline()) {
-      // lets create the outline since we do not have any outline field
+    if (StringUtils.isNotBlank(movie.getOutline())) {
+      // use the outline from the entity
+      outlineText = movie.getOutline();
+    }
+    else if (settings.isCreateOutline()) {
+      // create the outline from the plot
       if (settings.isOutlineFirstSentence()) {
         // use the first sentence of the plot (at least 20 chars)
         StringBuilder text = new StringBuilder();
@@ -403,7 +408,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
       }
     }
     else if (parser != null && StringUtils.isNotBlank(parser.outline)) {
-      // only pass pre-existing outlines since we do not have the outline
+      // fallback to pre-existing outline from the parsed NFO
       outlineText = parser.outline;
     }
 

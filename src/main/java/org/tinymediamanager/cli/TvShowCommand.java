@@ -39,6 +39,7 @@ import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowExporter;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowRenamerProfile;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
@@ -172,7 +173,7 @@ class TvShowCommand implements Runnable {
       if (ListUtils.isNotEmpty(dataSources)) {
         for (Integer i : datasource.indices) {
           if (dataSources.size() >= i - 1) {
-            Runnable task = new TvShowUpdateDatasourceTask(dataSources.get(i - 1));
+            Runnable task = new TvShowUpdateDatasourceTask(List.of(Paths.get(dataSources.get(i - 1))));
             task.run(); // blocking
           }
         }
@@ -404,6 +405,8 @@ class TvShowCommand implements Runnable {
   }
 
   private void renameTvShows(List<TvShow> showsToScrape, List<TvShowEpisode> episodesToScrape) {
+    TvShowRenamerProfile renamerProfile = TvShowModuleManager.getInstance().getSettings().getDefaultRenamerProfile();
+
     List<TvShow> tvShowsToRename = new ArrayList<>();
     List<TvShowEpisode> episodesToRename = new ArrayList<>();
 
@@ -424,7 +427,7 @@ class TvShowCommand implements Runnable {
 
     if (!tvShowsToRename.isEmpty() || !episodesToRename.isEmpty()) {
       // rename tvShows
-      Runnable task = new TvShowRenameTask(tvShowsToRename, episodesToRename);
+      Runnable task = new TvShowRenameTask(tvShowsToRename, episodesToRename, renamerProfile);
       task.run(); // blocking
     }
   }
@@ -465,7 +468,7 @@ class TvShowCommand implements Runnable {
 
       tvShow.writeNFO();
       for (TvShowSeason season : tvShow.getSeasons()) {
-        season.writeNfo();
+        season.writeNFO();
       }
       for (TvShowEpisode episode : tvShow.getEpisodes()) {
         episode.writeNFO();

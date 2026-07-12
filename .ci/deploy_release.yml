@@ -6,7 +6,7 @@ variables:
   MAVEN_CLI_OPTS: "-s .ci/settings.xml --batch-mode"
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   LFTP_OPTIONS: "set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no'; set net:timeout 5; set net:max-retries 2; set net:reconnect-interval-base 5;"
-  TMM_VERSION: "5.2.12"
+  TMM_VERSION: "5.3.0"
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -15,7 +15,7 @@ cache:
 
 build:
   stage: build
-  image: tinymediamanager/packaging:20221121194626
+  image: tinymediamanager/packaging:20260527164722
   environment:
     name: release
     url: https://release.tinymediamanager.org
@@ -79,6 +79,9 @@ build:
     - chmod 777 . dist
     - sudo -u xclient PATH=$PATH:/opt/bin AppBundler/create_windows_installer.sh "$CODE_SIGN_CERT" "$CODE_SIGN_PASS"
     - echo -e "\e[0Ksection_end:`date +%s`:windows_installer\r\e[0K"
+
+    # re-package the Linux files using system tools (for more performance)
+    - for f in *.tar.gz; do gzip -d -c "$f" | xz -c -T0 > "${f%.tar.gz}.tar.xz" && rm "$f"; done
 
     # push the build to the webserver
     - echo -e "\e[0Ksection_start:`date +%s`:ftp_upload\r\e[0KUpload"

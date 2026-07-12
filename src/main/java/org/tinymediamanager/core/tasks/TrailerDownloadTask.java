@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.TmmResourceBundle;
@@ -75,6 +76,10 @@ public abstract class TrailerDownloadTask extends DownloadTask {
       this.url = url;
     }
 
+    if (StringUtils.isBlank(url)) {
+      // NOW we can return if empty
+      return;
+    }
     super.doInBackground();
   }
 

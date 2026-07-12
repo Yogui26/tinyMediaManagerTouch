@@ -44,7 +44,6 @@ import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
-import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 
@@ -155,8 +154,7 @@ class MovieTrailerOptionsSettingsPanel extends JPanel {
       add(collapsiblePanel, "cell 0 0,growx, wmin 0");
 
       {
-        chckbxYtDlp = new JHintCheckBox(TmmResourceBundle.getString("Settings.trailer.ytdlp"));
-        chckbxYtDlp.setToolTipText(TmmResourceBundle.getString("Settings.trailer.ytdlp.desc"));
+        chckbxYtDlp = new JCheckBox(TmmResourceBundle.getString("Settings.trailer.ytdlp"));
         panelOptions.add(chckbxYtDlp, "cell 1 0 2 1");
 
         checkBox = new JCheckBox(TmmResourceBundle.getString("Settings.trailer.preferred"));
@@ -190,21 +188,19 @@ class MovieTrailerOptionsSettingsPanel extends JPanel {
         JLabel lblTrailerFileNaming = new JLabel(TmmResourceBundle.getString("Settings.trailerFileNaming"));
         panelTrailerFilenames.add(lblTrailerFileNaming, "cell 0 0");
 
-        rbTrailerFilename1 = new JRadioButton(
-            TmmResourceBundle.getString("Settings.moviefilename") + "-trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        rbTrailerFilename1 = new JRadioButton(TmmResourceBundle.getString("Settings.moviefilename") + "-trailer.*");
         trailerFilenameButtonGroup.add(rbTrailerFilename1);
         panelTrailerFilenames.add(rbTrailerFilename1, "cell 1 0");
 
-        rbTrailerFilename2 = new JRadioButton("movie-trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        rbTrailerFilename2 = new JRadioButton("movie-trailer.*");
         trailerFilenameButtonGroup.add(rbTrailerFilename2);
         panelTrailerFilenames.add(rbTrailerFilename2, "cell 1 1");
 
-        rbTrailerFilename3 = new JRadioButton("trailers/" + TmmResourceBundle.getString("Settings.moviefilename") + "-trailer."
-            + TmmResourceBundle.getString("Settings.artwork.extension"));
+        rbTrailerFilename3 = new JRadioButton("trailers/" + TmmResourceBundle.getString("Settings.moviefilename") + "-trailer.*");
         trailerFilenameButtonGroup.add(rbTrailerFilename3);
         panelTrailerFilenames.add(rbTrailerFilename3, "cell 1 2");
 
-        rbTrailerFilename4 = new JRadioButton("trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        rbTrailerFilename4 = new JRadioButton("trailer.*");
         trailerFilenameButtonGroup.add(rbTrailerFilename4);
         panelTrailerFilenames.add(rbTrailerFilename4, "cell 1 3");
       }

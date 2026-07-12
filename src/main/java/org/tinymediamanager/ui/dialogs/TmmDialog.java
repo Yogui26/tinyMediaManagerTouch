@@ -17,6 +17,7 @@ package org.tinymediamanager.ui.dialogs;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
@@ -43,6 +44,7 @@ import org.jdesktop.beansbinding.BindingGroup;
 import org.tinymediamanager.ui.EqualsLayout;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUILayoutStore;
+import org.tinymediamanager.ui.components.DarkenGlassPane;
 import org.tinymediamanager.ui.components.toast.TmmToast;
 import org.tinymediamanager.ui.panels.IModalPopupPanelProvider;
 import org.tinymediamanager.ui.panels.ModalPopupPanel;
@@ -117,6 +119,9 @@ public abstract class TmmDialog extends JDialog implements IModalPopupPanelProvi
     else {
       setIconImage(MainWindow.LOGOS);
     }
+
+    // set a reasonable minimum size to prevent dialogs from becoming unusably small
+    setMinimumSize(new Dimension(400, 300)); // $hide$ - do not parse this in wbpro
 
     initBottomPanel();
 
@@ -277,6 +282,12 @@ public abstract class TmmDialog extends JDialog implements IModalPopupPanelProvi
     if (visible) {
       pack();
       TmmUILayoutStore.getInstance().loadSettings(this);
+
+      // darken the owner window when this modal dialog becomes visible
+      if (isModal()) {
+        DarkenGlassPane.install(getOwner());
+      }
+
       super.setVisible(true);
       toFront();
     }
@@ -289,6 +300,9 @@ public abstract class TmmDialog extends JDialog implements IModalPopupPanelProvi
 
   @Override
   public void dispose() {
+    // undarkten the owner window when this dialog is disposed
+    DarkenGlassPane.uninstall(getOwner());
+
     unbind();
     // uninstall toast to restore previous glass pane and avoid memory leaks
     if (toast != null || TmmToast.isInstalled(this)) {

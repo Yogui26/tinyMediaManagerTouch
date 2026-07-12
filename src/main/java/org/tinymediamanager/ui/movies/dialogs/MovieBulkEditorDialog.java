@@ -42,12 +42,16 @@ import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
-import javax.swing.SpinnerDateModel;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jdesktop.beansbinding.AutoBinding;
+import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
+import org.jdesktop.beansbinding.BeanProperty;
+import org.jdesktop.beansbinding.Bindings;
+import org.jdesktop.beansbinding.Property;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaGenres;
@@ -58,6 +62,7 @@ import org.tinymediamanager.core.movie.MovieEdition;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieRenamer;
+import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.threading.TmmTaskManager;
@@ -67,6 +72,7 @@ import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.datepicker.DatePicker;
 import org.tinymediamanager.ui.components.datepicker.YearSpinner;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.tabbedpane.TmmTabbedPane;
@@ -92,6 +98,7 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public class MovieBulkEditorDialog extends TmmDialog {
+  private final MovieSettings            settings;
   private final MovieList                movieList    = MovieModuleManager.getInstance().getMovieList();
   private final List<Movie>              moviesToEdit = new ArrayList<>();
 
@@ -101,6 +108,8 @@ public class MovieBulkEditorDialog extends TmmDialog {
   private final JComboBox<MovieProperty> cbProperty;
 
   private final EventList<MovieValues>   movieValuesEventList;
+  private DatePicker                     dpLastWatched;
+  private JCheckBox                      chckbxWatched;
 
   /**
    * Instantiates a new movie batch editor.
@@ -110,7 +119,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
    */
   public MovieBulkEditorDialog(final List<Movie> movies) {
     super(TmmResourceBundle.getString("movie.edit"), "movieBulkEditor");
-
+    settings = MovieModuleManager.getInstance().getSettings();
     movieValuesEventList = GlazedLists
         .threadSafeList(new ObservableElementList<>(new BasicEventList<>(), GlazedLists.beanConnector(MovieValues.class)));
 
@@ -135,6 +144,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setYear((Integer) spYear.getValue());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.year"));
         });
         panelContent.add(btnYear, "cell 2 0");
       }
@@ -170,6 +180,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.genre"));
         });
         panelContent.add(btnAddGenre, "cell 2 1");
 
@@ -195,6 +206,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.genre"));
         });
         panelContent.add(btnRemoveGenre, "cell 3 1");
 
@@ -208,6 +220,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
               movie.removeAllGenres();
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.genre"));
           }
         });
         panelContent.add(btnRemoveAllGenres, "cell 4 1,growy");
@@ -240,6 +253,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.addToTags(Collections.singletonList(tag));
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.tags"));
         });
         panelContent.add(btnAddTag, "cell 2 2");
 
@@ -252,6 +266,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.removeFromTags(tag);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.tags"));
         });
         panelContent.add(btnRemoveTag, "cell 3 2");
 
@@ -265,6 +280,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
               movie.removeAllTags();
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.tags"));
           }
         });
         panelContent.add(btnRemoveAllTags, "cell 4 2,growy");
@@ -298,6 +314,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.edition"));
         });
         panelContent.add(btnMovieEdition, "cell 2 3");
       }
@@ -306,8 +323,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
         panelContent.add(lblCertificationT, "cell 0 4,alignx right");
 
         final JComboBox cbCertification = new JComboBox();
-        for (MediaCertification cert : MediaCertification
-            .getCertificationsforCountry(MovieModuleManager.getInstance().getSettings().getCertificationCountry())) {
+        for (MediaCertification cert : MediaCertification.getCertificationsforCountry(settings.getCertificationCountry())) {
           cbCertification.addItem(cert);
         }
         panelContent.add(cbCertification, "cell 1 4,growx");
@@ -322,6 +338,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
 
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.certification"));
         });
         panelContent.add(btnCertification, "cell 2 4");
       }
@@ -356,6 +373,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
           }
 
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.movieset"));
         });
         panelContent.add(btnSetMovieSet, "cell 2 5");
 
@@ -366,8 +384,12 @@ public class MovieBulkEditorDialog extends TmmDialog {
         JLabel lblWatchedT = new TmmLabel(TmmResourceBundle.getString("metatag.watched"));
         panelContent.add(lblWatchedT, "cell 0 6,alignx right");
 
-        JCheckBox chckbxWatched = new JCheckBox("");
-        panelContent.add(chckbxWatched, "cell 1 6,aligny top");
+        chckbxWatched = new JCheckBox("");
+        panelContent.add(chckbxWatched, "flowx,cell 1 6,aligny top");
+
+        dpLastWatched = new DatePicker(new Date());
+        dpLastWatched.setAllowNull(true);
+        panelContent.add(dpLastWatched, "cell 1 6");
 
         JButton btnWatched = new SquareIconButton(IconManager.APPLY_INV);
         btnWatched.addActionListener(e -> {
@@ -379,7 +401,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
               movie.setWatched(true);
               if (movie.getPlaycount() == 0) {
                 movie.setPlaycount(1);
-                movie.setLastWatched(new Date());
+                movie.setLastWatched(dpLastWatched.getDate());
               }
             }
             else {
@@ -389,6 +411,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.watched"));
         });
         panelContent.add(btnWatched, "cell 2 6");
       }
@@ -407,6 +430,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setVideoIn3D(chckbxVideo3D.isSelected());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.3d"));
         });
         panelContent.add(btnVideo3D, "cell 2 7");
       }
@@ -428,6 +452,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
               movie.setMediaSource(mediaSource);
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            showSuccessToast(getToastMessage("metatag.source"));
           }
         });
         panelContent.add(btnMediaSource, "cell 2 8");
@@ -447,6 +472,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setSpokenLanguages(tfLanguage.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.language"));
         });
         panelContent.add(btnLanguage, "cell 2 9");
       }
@@ -465,6 +491,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setCountry(tfCountry.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.country"));
         });
         panelContent.add(btnCountry, "cell 2 10");
       }
@@ -483,6 +510,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setNote(tfNote.getText());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.note"));
         });
         panelContent.add(btnNote, "cell 2 11");
       }
@@ -490,17 +518,18 @@ public class MovieBulkEditorDialog extends TmmDialog {
         JLabel lblDateAddedT = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
         panelContent.add(lblDateAddedT, "cell 0 12,alignx trailing");
 
-        JSpinner spDateAdded = new JSpinner(new SpinnerDateModel());
-        panelContent.add(spDateAdded, "cell 1 12");
+        DatePicker dpDateAdded = new DatePicker(new Date());
+        panelContent.add(dpDateAdded, "cell 1 12");
 
         JButton btnDateAdded = new SquareIconButton(IconManager.APPLY_INV);
         btnDateAdded.addActionListener(e -> {
           changed = true;
           setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
           for (Movie movie : moviesToEdit) {
-            movie.setDateAdded((Date) spDateAdded.getValue());
+            movie.setDateAdded(dpDateAdded.getDate());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.dateadded"));
         });
         panelContent.add(btnDateAdded, "cell 2 12");
 
@@ -521,6 +550,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setSortTitle(movie.getTitleSortable());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.sorttitle"));
         });
         panelContent.add(btnSetSorttitle, "flowx,cell 1 13 4 1");
       }
@@ -536,6 +566,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setRatings(Collections.emptyMap());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.ratings"));
         });
         panelContent.add(btnRemoveExternalRatings, "flowx,cell 1 14");
 
@@ -547,6 +578,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.removeRating(MediaRating.USER);
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.ratings"));
         });
         panelContent.add(btnRemovePersonalRating, "cell 1 14");
       }
@@ -563,6 +595,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setSpokenLanguages(movie.getMediaInfoAudioLanguageList().stream().findFirst().orElse(""));
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.spokenlanguages"));
         });
         panelContent.add(btnFirstAudioStream, "flowx,cell 1 15 4 1");
 
@@ -575,6 +608,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setSpokenLanguages(movie.getMediaInfoAudioLanguage());
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.spokenlanguages"));
         });
         panelContent.add(btnBestAudioStream, "cell 1 15 4 1");
 
@@ -587,6 +621,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setSpokenLanguages(String.join(", ", movie.getMediaInfoAudioLanguageList()));
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.spokenlanguages"));
         });
         panelContent.add(btnAllAudioStreams, "cell 1 15 4 1");
       }
@@ -600,6 +635,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setSortTitle("");
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.sorttitle"));
         });
         panelContent.add(btnClearSorttitle, "cell 1 13 4 1");
       }
@@ -616,6 +652,7 @@ public class MovieBulkEditorDialog extends TmmDialog {
             movie.setOriginalFilename("");
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          showSuccessToast(getToastMessage("metatag.originalfile"));
         });
         panelContent.add(btnDeleteOriginalFilename, "cell 1 16");
       }
@@ -705,6 +742,8 @@ public class MovieBulkEditorDialog extends TmmDialog {
           setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
           movieValuesEventList.forEach(MovieValues::applyValue);
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          MovieProperty prop = (MovieProperty) cbProperty.getSelectedItem();
+          showSuccessToast(TmmResourceBundle.getString("bulkedit.changed").replace("{}", prop.description));
         });
         panelContent.add(btnApply, "cell 1 4,alignx right");
       }
@@ -747,11 +786,11 @@ public class MovieBulkEditorDialog extends TmmDialog {
               movie.saveToDb();
             }
             // if configured - sync with trakt.tv
-            if (MovieModuleManager.getInstance().getSettings().getSyncTrakt()) {
+            if (settings.getSyncTrakt()) {
               MovieSyncTraktTvTask task = new MovieSyncTraktTvTask(moviesToEdit);
-              task.setSyncCollection(MovieModuleManager.getInstance().getSettings().getSyncTraktCollection());
-              task.setSyncWatched(MovieModuleManager.getInstance().getSettings().getSyncTraktWatched());
-              task.setSyncRating(MovieModuleManager.getInstance().getSettings().getSyncTraktRating());
+              task.setSyncCollection(settings.getSyncTraktCollection());
+              task.setSyncWatched(settings.getSyncTraktWatched());
+              task.setSyncRating(settings.getSyncTraktRating());
 
               TmmTaskManager.getInstance().addUnnamedTask(task);
             }
@@ -777,6 +816,12 @@ public class MovieBulkEditorDialog extends TmmDialog {
       };
       movieList.addPropertyChangeListener(listener);
     }
+    initDataBindings();
+  }
+
+  private String getToastMessage(String field) {
+    return TmmResourceBundle.getString("bulkedit.changed").replace("{}", TmmResourceBundle.getString(field));
+
   }
 
   private void setMovieSets() {
@@ -814,14 +859,16 @@ public class MovieBulkEditorDialog extends TmmDialog {
   }
 
   private static class MovieValues extends AbstractModelObject {
-    private final Movie movie;
+    private final Movie  movie;
+    private final Engine engine;
 
-    private String      property;
-    private String      propertyValue = "";
-    private String      patternValue  = "";
+    private String       property;
+    private String       propertyValue = "";
+    private String       patternValue  = "";
 
     public MovieValues(Movie movie) {
       this.movie = movie;
+      this.engine = MovieRenamer.createEngine(MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
     }
 
     public void changeProperty(String property) {
@@ -852,7 +899,6 @@ public class MovieBulkEditorDialog extends TmmDialog {
 
     private String getPatternValue(String pattern) {
       try {
-        Engine engine = MovieRenamer.createEngine();
         Map<String, Object> root = new HashMap<>();
         root.put("movie", movie);
         return engine.transform(JmteUtils.morphTemplate(pattern, MovieRenamer.getTokenMap()), root);
@@ -926,5 +972,13 @@ public class MovieBulkEditorDialog extends TmmDialog {
     public String toString() {
       return description;
     }
+  }
+
+  protected void initDataBindings() {
+    Property jCheckBoxBeanProperty = BeanProperty.create("selected");
+    Property datePickerBeanProperty = BeanProperty.create("enabled");
+    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxWatched, jCheckBoxBeanProperty, dpLastWatched,
+        datePickerBeanProperty);
+    autoBinding.bind();
   }
 }

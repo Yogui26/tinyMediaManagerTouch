@@ -45,6 +45,7 @@ import org.tinymediamanager.TinyMediaManager;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.TagManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.WolDevice;
@@ -53,6 +54,7 @@ import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.ui.actions.AboutAction;
 import org.tinymediamanager.ui.actions.BugReportAction;
 import org.tinymediamanager.ui.actions.CheckForUpdateAction;
+import org.tinymediamanager.ui.actions.CleanupImageCacheAction;
 import org.tinymediamanager.ui.actions.ClearDatabaseAction;
 import org.tinymediamanager.ui.actions.ClearHttpCacheAction;
 import org.tinymediamanager.ui.actions.ClearImageCacheAction;
@@ -74,6 +76,7 @@ import org.tinymediamanager.ui.dialogs.ActivityLogDialog;
 import org.tinymediamanager.ui.dialogs.FullLogDialog;
 import org.tinymediamanager.ui.dialogs.MessageHistoryDialog;
 import org.tinymediamanager.ui.dialogs.SettingsDialog;
+import org.tinymediamanager.ui.dialogs.TagManagerDialog;
 import org.tinymediamanager.ui.movies.MovieUIModule;
 import org.tinymediamanager.ui.movies.dialogs.MovieJmteExplorerDialog;
 import org.tinymediamanager.ui.thirdparty.KodiRPCMenu;
@@ -162,12 +165,6 @@ public class MainMenuPanel extends JPanel {
 
   private JPopupMenu buildToolsMenu() {
     JPopupMenu menu = new JPopupMenu();
-
-    menu.add(new ClearImageCacheAction());
-    menu.add(new RebuildImageCacheAction());
-    menu.add(new ClearHttpCacheAction());
-
-    menu.addSeparator();
 
     JMenuItem tmmLogs = new JMenuItem(TmmResourceBundle.getString("tmm.activitylog"));
     menu.add(tmmLogs);
@@ -276,6 +273,26 @@ public class MainMenuPanel extends JPanel {
       menu.add(jmteExplorerMenu);
     }
 
+    {
+      JMenu tagManagerMenu = new JMenu(TmmResourceBundle.getString("tagmanager.title"));
+
+      JMenuItem movieTags = new JMenuItem(TmmResourceBundle.getString("tmm.movies"));
+      movieTags.addActionListener(arg0 -> new TagManagerDialog(TagManager.forMovies(), TmmResourceBundle.getString("tmm.movies")).setVisible(true));
+      tagManagerMenu.add(movieTags);
+
+      JMenuItem tvShowTags = new JMenuItem(TmmResourceBundle.getString("tmm.tvshows"));
+      tvShowTags
+          .addActionListener(arg0 -> new TagManagerDialog(TagManager.forTvShows(), TmmResourceBundle.getString("tmm.tvshows")).setVisible(true));
+      tagManagerMenu.add(tvShowTags);
+
+      JMenuItem episodeTags = new JMenuItem(TmmResourceBundle.getString("metatag.episodes"));
+      episodeTags.addActionListener(
+          arg0 -> new TagManagerDialog(TagManager.forEpisodes(), TmmResourceBundle.getString("metatag.episodes")).setVisible(true));
+      tagManagerMenu.add(episodeTags);
+
+      menu.add(tagManagerMenu);
+    }
+
     if (Globals.canCheckForUpdates() || Globals.isDebug()) {
       menu.addSeparator();
     }
@@ -319,10 +336,18 @@ public class MainMenuPanel extends JPanel {
     }
 
     menu.addSeparator();
+    // housekeeping
+    JMenu menuHousekeeping = new JMenu(TmmResourceBundle.getString("tmm.housekeeping"));
+    menuHousekeeping.add(new CleanupImageCacheAction());
+    menuHousekeeping.add(new ClearImageCacheAction());
+    menuHousekeeping.add(new RebuildImageCacheAction());
+    menuHousekeeping.add(new ClearHttpCacheAction());
+
+    menu.add(menuHousekeeping);
     menu.add(new ClearDatabaseAction());
     menu.add(new ImportV4DataAction());
 
-    // a dedicated close action brecause on XWayland sometimes the window decorations are missing
+    // a dedicated close action because on XWayland sometimes the window decorations are missing
     if (SystemUtils.IS_OS_LINUX) {
       menu.addSeparator();
       menu.add(new CloseTmmAction());

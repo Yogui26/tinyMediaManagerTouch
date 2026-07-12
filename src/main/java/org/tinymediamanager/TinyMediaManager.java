@@ -44,6 +44,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
+import org.apache.commons.lang3.StringUtils;
 import org.h2.mvstore.MVStoreException;
 import org.jdesktop.beansbinding.ELProperty;
 import org.slf4j.Logger;
@@ -66,6 +67,7 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettingsDefaults;
 import org.tinymediamanager.core.movie.MovieUpgradeTasks;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
+import org.tinymediamanager.core.tasks.ImageCacheCleanupTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
@@ -234,7 +236,14 @@ public final class TinyMediaManager {
                     TmmTaskManager.getInstance().addMainTask(task);
                   }
                   if (!TvShowModuleManager.getInstance().getSettings().getTvShowDataSource().isEmpty()) {
-                    TmmThreadPool task = new TvShowUpdateDatasourceTask();
+                    List<Path> foldersToUpdate = new ArrayList<>();
+                    for (String ds : TvShowModuleManager.getInstance().getSettings().getTvShowDataSource()) {
+                      if (StringUtils.isNotBlank(ds)) {
+                        foldersToUpdate.add(Paths.get(ds));
+                      }
+                    }
+
+                    TmmThreadPool task = new TvShowUpdateDatasourceTask(foldersToUpdate);
                     TmmTaskManager.getInstance().addMainTask(task);
                   }
                 }
@@ -486,8 +495,10 @@ public final class TinyMediaManager {
     }
 
     // check for external tools upgrade (force on upgrade and update check)
-    if (newVersion || TmmUIHelper.shouldCheckForUpdate()) {
+    String value = System.getProperty("tmm.useexternaltools");
+    if (value == null || Boolean.parseBoolean(value) && (newVersion || TmmUIHelper.shouldCheckForUpdate())) {
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("ffmpeg"));
+      TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("ffprobe"));
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("yt-dlp"));
       TmmTaskManager.getInstance().addDownloadTask(new ExternalTools.ExternalToolsUpgradeTask("deno"));
     }
@@ -610,6 +621,11 @@ public final class TinyMediaManager {
     TvShowUpgradeTasks tvShowUpgradeTasks = new TvShowUpgradeTasks();
     tvShowUpgradeTasks.performSettingsUpgrades();
     tvShowUpgradeTasks.performDbUpgrades();
+
+    if (newVersion) {
+      // do an image cache cleanup
+      TmmTaskManager.getInstance().addUnnamedTask(new ImageCacheCleanupTask());
+    }
   }
 
   /**
@@ -651,7 +667,7 @@ public final class TinyMediaManager {
     Thread.setDefaultUncaughtExceptionHandler(new Log4jBackstop());
 
     try {
-      License.getInstance().init525();
+      License.getInstance().init530();
     }
     catch (Exception e) {
       LOGGER.error("Could not initialize license module!");

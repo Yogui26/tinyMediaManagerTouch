@@ -55,10 +55,11 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkTypeRecord;
-import org.tinymediamanager.scraper.thetvdb.entities.ArtworkTypeResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.BaseResponseArray;
+import org.tinymediamanager.scraper.thetvdb.entities.BaseResponseList;
 import org.tinymediamanager.scraper.thetvdb.entities.Character;
 import org.tinymediamanager.scraper.thetvdb.entities.RemoteID;
-import org.tinymediamanager.scraper.thetvdb.entities.SearchResultResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.SearchByRemoteIdResult;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
@@ -156,7 +157,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         tvdb.setAuthToken(getAuthToken());
 
         artworkTypes.clear();
-        Response<ArtworkTypeResponse> response = tvdb.getConfigService().getArtworkTypes().execute();
+        Response<BaseResponseList<ArtworkTypeRecord>> response = tvdb.getConfigService().getArtworkTypes().execute();
         if (response.isSuccessful()) {
           for (ArtworkTypeRecord artworkTypeRecord : response.body().data) {
             if (artworkTypeRecord.width > 0 && artworkTypeRecord.height > 0) {
@@ -499,12 +500,33 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
     return searchResult;
   }
 
+  /**
+   * Returns the TVDB id from an IMDB id
+   * 
+   * @param imdbId
+   * @return TVDB id or 0
+   */
   protected int getTvdbIdViaImdbId(String imdbId) {
     // try to get it via service call
     try {
-      Response<SearchResultResponse> httpResponse = tvdb.getSearchService().getSearch(imdbId, imdbId).execute();
-      if (httpResponse.isSuccessful() && httpResponse.body() != null) {
-        return Integer.parseInt(httpResponse.body().data.get(0).tvdbId);
+      Response<BaseResponseArray<SearchByRemoteIdResult>> httpResponse = tvdb.getSearchService().remoteIdSearch(imdbId).execute();
+      if (!httpResponse.isSuccessful()) {
+        throw new HttpException(httpResponse.code(), httpResponse.message());
+      }
+      BaseResponseArray<SearchByRemoteIdResult> resp = httpResponse.body();
+      SearchByRemoteIdResult res = resp.data[0];
+
+      if (res.series != null && res.series.id != null) {
+        return res.series.id.intValue();
+      }
+      if (res.movie != null && res.movie.id != null) {
+        return res.movie.id.intValue();
+      }
+      if (res.episode != null && res.episode.id != null) {
+        return res.episode.id.intValue();
+      }
+      if (res.people != null && res.people.id != null) {
+        return res.people.id.intValue();
       }
     }
     catch (Exception e) {

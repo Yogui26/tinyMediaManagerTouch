@@ -217,6 +217,18 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
 
     /*
+     * tmdb rating (hidden per default)
+     */
+    col = new Column("TMDB", "tmdb", this::getTmdbRating, Float.class);
+    col.setColumnComparator(floatComparator);
+    col.setHeaderTooltip(TmmResourceBundle.getString("metatag.rating") + " - TMDB");
+    col.setCellRenderer(new RightAlignTableCellRenderer());
+    col.setColumnResizeable(false);
+    col.setMinWidth(fontMetrics.stringWidth("TMDB") + getCellPadding());
+    col.setDefaultHidden(true);
+    addColumn(col);
+
+    /*
      * aired (hidden per default)
      */
     col = new Column(TmmResourceBundle.getString("metatag.aired"), "aired", this::getAiredDate, Date.class);
@@ -710,6 +722,17 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     return null;
   }
 
+  private Float getTmdbRating(TmmTreeNode node) {
+    Object userObject = node.getUserObject();
+    if (userObject instanceof TvShow || userObject instanceof TvShowEpisode) {
+      MediaRating mediaRating = ((MediaEntity) userObject).getRating(MediaMetadata.TMDB);
+      if (mediaRating != null && mediaRating.getRating() > 0) {
+        return mediaRating.getRating();
+      }
+    }
+    return null;
+  }
+
   private Date getAiredDate(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShow tvShow) {
@@ -1195,16 +1218,51 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
 
   private ImageIcon isWatched(TmmTreeNode node) {
     Object userObject = node.getUserObject();
+
     if (userObject instanceof TvShow tvShow) {
-      return getCheckIcon(tvShow.isWatched());
+      return getWatchedIcon(tvShow.getEpisodes());
     }
     else if (userObject instanceof TvShowSeason season) {
-      return getCheckIcon(season.isWatched());
+      return getWatchedIcon(season.getEpisodes());
     }
     else if (userObject instanceof TvShowEpisode episode) {
-      return getCheckIcon(episode.isWatched());
+      return getWatchedIcon(List.of(episode));
     }
     return null;
+  }
+
+  private ImageIcon getWatchedIcon(List<TvShowEpisode> episodes) {
+    int totalEpisodeCount = 0;
+    int watchedCount = 0;
+
+    // get all non dummy episodes and watched episodes
+    for (TvShowEpisode episode : episodes) {
+      if (episode.isDummy()) {
+        continue;
+      }
+      totalEpisodeCount++;
+      if (episode.isWatched()) {
+        watchedCount++;
+      }
+    }
+
+    // Determine the watched status based on the ratio of watched to total episodes
+    if (watchedCount == totalEpisodeCount) {
+      // All non-dummy episodes are watched
+      return IconManager.TABLE_OK;
+    }
+    else if (watchedCount > 0) {
+      // At least one non-dummy episode is not watched
+      return IconManager.TABLE_WATCHED;
+    }
+    else if (totalEpisodeCount > 0) {
+      // No non-dummy episode watched
+      return IconManager.TABLE_NOT_OK;
+    }
+    else {
+      // only dummy
+      return null;
+    }
   }
 
   private MediaCertification getCertification(TmmTreeNode node) {

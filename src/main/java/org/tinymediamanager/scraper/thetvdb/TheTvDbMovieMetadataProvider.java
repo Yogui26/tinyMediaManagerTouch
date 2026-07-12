@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -46,19 +47,17 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieTrailerProvider;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
+import org.tinymediamanager.scraper.thetvdb.entities.BaseResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.BaseResponseList;
 import org.tinymediamanager.scraper.thetvdb.entities.CompanyBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.ContentRating;
-import org.tinymediamanager.scraper.thetvdb.entities.ContentRatingResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.GenreBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.MovieExtendedRecord;
-import org.tinymediamanager.scraper.thetvdb.entities.MovieExtendedResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.Release;
 import org.tinymediamanager.scraper.thetvdb.entities.SearchResultRecord;
-import org.tinymediamanager.scraper.thetvdb.entities.SearchResultResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.SearchType;
 import org.tinymediamanager.scraper.thetvdb.entities.Trailer;
 import org.tinymediamanager.scraper.thetvdb.entities.Translation;
-import org.tinymediamanager.scraper.thetvdb.entities.TranslationResponse;
 import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
@@ -114,13 +113,18 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
     // detect the string to search
     String searchString = "";
     if (StringUtils.isNotBlank(options.getSearchQuery())) {
-      searchString = options.getSearchQuery();
+      searchString = options.getSearchQuery().toLowerCase(Locale.ROOT);
     }
+    // if the text query is an IMDB id, override any preset IMDB id...
+    if (MediaIdUtil.isValidImdbId(searchString)) {
+      options.setImdbId(searchString);
+    }
+    String imdbId = options.getImdbId();
 
     int tvdbId = options.getIdAsInt(getId());
     // if we have an TVDB id, use that!
-    if (tvdbId != 0) {
-      LOGGER.debug("found TvDb ID {} - getting direct", tvdbId);
+    if (tvdbId != 0 || !imdbId.isEmpty()) {
+      LOGGER.debug("found TvDb ID {} - getting direct", tvdbId != 0 ? tvdbId : imdbId);
       try {
         MediaMetadata md = getMetadata(options);
         if (md != null) {
@@ -138,7 +142,7 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
     // only search when we did not find something by ID (and search string or IMDB is present)
     if (StringUtils.isNotBlank(searchString)) {
       try {
-        Response<SearchResultResponse> httpResponse = tvdb.getSearchService().getSearch(searchString, SearchType.MOVIE).execute();
+        Response<BaseResponseList<SearchResultRecord>> httpResponse = tvdb.getSearchService().getSearch(searchString, SearchType.MOVIE).execute();
 
         if (!httpResponse.isSuccessful()) {
           String msg = httpResponse.message().isBlank() ? httpResponse.errorBody().string() : httpResponse.message();
@@ -293,7 +297,7 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
         fallbackLanguage = "pt";
       }
 
-      Response<MovieExtendedResponse> httpResponse = tvdb.getMoviesService().getMovieExtended(id).execute();
+      Response<BaseResponse<MovieExtendedRecord>> httpResponse = tvdb.getMoviesService().getMovieExtended(id).execute();
       if (!httpResponse.isSuccessful()) {
         String msg = httpResponse.message().isBlank() ? httpResponse.errorBody().string() : httpResponse.message();
         throw new HttpException(httpResponse.code(), msg);
@@ -302,7 +306,7 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
 
       // base translation (needed for title and overview)
       if (movie.overviewTranslations.contains(baseLanguage)) {
-        Response<TranslationResponse> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, baseLanguage).execute();
+        Response<BaseResponse<Translation>> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, baseLanguage).execute();
         if (translationResponse.isSuccessful()) {
           baseTranslation = translationResponse.body().data;
         }
@@ -311,7 +315,7 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
       // also get fallback is either title or overview of the base translation is missing
       if ((baseTranslation == null || StringUtils.isAnyBlank(baseTranslation.name, baseTranslation.overview))
           && movie.overviewTranslations.contains(fallbackLanguage)) {
-        Response<TranslationResponse> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, fallbackLanguage).execute();
+        Response<BaseResponse<Translation>> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, fallbackLanguage).execute();
         if (translationResponse.isSuccessful()) {
           fallbackTranslation = translationResponse.body().data;
         }
@@ -324,7 +328,7 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
         englishTranslation = fallbackTranslation;
       }
       else if (movie.nameTranslations.contains(englishLanguage)) {
-        Response<TranslationResponse> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, englishLanguage).execute();
+        Response<BaseResponse<Translation>> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, englishLanguage).execute();
         if (translationResponse.isSuccessful()) {
           englishTranslation = translationResponse.body().data;
         }
@@ -552,11 +556,11 @@ public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider 
     initAPI();
 
     try {
-      Response<ContentRatingResponse> httpResponse = tvdb.getConfigService().getCertifications().execute();
+      Response<BaseResponseList<ContentRating>> httpResponse = tvdb.getConfigService().getCertifications().execute();
       if (!httpResponse.isSuccessful()) {
         throw new HttpException(httpResponse.code(), httpResponse.message());
       }
-      ContentRatingResponse certs = httpResponse.body();
+      BaseResponseList<ContentRating> certs = httpResponse.body();
       for (ContentRating cert : certs.data) {
         if (cert.contentType.equals("movie")) {
           ret.add(cert);

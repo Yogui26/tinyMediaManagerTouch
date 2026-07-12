@@ -113,6 +113,7 @@ public class IconManager {
   public static final ImageIcon              DELETE_FOREVER_RED           = createSVGIcon("trash-alt.svg", RED, TmmFontHelper.H3);
   public static final ImageIcon              DISCONNECT                   = createMenuIcon("unlink.svg");
   public static final ImageIcon              DOWNLOAD                     = createMenuIcon("download.svg");
+  public static final ImageIcon              DOWNLOAD_GRAY                = createSVGIcon("download.svg");
   public static final ImageIcon              FEEDBACK                     = createMenuIcon("envelope.svg");
   public static final ImageIcon              EDIT                         = createMenuIcon("edit.svg");
   public static final ImageIcon              EXPORT                       = createMenuIcon("share-square.svg");
@@ -148,18 +149,22 @@ public class IconManager {
   public static final ImageIcon              TABLE_PROBLEM                = createSVGIcon("triangle-exclamation.svg", new Color(204, 120, 50));
   public static final ImageIcon              TABLE_NOT_OK                 = createSVGIcon("xmark.svg", RED);
   public static final ImageIcon              TABLE_ALERT                  = createSVGIcon("icn_alert_active.svg", Color.RED);
+  public static final ImageIcon              TABLE_WATCHED                = createSVGIcon("play.svg", "Component.focusColor", TmmFontHelper.H2);
+
   public static final ImageIcon              RENAMER_ADDED                = createSVGIcon("plus.svg", "Component.successColor", TmmFontHelper.L1);
   public static final ImageIcon              RENAMER_SPACER               = createSVGIcon("spacer.svg", TmmFontHelper.L1);
   public static final ImageIcon              RENAMER_REMOVED              = createSVGIcon("minus.svg", "Component.errorColor", TmmFontHelper.L1);
 
   // font awesome icons normal
   public static final ImageIcon              AI                           = createSVGIcon("microchip-ai.svg");
+  public static final ImageIcon              ADD_GRAY                     = createSVGIcon("plus.svg");
   public static final ImageIcon              CANCEL                       = createSVGIcon("circle-xmark.svg");
   public static final ImageIcon              CARET_UP                     = createSVGIcon("chevron-up.svg");
   public static final ImageIcon              CARET_DOWN                   = createSVGIcon("chevron-down.svg");
-  public static final ImageIcon              CLEAR_GREY                   = createSVGIcon("circle-xmark.svg");
+  public static final ImageIcon              CLEAR_GRAY                   = createSVGIcon("circle-xmark.svg");
   public static final ImageIcon              COLLAPSED                    = createSVGIcon("square-chevron-down.svg");
   public static final ImageIcon              CONFIGURE                    = createSVGIcon("wrench.svg");
+  public static final ImageIcon              COPY_GRAY                    = createSVGIcon("clone.svg");
   public static final ImageIcon              DATE_PICKER                  = createSVGIcon("calendar-lines.svg");
   public static final ImageIcon              DEAF                         = createSVGIcon("ear-deaf.svg");
   public static final ImageIcon              DELETE_GRAY                  = createSVGIcon("trash-alt.svg");
@@ -175,9 +180,9 @@ public class IconManager {
   public static final ImageIcon              QUESTION_BIG                 = createSVGIcon("question.svg", RED, 2);
 
   public static final ImageIcon              SAVE                         = createSVGIcon("save.svg");
-  public static final ImageIcon              SEARCH_GREY                  = createSVGIcon("search.svg");
+  public static final ImageIcon              SEARCH_GRAY                  = createSVGIcon("search.svg");
   public static final ImageIcon              STOP                         = createSVGIcon("circle-stop.svg");
-  public static final ImageIcon              UNDO_GREY                    = createSVGIcon("undo.svg");
+  public static final ImageIcon              UNDO_GRAY                    = createSVGIcon("undo.svg");
 
   // font awesome icons light (button usage)
   public static final ImageIcon              ADD_INV                      = createButtonIcon("plus.svg");
@@ -211,6 +216,7 @@ public class IconManager {
   public static final ImageIcon              DATE_ADDED                   = createTableHeaderIcon("calendar-plus.svg");
   public static final ImageIcon              DATE_AIRED                   = createTableHeaderIcon("calendar-lines.svg");
   public static final ImageIcon              DATE_CREATED                 = createTableHeaderIcon("calendar-star.svg");
+  public static final ImageIcon              DELETE_HEADER                = createTableHeaderIcon("trash-alt.svg");
   public static final ImageIcon              EDITION                      = createTableHeaderIcon("compact-disc.svg");
   public static final ImageIcon              EDIT_HEADER                  = createTableHeaderIcon("edit.svg");
   public static final ImageIcon              EPISODES                     = createTextIcon("E", 1.4);
