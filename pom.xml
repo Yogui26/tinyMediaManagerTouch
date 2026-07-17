@@ -81,7 +81,7 @@
         <slf4j.version>2.0.9</slf4j.version>
         <release.version>3.1.1</release.version>
         <jre.version>25.0.3-b508</jre.version>
-        <jre.version.macosx64>21.0.11-b1163</jre.version.macosx64>
+        <jre.version.macosx64>21.0.10-b1163</jre.version.macosx64>
         <launcher.version>5.2.5</launcher.version>
         <flatlaf.version>3.7.2</flatlaf.version>
         <jackson.version>2.21.2</jackson.version>
@@ -919,7 +919,7 @@
                                         <artifactItem>
                                             <groupId>org.tinymediamanager.jre</groupId>
                                             <artifactId>macos_aarch64</artifactId>
-                                            <version>${jre.version}</version>
+                                            <version>${jre.version.macosx64}</version>
                                             <type>tar.xz</type>
                                         </artifactItem>
                                     </artifactItems>
@@ -963,14 +963,14 @@
                                         <artifactItem>
                                             <groupId>org.tinymediamanager.jre</groupId>
                                             <artifactId>macos_x64</artifactId>
-                                            <version>${jre.version}</version>
+                                            <version>${jre.version.macosx64}</version>
                                             <type>tar.xz</type>
                                             <outputDirectory>${project.build.directory}/macos-x64/jre</outputDirectory>
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.tinymediamanager.jre</groupId>
                                             <artifactId>macos_aarch64</artifactId>
-                                            <version>${jre.version}</version>
+                                            <version>${jre.version.macosx64}</version>
                                             <type>tar.xz</type>
                                             <outputDirectory>${project.build.directory}/macos-aarch64/jre
                                             </outputDirectory>
