@@ -43,6 +43,7 @@ import org.tinymediamanager.ui.AbstractTmmUIModule;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmLazyMenuAdapter;
 import org.tinymediamanager.ui.components.MenuScroller;
+import org.tinymediamanager.ui.components.label.TmmMenuLabel;
 import org.tinymediamanager.ui.components.tabbedpane.MainTabbedPane;
 import org.tinymediamanager.ui.dialogs.PostProcessResultDialog;
 import org.tinymediamanager.ui.movies.actions.DebugDumpMovieAction;
@@ -191,6 +192,22 @@ public class MovieUIModule extends AbstractTmmUIModule {
     return selectionModel;
   }
 
+  @Override
+  public JPopupMenu getRenameButtonMenu() {
+    if (MovieModuleManager.getInstance().getSettings().getRenamerProfiles().size() <= 1) {
+      return null;
+    }
+
+    JPopupMenu menu = new JPopupMenu(TmmResourceBundle.getString("Toolbar.rename"));
+    menu.setToolTipText(TmmResourceBundle.getString("Toolbar.rename"));
+    menu.add(new TmmMenuLabel(TmmResourceBundle.getString("tmm.renamewithprofile")));
+    menu.addSeparator();
+    for (String profile : MovieModuleManager.getInstance().getSettings().getRenamerProfiles().keySet()) {
+      menu.add(new MovieRenameWithProfileAction(profile));
+    }
+    return menu;
+  }
+
   private void createActions() {
     searchAction = createAndRegisterAction(MovieSingleScrapeAction.class);
     editAction = createAndRegisterAction(MovieEditAction.class);
@@ -292,7 +309,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
     renamePopupMenu.add(createAndRegisterAction(MovieRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieRenamePreviewAction.class));
     renamePopupMenu.addSeparator();
-    JMenu renamerProfile = new JMenu(TmmResourceBundle.getString("Settings.renamer.profile"));
+    JMenu renamerProfile = new JMenu(TmmResourceBundle.getString("tmm.renamewithprofile"));
     renamerProfile.setIcon(IconManager.MENU);
     MenuScroller.setScrollerFor(renamerProfile, 20, 50, 0, 0);
     renamerProfile.getPopupMenu().addPopupMenuListener(new TmmLazyMenuAdapter() {
@@ -390,7 +407,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
     renamePopupMenu.add(createAndRegisterAction(MovieRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieRenamePreviewAction.class));
     renamePopupMenu.addSeparator();
-    JMenu renamerProfile = new JMenu(TmmResourceBundle.getString("Settings.renamer.profile"));
+    JMenu renamerProfile = new JMenu(TmmResourceBundle.getString("tmm.renamewithprofile"));
     renamerProfile.setIcon(IconManager.MENU);
     MenuScroller.setScrollerFor(renamerProfile, 20, 50, 0, 0);
     renamerProfile.getPopupMenu().addPopupMenuListener(new TmmLazyMenuAdapter() {
