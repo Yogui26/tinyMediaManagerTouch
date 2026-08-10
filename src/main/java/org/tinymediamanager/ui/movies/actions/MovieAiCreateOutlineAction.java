@@ -70,7 +70,7 @@ public class MovieAiCreateOutlineAction extends TmmAction {
               String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(),
                   MovieModuleManager.getInstance().getSettings().getAiOutlineMaxWords());
               if (StringUtils.isNotBlank(outline)) {
-                // TODO
+                movie.setOutline(outline);
               }
               publishState(++i);
               if (cancel) {

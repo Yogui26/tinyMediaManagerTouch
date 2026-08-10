@@ -58,6 +58,7 @@ import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -80,18 +81,18 @@ class ExternalServicesSettingsPanel extends JPanel {
   private JButton             btnGetTraktPin;
   private JButton             btnTestTraktConnection;
   private JLabel              lblTraktStatus;
-  private JPasswordField pfMdbListApiKey;
+  private JPasswordField      pfMdbListApiKey;
   private JComboBox           cbTraktDate;
 
-  private JTextField     tfAiEndpointUrl;
-  private JPasswordField pfAiApiKey;
-  private JButton        btnTestAiConnection;
-  private JCheckBox      chckbxAiRateLimit;
-  private JSpinner       spAiMaxCallsPerMinute;
-  private JSpinner       spAiMaxCallsPerHour;
-  private JSpinner       spAiMinIntervalSeconds;
-  private JLabel         lblAiTestResult;
-  private JTextField     tfAiModel;
+  private JTextField          tfAiEndpointUrl;
+  private JPasswordField      pfAiApiKey;
+  private JButton             btnTestAiConnection;
+  private JCheckBox           chckbxAiRateLimit;
+  private JSpinner            spAiMaxCallsPerMinute;
+  private JSpinner            spAiMaxCallsPerHour;
+  private JSpinner            spAiMinIntervalSeconds;
+  private JLabel              lblAiTestResult;
+  private JTextField          tfAiModel;
 
   ExternalServicesSettingsPanel() {
     // UI init

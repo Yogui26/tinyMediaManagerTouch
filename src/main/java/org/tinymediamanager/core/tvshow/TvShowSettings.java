@@ -266,12 +266,9 @@ public final class TvShowSettings extends AbstractSettings {
   final List<String>                             ratingSources                  = ObservableCollections.observableList(new ArrayList<>());
 
   // AI settings
-  boolean                                        aiPlotTranslationEnabled;
   String                                         aiPlotTranslationModel;
-  boolean                                        aiTaglineEnabled;
   String                                         aiTaglineModel;
   int                                            aiTaglineMaxWords;
-  boolean                                        aiOutlineEnabled;
   String                                         aiOutlineModel;
   int                                            aiOutlineMaxWords;
 
@@ -490,13 +487,10 @@ public final class TvShowSettings extends AbstractSettings {
     setUniversalFilterFields(List.of(UniversalFilterFields.values()));
 
     // AI settings
-    setAiPlotTranslationEnabled(false);
-    setAiPlotTranslationModel("gpt-4o-mini");
-    setAiTaglineEnabled(false);
-    setAiTaglineModel("gpt-4o-mini");
+    setAiPlotTranslationModel("");
+    setAiTaglineModel("");
     setAiTaglineMaxWords(20);
-    setAiOutlineEnabled(false);
-    setAiOutlineModel("gpt-4o-mini");
+    setAiOutlineModel("");
     setAiOutlineMaxWords(50);
   }
 
@@ -2189,16 +2183,6 @@ public final class TvShowSettings extends AbstractSettings {
     firePropertyChange("ratingSources", null, ratingSources);
   }
 
-  public boolean isAiPlotTranslationEnabled() {
-    return aiPlotTranslationEnabled;
-  }
-
-  public void setAiPlotTranslationEnabled(boolean newValue) {
-    boolean oldValue = this.aiPlotTranslationEnabled;
-    this.aiPlotTranslationEnabled = newValue;
-    firePropertyChange("aiPlotTranslationEnabled", oldValue, newValue);
-  }
-
   public String getAiPlotTranslationModel() {
     return aiPlotTranslationModel;
   }
@@ -2207,16 +2191,6 @@ public final class TvShowSettings extends AbstractSettings {
     String oldValue = this.aiPlotTranslationModel;
     this.aiPlotTranslationModel = newValue;
     firePropertyChange("aiPlotTranslationModel", oldValue, newValue);
-  }
-
-  public boolean isAiTaglineEnabled() {
-    return aiTaglineEnabled;
-  }
-
-  public void setAiTaglineEnabled(boolean newValue) {
-    boolean oldValue = this.aiTaglineEnabled;
-    this.aiTaglineEnabled = newValue;
-    firePropertyChange("aiTaglineEnabled", oldValue, newValue);
   }
 
   public String getAiTaglineModel() {
@@ -2237,16 +2211,6 @@ public final class TvShowSettings extends AbstractSettings {
     int oldValue = this.aiTaglineMaxWords;
     this.aiTaglineMaxWords = newValue;
     firePropertyChange("aiTaglineMaxWords", oldValue, newValue);
-  }
-
-  public boolean isAiOutlineEnabled() {
-    return aiOutlineEnabled;
-  }
-
-  public void setAiOutlineEnabled(boolean newValue) {
-    boolean oldValue = this.aiOutlineEnabled;
-    this.aiOutlineEnabled = newValue;
-    firePropertyChange("aiOutlineEnabled", oldValue, newValue);
   }
 
   public String getAiOutlineModel() {

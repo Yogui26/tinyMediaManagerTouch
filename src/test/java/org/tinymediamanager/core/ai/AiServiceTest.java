@@ -156,7 +156,7 @@ public class AiServiceTest {
 
   @Test
   public void testBlankTitleAndPlotReturnsEmptyOutline() {
-    String result = service.generateOutline("", "", 0, "German", 50);
+    String result = service.generateOutline("", "", 50);
     assertThat(result).isEqualTo("");
   }
 
@@ -166,7 +166,7 @@ public class AiServiceTest {
         .setBody(
             "{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"A hero saves the day.\"},\"finish_reason\":\"stop\"}]}"));
 
-    String result = service.generateOutline("Test Movie", "A movie about testing.", 2024, "English", 50);
+    String result = service.generateOutline("Test Movie", "A movie about testing.", 50);
     assertThat(result).isEqualTo("A hero saves the day.");
   }
 
@@ -174,7 +174,7 @@ public class AiServiceTest {
   public void testOutlineApiErrorReturnsEmpty() {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":{\"message\":\"Bad request\"}}"));
 
-    String result = service.generateOutline("Test", "A plot.", 2024, "English", 50);
+    String result = service.generateOutline("Test", "A plot.", 50);
     assertThat(result).isEqualTo("");
   }
 
@@ -184,7 +184,7 @@ public class AiServiceTest {
       server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
     }
 
-    String result = service.generateOutline("Test", "A plot.", 2024, "English", 50);
+    String result = service.generateOutline("Test", "A plot.", 50);
     assertThat(result).isEqualTo("");
   }
 }

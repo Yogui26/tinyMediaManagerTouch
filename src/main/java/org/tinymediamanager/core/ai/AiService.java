@@ -58,7 +58,7 @@ public class AiService {
       + "Generate a brief, spoiler-free outline (maximum {maxWords} words) for the given media. "
       + "An outline is a short description of the storyline without analysis, personal opinion, or actor names. "
       + "Do NOT start with 'This film is about' or 'This is a story about'. " + "Do NOT include the title at the beginning of the outline. "
-      + "Return only the outline text, no explanations.";
+      + "Return only the outline text, no explanations. Return the outline in the same language as the given plot!";
 
   static final String         PROMPT_OUTLINE_USER     = "Generate an outline for:\nTitle: {title}\nPlot: {plot}";
 
