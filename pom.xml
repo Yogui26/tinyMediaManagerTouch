@@ -88,6 +88,7 @@
         <flatlaf.version>3.7.2</flatlaf.version>
         <jackson.version>2.21.2</jackson.version>
         <sonar.java.source>17</sonar.java.source>
+        <skip.fix.crlf>false</skip.fix.crlf>
     </properties>
     <dependencies>
         <dependency>
@@ -1178,6 +1179,7 @@
                                     <goal>run</goal>
                                 </goals>
                                 <configuration>
+                                    <skip>${skip.fix.crlf}</skip>
                                     <!-- create SBOM with Linux LF line endings, so file is binary same on windows build -->
                                     <target>
                                         <fixcrlf srcdir="${project.build.outputDirectory}/META-INF/sbom"
