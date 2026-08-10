@@ -19,6 +19,9 @@ import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import static org.tinymediamanager.ui.TmmFontHelper.L2;
 
 import java.awt.Dimension;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
@@ -31,6 +34,7 @@ import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -54,12 +58,15 @@ import org.tinymediamanager.Globals;
 import org.tinymediamanager.LauncherExtraConfig;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
+import org.tinymediamanager.ui.components.toast.TmmToastManager;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -86,7 +93,7 @@ class SystemSettingsPanel extends JPanel {
   private JCheckBox            chckbxDisableD3d;
   private JSpinner             spMaximumDownloadThreads;
   private JTextField           tfHttpPort;
-  private JTextField           tfHttpApiKey;
+  private JPasswordField       pfHttpApiKey;
   private JCheckBox            chkbxEnableHttpServer;
   private JLabel               lblHttpPortT;
 
@@ -233,9 +240,18 @@ class SystemSettingsPanel extends JPanel {
       JLabel lblHttpApiKey = new JLabel(TmmResourceBundle.getString("Settings.api.key"));
       panelMisc.add(lblHttpApiKey, "flowx,cell 2 2");
 
-      tfHttpApiKey = new JTextField();
-      panelMisc.add(tfHttpApiKey, "cell 2 2");
-      tfHttpApiKey.setColumns(30);
+      pfHttpApiKey = new JPasswordField();
+      pfHttpApiKey.setColumns(30);
+      panelMisc.add(pfHttpApiKey, "cell 2 2");
+
+      JButton btnCopyHttpApiKey = new SquareIconButton(IconManager.COPY);
+      btnCopyHttpApiKey.setToolTipText(TmmResourceBundle.getString("Settings.apikey.copy.desc"));
+      btnCopyHttpApiKey.addActionListener(l -> {
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(new StringSelection(new String(pfHttpApiKey.getPassword())), null);
+        TmmToastManager.showSuccessToast(this, TmmResourceBundle.getString("Settings.apikey.copy.done"));
+      });
+      panelMisc.add(btnCopyHttpApiKey, "cell 2 2");
 
       add(collapsiblePanel, "cell 0 4,growx,wmin 0");
     }
@@ -412,7 +428,7 @@ class SystemSettingsPanel extends JPanel {
     //
     Property settingsBeanProperty_11 = BeanProperty.create("httpApiKey");
     Property jTextFieldBeanProperty_6 = BeanProperty.create("text");
-    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_11, tfHttpApiKey,
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_11, pfHttpApiKey,
         jTextFieldBeanProperty_6);
     autoBinding_12.bind();
     //
@@ -421,7 +437,7 @@ class SystemSettingsPanel extends JPanel {
         jTextFieldBeanProperty_3);
     autoBinding_6.bind();
     //
-    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ, chkbxEnableHttpServer, jCheckBoxBeanProperty, tfHttpApiKey,
+    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ, chkbxEnableHttpServer, jCheckBoxBeanProperty, pfHttpApiKey,
         jTextFieldBeanProperty_3);
     autoBinding_9.bind();
   }

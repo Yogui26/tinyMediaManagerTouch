@@ -35,6 +35,7 @@ import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSearchAndScrapeOptions;
+import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.tasks.MovieTrailerDownloadTask;
 import org.tinymediamanager.core.tasks.QueueTask;
@@ -68,6 +69,7 @@ public class MovieChooserModel extends AbstractModelObject {
   private static final Logger           LOGGER           = LoggerFactory.getLogger(MovieChooserModel.class);
   public static final MovieChooserModel emptyResult      = new MovieChooserModel();
 
+  private final MovieSettings           settings;
   private final Movie                   movieToScrape;
 
   private MediaScraper                  metadataProvider = null;
@@ -93,6 +95,7 @@ public class MovieChooserModel extends AbstractModelObject {
 
   public MovieChooserModel(Movie movie, MediaScraper metadataProvider, List<MediaScraper> artworkScrapers, List<MediaScraper> trailerScrapers,
       MediaSearchResult result, MediaLanguages language) {
+    this.settings = MovieModuleManager.getInstance().getSettings();
     this.movieToScrape = movie;
     this.metadataProvider = metadataProvider;
     this.artworkScrapers = artworkScrapers;
@@ -118,6 +121,7 @@ public class MovieChooserModel extends AbstractModelObject {
    */
   private MovieChooserModel() {
     setTitle(TmmResourceBundle.getString("chooser.nothingfound"));
+    settings = MovieModuleManager.getInstance().getSettings();
     movieToScrape = null;
     combinedName = title;
   }
@@ -231,8 +235,8 @@ public class MovieChooserModel extends AbstractModelObject {
       MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions();
       options.setSearchResult(result);
       options.setLanguage(language);
-      options.setCertificationCountry(MovieModuleManager.getInstance().getSettings().getCertificationCountry());
-      options.setReleaseDateCountry(MovieModuleManager.getInstance().getSettings().getReleaseDateCountry());
+      options.setCertificationCountry(settings.getCertificationCountry());
+      options.setReleaseDateCountry(settings.getReleaseDateCountry());
       options.setIds(result.getIds());
 
       LOGGER.info("Scraping movie '{}' with '{}'", movieToScrape.getTitle(), metadataProvider.getMediaProvider().getProviderInfo().getId());
@@ -396,9 +400,9 @@ public class MovieChooserModel extends AbstractModelObject {
     else {
       options.setId("mediaFile", movieToScrape.getMainFile());
     }
-    options.setLanguage(MovieModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
-    options.setFanartSize(MovieModuleManager.getInstance().getSettings().getImageFanartSize());
-    options.setPosterSize(MovieModuleManager.getInstance().getSettings().getImagePosterSize());
+    options.setLanguage(settings.getDefaultImageScraperLanguage());
+    options.setFanartSize(settings.getImageFanartSize());
+    options.setPosterSize(settings.getImagePosterSize());
 
     // scrape providers
     artworkScrapers.parallelStream().forEach(artworkScraper -> {
@@ -519,9 +523,8 @@ public class MovieChooserModel extends AbstractModelObject {
       movieToScrape.writeNFO();
 
       // start automatic movie trailer download
-      if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
-          && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
-          && movieToScrape.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !movieToScrape.getTrailer().isEmpty()) {
+      if (settings.isUseTrailerPreference() && settings.isAutomaticTrailerDownload() && movieToScrape.getMediaFiles(MediaFileType.TRAILER).isEmpty()
+          && !movieToScrape.getTrailer().isEmpty()) {
         TmmTask task = new MovieTrailerDownloadTask(movieToScrape);
         TmmTaskManager.getInstance().addDownloadTask(task);
       }

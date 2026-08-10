@@ -48,6 +48,7 @@ import org.tinymediamanager.ui.dialogs.PostProcessResultDialog;
 import org.tinymediamanager.ui.movies.actions.DebugDumpMovieAction;
 import org.tinymediamanager.ui.movies.actions.DebugLoadMovieAction;
 import org.tinymediamanager.ui.movies.actions.MovieAddDatasourceAction;
+import org.tinymediamanager.ui.movies.actions.MovieAiCreateOutlineAction;
 import org.tinymediamanager.ui.movies.actions.MovieAspectRatioDetectAction;
 import org.tinymediamanager.ui.movies.actions.MovieAssignMovieSetAction;
 import org.tinymediamanager.ui.movies.actions.MovieBulkEditAction;
@@ -450,6 +451,9 @@ public class MovieUIModule extends AbstractTmmUIModule {
       popupMenu.addSeparator();
       popupMenu.add(debugMenu);
     }
+
+    // AI
+    popupMenu.add(createAndRegisterAction(MovieAiCreateOutlineAction.class));
 
     // activate/deactivate menu items based on some status
     popupMenu.addPopupMenuListener(new PopupMenuListener() {

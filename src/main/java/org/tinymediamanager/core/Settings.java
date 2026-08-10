@@ -157,6 +157,15 @@ public final class Settings extends AbstractSettings {
   private float                                            ardDarkLevelPct              = 7f;
   private float                                            ardDarkLevelMaxPct           = 13f;
 
+  // AI (LLM) settings
+  private String                                           aiEndpointUrl                = "";
+  private String                                           aiApiKey                     = "";
+  private String                                           aiModel                      = "";
+  private boolean                                          aiRateLimitEnabled           = true;
+  private int                                              aiMaxCallsPerMinute          = 50;
+  private int                                              aiMaxCallsPerHour            = 1000;
+  private int                                              aiMinIntervalSeconds         = 1;
+
   private boolean                                          enableAutomaticUpdate        = true;
   private int                                              automaticUpdateInterval      = 1;
   private String                                           mdbListApiKey                = "";
@@ -1438,6 +1447,82 @@ public final class Settings extends AbstractSettings {
 
   public ArdSettings.SampleSetting getArdSampleSetting(ArdSettings.Mode mode) {
     return ardSampleSettings.get(mode);
+  }
+
+  // =======================================================================
+  // AI (LLM) settings
+  // =======================================================================
+
+  public String getAiEndpointUrl() {
+    return aiEndpointUrl;
+  }
+
+  public void setAiEndpointUrl(String aiEndpointUrl) {
+    String oldValue = this.aiEndpointUrl;
+    this.aiEndpointUrl = aiEndpointUrl;
+    firePropertyChange("aiEndpointUrl", oldValue, aiEndpointUrl);
+  }
+
+  @JsonSerialize(using = EncryptedStringSerializer.class)
+  @JsonDeserialize(using = EncryptedStringDeserializer.class)
+  public String getAiApiKey() {
+    return aiApiKey;
+  }
+
+  public void setAiApiKey(String aiApiKey) {
+    String oldValue = this.aiApiKey;
+    this.aiApiKey = aiApiKey;
+    firePropertyChange("aiApiKey", oldValue, aiApiKey);
+  }
+
+  public String getAiModel() {
+    return aiModel;
+  }
+
+  public void setAiModel(String newValue) {
+    String oldValue = this.aiModel;
+    this.aiModel = newValue;
+    firePropertyChange("aiModel", oldValue, newValue);
+  }
+
+  public boolean isAiRateLimitEnabled() {
+    return aiRateLimitEnabled;
+  }
+
+  public void setAiRateLimitEnabled(boolean aiRateLimitEnabled) {
+    boolean oldValue = this.aiRateLimitEnabled;
+    this.aiRateLimitEnabled = aiRateLimitEnabled;
+    firePropertyChange("aiRateLimitEnabled", oldValue, aiRateLimitEnabled);
+  }
+
+  public int getAiMaxCallsPerMinute() {
+    return aiMaxCallsPerMinute;
+  }
+
+  public void setAiMaxCallsPerMinute(int aiMaxCallsPerMinute) {
+    int oldValue = this.aiMaxCallsPerMinute;
+    this.aiMaxCallsPerMinute = aiMaxCallsPerMinute;
+    firePropertyChange("aiMaxCallsPerMinute", oldValue, aiMaxCallsPerMinute);
+  }
+
+  public int getAiMaxCallsPerHour() {
+    return aiMaxCallsPerHour;
+  }
+
+  public void setAiMaxCallsPerHour(int aiMaxCallsPerHour) {
+    int oldValue = this.aiMaxCallsPerHour;
+    this.aiMaxCallsPerHour = aiMaxCallsPerHour;
+    firePropertyChange("aiMaxCallsPerHour", oldValue, aiMaxCallsPerHour);
+  }
+
+  public int getAiMinIntervalSeconds() {
+    return aiMinIntervalSeconds;
+  }
+
+  public void setAiMinIntervalSeconds(int aiMinIntervalSeconds) {
+    int oldValue = this.aiMinIntervalSeconds;
+    this.aiMinIntervalSeconds = aiMinIntervalSeconds;
+    firePropertyChange("aiMinIntervalSeconds", oldValue, aiMinIntervalSeconds);
   }
 
   public boolean isEnableHttpServer() {

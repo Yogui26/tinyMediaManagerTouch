@@ -263,6 +263,16 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        englishTitle;
   final List<String>                             ratingSources                  = ObservableCollections.observableList(new ArrayList<>());
 
+  // AI settings
+  boolean                                        aiPlotTranslationEnabled;
+  String                                         aiPlotTranslationModel;
+  boolean                                        aiTaglineEnabled;
+  String                                         aiTaglineModel;
+  int                                            aiTaglineMaxWords;
+  boolean                                        aiOutlineEnabled;
+  String                                         aiOutlineModel;
+  int                                            aiOutlineMaxWords;
+
   final PropertyChangeListener                   propertyChangeListener;
 
   public TvShowSettings() {
@@ -476,6 +486,16 @@ public final class TvShowSettings extends AbstractSettings {
     setTvShowScraperMetadataConfig(List.of(TvShowScraperMetadataConfig.values()));
     setEpisodeScraperMetadataConfig(List.of(TvShowEpisodeScraperMetadataConfig.values()));
     setUniversalFilterFields(List.of(UniversalFilterFields.values()));
+
+    // AI settings
+    setAiPlotTranslationEnabled(false);
+    setAiPlotTranslationModel("gpt-4o-mini");
+    setAiTaglineEnabled(false);
+    setAiTaglineModel("gpt-4o-mini");
+    setAiTaglineMaxWords(20);
+    setAiOutlineEnabled(false);
+    setAiOutlineModel("gpt-4o-mini");
+    setAiOutlineMaxWords(50);
   }
 
   @Override
@@ -2145,5 +2165,85 @@ public final class TvShowSettings extends AbstractSettings {
     ratingSources.set(pos1, ratingSources.get(pos2));
     ratingSources.set(pos2, tmp);
     firePropertyChange("ratingSources", null, ratingSources);
+  }
+
+  public boolean isAiPlotTranslationEnabled() {
+    return aiPlotTranslationEnabled;
+  }
+
+  public void setAiPlotTranslationEnabled(boolean newValue) {
+    boolean oldValue = this.aiPlotTranslationEnabled;
+    this.aiPlotTranslationEnabled = newValue;
+    firePropertyChange("aiPlotTranslationEnabled", oldValue, newValue);
+  }
+
+  public String getAiPlotTranslationModel() {
+    return aiPlotTranslationModel;
+  }
+
+  public void setAiPlotTranslationModel(String newValue) {
+    String oldValue = this.aiPlotTranslationModel;
+    this.aiPlotTranslationModel = newValue;
+    firePropertyChange("aiPlotTranslationModel", oldValue, newValue);
+  }
+
+  public boolean isAiTaglineEnabled() {
+    return aiTaglineEnabled;
+  }
+
+  public void setAiTaglineEnabled(boolean newValue) {
+    boolean oldValue = this.aiTaglineEnabled;
+    this.aiTaglineEnabled = newValue;
+    firePropertyChange("aiTaglineEnabled", oldValue, newValue);
+  }
+
+  public String getAiTaglineModel() {
+    return aiTaglineModel;
+  }
+
+  public void setAiTaglineModel(String newValue) {
+    String oldValue = this.aiTaglineModel;
+    this.aiTaglineModel = newValue;
+    firePropertyChange("aiTaglineModel", oldValue, newValue);
+  }
+
+  public int getAiTaglineMaxWords() {
+    return aiTaglineMaxWords;
+  }
+
+  public void setAiTaglineMaxWords(int newValue) {
+    int oldValue = this.aiTaglineMaxWords;
+    this.aiTaglineMaxWords = newValue;
+    firePropertyChange("aiTaglineMaxWords", oldValue, newValue);
+  }
+
+  public boolean isAiOutlineEnabled() {
+    return aiOutlineEnabled;
+  }
+
+  public void setAiOutlineEnabled(boolean newValue) {
+    boolean oldValue = this.aiOutlineEnabled;
+    this.aiOutlineEnabled = newValue;
+    firePropertyChange("aiOutlineEnabled", oldValue, newValue);
+  }
+
+  public String getAiOutlineModel() {
+    return aiOutlineModel;
+  }
+
+  public void setAiOutlineModel(String newValue) {
+    String oldValue = this.aiOutlineModel;
+    this.aiOutlineModel = newValue;
+    firePropertyChange("aiOutlineModel", oldValue, newValue);
+  }
+
+  public int getAiOutlineMaxWords() {
+    return aiOutlineMaxWords;
+  }
+
+  public void setAiOutlineMaxWords(int newValue) {
+    int oldValue = this.aiOutlineMaxWords;
+    this.aiOutlineMaxWords = newValue;
+    firePropertyChange("aiOutlineMaxWords", oldValue, newValue);
   }
 }
