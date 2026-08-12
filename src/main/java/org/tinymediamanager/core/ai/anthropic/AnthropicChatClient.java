@@ -2,6 +2,8 @@ package org.tinymediamanager.core.ai.anthropic;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
@@ -102,7 +104,7 @@ public class AnthropicChatClient implements AiClient {
     }
 
     // Convert AiMessage list to AnthropicMessage list
-    java.util.List<AnthropicMessage> anthropicMessages = AnthropicMessageConverter.toAnthropicMessages(request.getMessages());
+    List<AnthropicMessage> anthropicMessages = AnthropicMessageConverter.toAnthropicMessages(request.getMessages());
 
     AnthropicRequest anthropicRequest = new AnthropicRequest(request.getModel(), anthropicMessages, request.getMaxTokens(), request.getTemperature());
 
@@ -176,13 +178,13 @@ public class AnthropicChatClient implements AiClient {
       }
 
       if (anthropicResponse.getTextContent() != null) {
-        org.tinymediamanager.core.ai.AiResponse.Message message = new org.tinymediamanager.core.ai.AiResponse.Message();
+        AiResponse.Message message = new AiResponse.Message();
         message.setRole("assistant");
         message.setContent(anthropicResponse.getTextContent());
-        org.tinymediamanager.core.ai.AiResponse.Choice choice = new org.tinymediamanager.core.ai.AiResponse.Choice();
+        AiResponse.Choice choice = new AiResponse.Choice();
         choice.setMessage(message);
         choice.setFinishReason(anthropicResponse.getStopReason());
-        aiResponse.setChoices(java.util.Collections.singletonList(choice));
+        aiResponse.setChoices(Collections.singletonList(choice));
       }
 
       return aiResponse;

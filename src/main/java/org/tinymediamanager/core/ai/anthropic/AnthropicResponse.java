@@ -1,5 +1,7 @@
 package org.tinymediamanager.core.ai.anthropic;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -21,7 +23,7 @@ public class AnthropicResponse {
   private String                       role;
 
   @JsonProperty("content")
-  private java.util.List<ContentBlock> content;
+  private List<ContentBlock> content;
 
   @JsonProperty("model")
   private String                       model;
@@ -62,13 +64,13 @@ public class AnthropicResponse {
     this.role = role;
   }
 
-  public java.util.List<ContentBlock> getContent() {
+  public List<ContentBlock> getContent() {
     return content;
   }
 
-  public void setContent(java.util.List<ContentBlock> content) {
-    this.content = content;
-  }
+   public void setContent(List<ContentBlock> content) {
+     this.content = content;
+   }
 
   /**
    * Extracts the text content from the response. Handles both "thinking" and "text" content blocks.

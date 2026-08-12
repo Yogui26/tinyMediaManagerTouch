@@ -1,5 +1,8 @@
 package org.tinymediamanager.core.ai.anthropic;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.tinymediamanager.core.ai.AiMessage;
 
 /**
@@ -16,8 +19,8 @@ public class AnthropicMessageConverter {
    *          the messages to convert
    * @return the converted messages
    */
-  public static java.util.List<AnthropicMessage> toAnthropicMessages(java.util.List<AiMessage> messages) {
-    java.util.List<AnthropicMessage> anthropicMessages = new java.util.ArrayList<>();
+  public static List<AnthropicMessage> toAnthropicMessages(List<AiMessage> messages) {
+    List<AnthropicMessage> anthropicMessages = new ArrayList<>();
     for (AiMessage msg : messages) {
       String role = "user"; // default
       String roleStr = msg.getRole();
