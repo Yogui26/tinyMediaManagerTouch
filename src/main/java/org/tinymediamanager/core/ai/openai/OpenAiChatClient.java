@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.tinymediamanager.core.ai;
+package org.tinymediamanager.core.ai.openai;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -22,10 +22,14 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.ai.AiClient;
+import org.tinymediamanager.core.ai.AiException;
 import org.tinymediamanager.core.ai.AiException.Authentication;
 import org.tinymediamanager.core.ai.AiException.Network;
 import org.tinymediamanager.core.ai.AiException.RateLimit;
 import org.tinymediamanager.core.ai.AiException.Timeout;
+import org.tinymediamanager.core.ai.AiRequest;
+import org.tinymediamanager.core.ai.AiResponse;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -80,7 +84,7 @@ public class OpenAiChatClient implements AiClient {
   }
 
   // package-private for testing - allows injecting a simpler HTTP client without the 429 retry interceptor
-  OpenAiChatClient(String name, String apiUrl, String apiKey, String model, int maxTokens, double temperature, OkHttpClient httpClient) {
+  public OpenAiChatClient(String name, String apiUrl, String apiKey, String model, int maxTokens, double temperature, OkHttpClient httpClient) {
     this.name = name;
     this.apiUrl = apiUrl;
     this.apiKey = apiKey;

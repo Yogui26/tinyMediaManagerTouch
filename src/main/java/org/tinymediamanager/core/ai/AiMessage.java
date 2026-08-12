@@ -18,6 +18,7 @@ package org.tinymediamanager.core.ai;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.tinymediamanager.core.ai.anthropic.AnthropicChatClient;
 
 /**
  * The class {@link AiMessage} represents a single message in an AI chat conversation.
@@ -32,7 +33,11 @@ public class AiMessage {
   @JsonProperty("content")
   private String content;
 
-  AiMessage() {
+  /**
+   * Creates a new message. This constructor is public to allow external implementations (e.g., {@link AnthropicChatClient}). For normal use, use the
+   * factory methods (system(), user(), assistant()) or the public constructor.
+   */
+  public AiMessage() {
   }
 
   /**
@@ -85,8 +90,16 @@ public class AiMessage {
     return role;
   }
 
+  public void setRole(String role) {
+    this.role = role;
+  }
+
   public String getContent() {
     return content;
+  }
+
+  public void setContent(String content) {
+    this.content = content;
   }
 
   @Override

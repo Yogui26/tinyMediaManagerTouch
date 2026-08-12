@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.ai.AiException.Configuration;
+import org.tinymediamanager.core.ai.openai.OpenAiChatClient;
 import org.tinymediamanager.license.TmmFeature;
 
 /**
@@ -95,8 +96,19 @@ public class AiManager implements TmmFeature {
   }
 
   private AiClient createClient(Settings settings, String model) {
-    LOGGER.debug("Creating AI client for endpoint: {} (model: {})", settings.getAiEndpointUrl(), model);
-    return new OpenAiChatClient("default", settings.getAiEndpointUrl(), settings.getAiApiKey(), model, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
+    String providerType = settings.getAiProviderType();
+    String endpointUrl = settings.getAiEndpointUrl();
+    String apiKey = settings.getAiApiKey();
+
+    LOGGER.debug("Creating AI client for provider: {} at endpoint: {} (model: {})", providerType, endpointUrl, model);
+
+    if ("anthropic".equalsIgnoreCase(providerType)) {
+      return new org.tinymediamanager.core.ai.anthropic.AnthropicChatClient(providerType, endpointUrl, apiKey, model, DEFAULT_MAX_TOKENS,
+          DEFAULT_TEMPERATURE);
+    }
+
+    // Default to OpenAI-compatible endpoint
+    return new OpenAiChatClient(providerType, endpointUrl, apiKey, model, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
   }
 
   /**

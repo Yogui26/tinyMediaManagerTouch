@@ -19,6 +19,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.tinymediamanager.core.ai.anthropic.AnthropicChatClient;
 
 /**
  * The class {@link AiResponse} represents a response from an OpenAI-compatible chat completions API.
@@ -49,7 +50,11 @@ public class AiResponse {
   @JsonProperty("error")
   private ApiError     error;
 
-  AiResponse() {
+  /**
+   * Creates a new AI response. This constructor is public to allow external implementations (e.g., {@link AnthropicChatClient}). For normal use, use
+   * Jackson deserialization or factory methods.
+   */
+  public AiResponse() {
   }
 
   /**
@@ -80,28 +85,56 @@ public class AiResponse {
     return id;
   }
 
+  public void setId(String id) {
+    this.id = id;
+  }
+
   public String getObject() {
     return object;
+  }
+
+  public void setObject(String object) {
+    this.object = object;
   }
 
   public long getCreated() {
     return created;
   }
 
+  public void setCreated(long created) {
+    this.created = created;
+  }
+
   public String getModel() {
     return model;
+  }
+
+  public void setModel(String model) {
+    this.model = model;
   }
 
   public List<Choice> getChoices() {
     return choices;
   }
 
+  public void setChoices(List<Choice> choices) {
+    this.choices = choices;
+  }
+
   public Usage getUsage() {
     return usage;
   }
 
+  public void setUsage(Usage usage) {
+    this.usage = usage;
+  }
+
   public ApiError getError() {
     return error;
+  }
+
+  public void setError(ApiError error) {
+    this.error = error;
   }
 
   public boolean hasError() {
@@ -128,9 +161,17 @@ public class AiResponse {
       return message;
     }
 
-    public String getFinishReason() {
-      return finishReason;
-    }
+  public void setMessage(Message message) {
+    this.message = message;
+  }
+
+  public String getFinishReason() {
+    return finishReason;
+  }
+
+  public void setFinishReason(String finishReason) {
+    this.finishReason = finishReason;
+  }
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -146,8 +187,16 @@ public class AiResponse {
       return role;
     }
 
+    public void setRole(String role) {
+      this.role = role;
+    }
+
     public String getContent() {
       return content;
+    }
+
+    public void setContent(String content) {
+      this.content = content;
     }
   }
 
@@ -167,12 +216,24 @@ public class AiResponse {
       return promptTokens;
     }
 
+    public void setPromptTokens(int promptTokens) {
+      this.promptTokens = promptTokens;
+    }
+
     public int getCompletionTokens() {
       return completionTokens;
     }
 
+    public void setCompletionTokens(int completionTokens) {
+      this.completionTokens = completionTokens;
+    }
+
     public int getTotalTokens() {
       return totalTokens;
+    }
+
+    public void setTotalTokens(int totalTokens) {
+      this.totalTokens = totalTokens;
     }
   }
 
@@ -192,12 +253,24 @@ public class AiResponse {
       return message;
     }
 
+    public void setMessage(String message) {
+      this.message = message;
+    }
+
     public String getType() {
       return type;
     }
 
+    public void setType(String type) {
+      this.type = type;
+    }
+
     public String getCode() {
       return code;
+    }
+
+    public void setCode(String code) {
+      this.code = code;
     }
   }
 }

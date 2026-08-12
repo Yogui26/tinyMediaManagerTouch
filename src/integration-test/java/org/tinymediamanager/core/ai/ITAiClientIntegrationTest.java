@@ -26,15 +26,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.BasicITest;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.ai.openai.OpenAiChatClient;
 
 /**
- * Integration tests that call a real LLM endpoint (OpenAI-compatible).
+ * Integration tests that call a real LLM endpoint (OpenAI-compatible or Anthropic).
  * <p>
  * Set the following environment variables to enable:
  * <ul>
  * <li>{@code TMM_AI_API_KEY} – your API key (required)</li>
  * <li>{@code TMM_AI_ENDPOINT_URL} – API endpoint (default: {@code https://api.openai.com/v1/chat/completions})</li>
  * <li>{@code TMM_AI_MODEL} – model name (default: gpt-4o-mini)</li>
+ * <li>{@code TMM_AI_PROVIDER_TYPE} – provider type (default: openai, can be openai or anthropic)</li>
  * </ul>
  * </p>
  */
@@ -44,14 +46,26 @@ public class ITAiClientIntegrationTest extends BasicITest {
 
   private static String       apiKey;
   private static String       endpointUrl;
+  private static String       providerType;
 
   @BeforeClass
   public static void readCredentials() {
     apiKey = System.getenv("TMM_AI_API_KEY");
     endpointUrl = System.getenv("TMM_AI_ENDPOINT_URL");
+    providerType = System.getenv("TMM_AI_PROVIDER_TYPE");
     if (StringUtils.isBlank(endpointUrl)) {
       endpointUrl = "https://api.openai.com/v1/chat/completions";
     }
+    if (StringUtils.isBlank(providerType)) {
+      providerType = "openai";
+    }
+  }
+
+  private static AiClient createClient(String model) {
+    if ("anthropic".equalsIgnoreCase(providerType)) {
+      return new org.tinymediamanager.core.ai.anthropic.AnthropicChatClient("integration-test", endpointUrl, apiKey, model, 1000, 0.7);
+    }
+    return new OpenAiChatClient("integration-test", endpointUrl, apiKey, model, 1000, 0.7);
   }
 
   @Before
@@ -61,7 +75,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
 
   @Test
   public void testBasicChatCompletion() throws Exception {
-    OpenAiChatClient client = new OpenAiChatClient("integration-test", endpointUrl, apiKey, "gpt-4o-mini", 1000, 0.7);
+    AiClient client = createClient("gpt-4o-mini");
 
     AiRequest request = new AiRequest("gpt-4o-mini", "You are a helpful assistant.", "Reply with only the word OK.");
     AiResponse response = client.chat(request);
@@ -76,7 +90,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
 
   @Test
   public void testConnection() throws Exception {
-    OpenAiChatClient client = new OpenAiChatClient("integration-test", endpointUrl, apiKey, "gpt-4o-mini", 1000, 0.7);
+    AiClient client = createClient("gpt-4o-mini");
 
     boolean connected = client.testConnection();
     assertThat(connected).isTrue();

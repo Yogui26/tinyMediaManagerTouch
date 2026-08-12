@@ -25,6 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.tinymediamanager.core.BasicTest;
+import org.tinymediamanager.core.ai.openai.OpenAiChatClient;
 
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;

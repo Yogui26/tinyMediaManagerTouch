@@ -161,10 +161,21 @@ public final class Settings extends AbstractSettings {
   private String                                           aiEndpointUrl                = "";
   private String                                           aiApiKey                     = "";
   private String                                           aiModel                      = "";
+  private String                                           aiProviderType               = "openai";
   private boolean                                          aiRateLimitEnabled           = true;
   private int                                              aiMaxCallsPerMinute          = 50;
   private int                                              aiMaxCallsPerHour            = 1000;
   private int                                              aiMinIntervalSeconds         = 1;
+
+  public String getAiProviderType() {
+    return aiProviderType;
+  }
+
+  public void setAiProviderType(String aiProviderType) {
+    String oldValue = this.aiProviderType;
+    this.aiProviderType = aiProviderType;
+    firePropertyChange("aiProviderType", oldValue, aiProviderType);
+  }
 
   private boolean                                          enableAutomaticUpdate        = true;
   private int                                              automaticUpdateInterval      = 1;
