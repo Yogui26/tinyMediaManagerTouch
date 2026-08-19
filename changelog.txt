@@ -1,3 +1,19 @@
+Version 5.3.2
+=======================
++ [Simkl.com] added support for syncing watched status with Simkl.com
++ [Movies, TV shows] added squareart artwork type #3217
++ [Trailer] added language information for trailers and improved trailer handling to enhance automatic trailer selection #3343
+---
+x [Movies, TV shows] added a guard to prevent adding/processing nested data sources
+x [Movies, TV shows] import pre-existing date added from NFO files
+x [UI] some minor fixes for the range slider in the image chooser
+x [UI] removed completeness indicators for missing episodes
+x [UI] moved "Include external audio streams in NFO" to the NFO settings panel
+x [Core] fall back to the content folder if the systems temp folder is not writable
+x [Core] fixed parsing of dates in multithreaded environments #3344
+x [Fernsehserien.de] fixed error when searching for ongoing TV shows
+
+
 Version 5.3.1
 =======================
 + [UI] enabled to open the editor for locked entries in read only mode

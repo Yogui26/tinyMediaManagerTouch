@@ -18,8 +18,11 @@ package org.tinymediamanager.core.tvshow.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.After;
@@ -30,14 +33,15 @@ import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.tvshow.BasicTvShowTest;
 import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 
 public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
-  private static final int NUMBER_OF_EXPECTED_SHOWS      = 18;
-  private static final int NUMBER_OF_EXPECTED_EPISODES   = 165;
-  private static final int NUMBER_OF_EXPECTED_MEDIAFILES = 410;
+  private static final int NUMBER_OF_EXPECTED_SHOWS      = 19;
+  private static final int NUMBER_OF_EXPECTED_EPISODES   = 166;
+  private static final int NUMBER_OF_EXPECTED_MEDIAFILES = 414;
 
   @Before
   public void setup() throws Exception {
@@ -73,6 +77,62 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
     assertThat(tvShowList.getTvShows()).hasSize(1);
     assertThat(tvShowList.getTvShows().get(0).getTitle()).isEqualTo("Breaking Bad");
+  }
+
+  @Test
+  public void udsNestedDatasource() throws Exception {
+    TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
+    TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+
+    Path parentDs = getWorkFolder().resolve("testtvshows").toAbsolutePath();
+    Path nestedDs = parentDs.resolve("Breaking Bad");
+
+    // adding a nested data source via the settings API must be rejected
+    assertThat(settings.addTvShowDataSources(nestedDs.toString())).isFalse();
+    assertThat(settings.getTvShowDataSource()).doesNotContain(nestedDs.toString());
+
+    // simulate an already broken setup (nested data source added before the guard existed)
+    settings.setTvShowDataSources(List.of(parentDs.toString(), nestedDs.toString()));
+
+    // and a bogus show which has been created by the nested data source on a previous run
+    TvShow bogusShow = new TvShow();
+    bogusShow.setDataSource(nestedDs.toString());
+    bogusShow.setPath(nestedDs.resolve("Season 01").toString());
+    bogusShow.setTitle("Season 01");
+    tvShowList.addTvShow(bogusShow);
+
+    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask();
+    task.run();
+
+    // the nested data source must not create bogus TV shows from its season folders
+    assertThat(tvShowList.getTvShowByPath(nestedDs.resolve("Season 01"))).isNull();
+    assertThat(tvShowList.getTvShowByPath(nestedDs.resolve("Season 02"))).isNull();
+
+    // the bogus show from a previous run must have been removed
+    assertThat(tvShowList.getTvShows()).noneMatch(tvShow -> nestedDs.toString().equals(tvShow.getDataSource()));
+
+    // the real TV show must still be present (found via the parent data source)
+    TvShow show = tvShowList.getTvShowByPath(nestedDs);
+    assertThat(show).isNotNull();
+    assertThat(show.getTitle()).isEqualTo("Breaking Bad");
+    assertThat(show.getEpisodes().size()).isEqualTo(62);
+    assertThat(show.getSeasons().size()).isEqualTo(5);
+  }
+
+  @Test
+  public void udsXmlDateAdded() throws Exception {
+    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask(List.of(getWorkFolder().resolve("testtvshows").resolve("XmlDateAdded")));
+    task.run();
+
+    TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+    TvShow show = tvShowList.getTvShowByPath(getWorkFolder().resolve("testtvshows/XmlDateAdded"));
+    assertThat(show).isNotNull();
+    assertThat(show.getEpisodes()).hasSize(1);
+
+    TvShowEpisode episode = show.getEpisodes().get(0);
+    // the NFO has no <dateadded>, but the .xml file does - must be adopted instead of now()
+    Date expectedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2019-01-02 03:04:05");
+    assertThat(episode.getDateAdded()).isEqualTo(expectedDate);
   }
 
   private void check() throws Exception {
@@ -183,6 +243,15 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     assertThat(seasons.get(2).getEpisodes().size()).isEqualTo(20);
     assertThat(seasons.get(3).getSeason()).isEqualTo(3);
     assertThat(seasons.get(3).getEpisodes().size()).isEqualTo(15);
+
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Janosik DVD - show dateAdded must come from the NFO, not now()
+    ///////////////////////////////////////////////////////////////////////////////////////
+    show = tvShowList.getTvShowByPath(getWorkFolder().resolve("testtvshows/Janosik DVD"));
+    assertThat(show).isNotNull();
+    assertThat(show.getTitle()).isEqualTo("Janosik");
+    Date expectedJanosikDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2017-03-16 23:28:08");
+    assertThat(show.getDateAdded()).isEqualTo(expectedJanosikDate);
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // unknown -1/-1 detection
