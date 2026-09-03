@@ -16,6 +16,8 @@
 package org.tinymediamanager.core.tvshow;
 
 import java.beans.PropertyChangeListener;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,7 +42,6 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.PostProcess;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TrailerQuality;
-import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.tvshow.connector.TvShowConnectors;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowBannerNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowCharacterartNaming;
@@ -59,6 +60,7 @@ import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonFanartNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonPosterNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonThumbNaming;
+import org.tinymediamanager.core.tvshow.filenaming.TvShowSquareartNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowThumbNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowTrailerNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
@@ -110,6 +112,7 @@ public final class TvShowSettings extends AbstractSettings {
   static final String                            CLEARLOGO_FILENAME             = "clearlogoFilename";
   static final String                            CHARACTERART_FILENAME          = "characterartFilename";
   static final String                            KEYART_FILENAME                = "keyartFilename";
+  static final String                            SQUAREART_FILENAME             = "squareartFilename";
   static final String                            SEASON_NFO_FILENAME            = "seasonNfoFilename";
   static final String                            SEASON_POSTER_FILENAME         = "seasonPosterFilename";
   static final String                            SEASON_FANART_FILENAME         = "seasonFanartFilename";
@@ -142,6 +145,7 @@ public final class TvShowSettings extends AbstractSettings {
   final List<TvShowClearlogoNaming>              clearlogoFilenames             = new ArrayList<>();
   final List<TvShowCharacterartNaming>           characterartFilenames          = new ArrayList<>();
   final List<TvShowKeyartNaming>                 keyartFilenames                = new ArrayList<>();
+  final List<TvShowSquareartNaming>              squareartFilenames             = new ArrayList<>();
   final List<TvShowSeasonNfoNaming>              seasonNfoFilenames             = new ArrayList<>();
   final List<TvShowSeasonPosterNaming>           seasonPosterFilenames          = new ArrayList<>();
   final List<TvShowSeasonFanartNaming>           seasonFanartFilenames          = new ArrayList<>();
@@ -213,7 +217,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        useTrailerPreference;
   boolean                                        automaticTrailerDownload;
   TrailerQuality                                 trailerQuality;
-  TrailerSources                                 trailerSource;
+  MediaLanguages                                 trailerLanguage;
 
   // subtitle scraper
   MediaLanguages                                 subtitleScraperLanguage;
@@ -343,7 +347,7 @@ public final class TvShowSettings extends AbstractSettings {
     setUseTrailerPreference(true);
     setAutomaticTrailerDownload(false);
     setTrailerQuality(TrailerQuality.HD_720);
-    setTrailerSource(TrailerSources.YOUTUBE);
+    setTrailerLanguage(ml);
 
     // subtitle scraper
     setSubtitleScraperLanguage(ml);
@@ -417,6 +421,9 @@ public final class TvShowSettings extends AbstractSettings {
 
     clearKeyartFilenames();
     addKeyartFilename(TvShowKeyartNaming.KEYART);
+
+    clearSquareartFilenames();
+    addSquareartFilename(TvShowSquareartNaming.SQUAREART);
 
     clearTrailerFilenames();
     addTrailerFilename(TvShowTrailerNaming.TVSHOW_TRAILER);
@@ -601,12 +608,29 @@ public final class TvShowSettings extends AbstractSettings {
     firePropertyChange(Constants.DATA_SOURCE, null, tvShowDataSources);
   }
 
-  public void addTvShowDataSources(String path) {
+  public boolean addTvShowDataSources(String path) {
+    if (StringUtils.isBlank(path)) {
+      return false;
+    }
+
+    Path newDatasource = Paths.get(path).normalize().toAbsolutePath();
+    for (String ds : tvShowDataSources) {
+      if (StringUtils.isBlank(ds)) {
+        continue;
+      }
+
+      Path existingDatasource = Paths.get(ds).normalize().toAbsolutePath();
+      if (newDatasource.startsWith(existingDatasource) || existingDatasource.startsWith(newDatasource)) {
+        return false;
+      }
+    }
+
     if (!tvShowDataSources.contains(path)) {
       tvShowDataSources.add(path);
       firePropertyChange(TV_SHOW_DATA_SOURCE, null, tvShowDataSources);
       firePropertyChange(Constants.DATA_SOURCE, null, tvShowDataSources);
     }
+    return true;
   }
 
   public void removeTvShowDataSources(String path) {
@@ -729,14 +753,14 @@ public final class TvShowSettings extends AbstractSettings {
     firePropertyChange("trailerQuality", oldValue, newValue);
   }
 
-  public TrailerSources getTrailerSource() {
-    return trailerSource;
+  public MediaLanguages getTrailerLanguage() {
+    return trailerLanguage;
   }
 
-  public void setTrailerSource(TrailerSources newValue) {
-    TrailerSources oldValue = this.trailerSource;
-    this.trailerSource = newValue;
-    firePropertyChange("trailerSource", oldValue, newValue);
+  public void setTrailerLanguage(MediaLanguages newValue) {
+    MediaLanguages oldValue = this.trailerLanguage;
+    this.trailerLanguage = newValue;
+    firePropertyChange("trailerLanguage", oldValue, newValue);
   }
 
   public void addTvShowTrailerScraper(String newValue) {
@@ -1459,6 +1483,22 @@ public final class TvShowSettings extends AbstractSettings {
 
   public List<TvShowKeyartNaming> getKeyartFilenames() {
     return keyartFilenames;
+  }
+
+  public void addSquareartFilename(TvShowSquareartNaming filename) {
+    if (!squareartFilenames.contains(filename)) {
+      squareartFilenames.add(filename);
+      firePropertyChange(SQUAREART_FILENAME, null, squareartFilenames);
+    }
+  }
+
+  public void clearSquareartFilenames() {
+    squareartFilenames.clear();
+    firePropertyChange(SQUAREART_FILENAME, null, squareartFilenames);
+  }
+
+  public List<TvShowSquareartNaming> getSquareartFilenames() {
+    return Collections.unmodifiableList(this.squareartFilenames);
   }
 
   public void addClearlogoFilename(TvShowClearlogoNaming filename) {

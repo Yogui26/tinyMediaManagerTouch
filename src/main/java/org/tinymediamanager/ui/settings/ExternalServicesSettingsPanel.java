@@ -52,12 +52,15 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.ai.AiException;
 import org.tinymediamanager.core.ai.AiManager;
 import org.tinymediamanager.license.License;
+import org.tinymediamanager.thirdparty.simkl.Simkl;
 import org.tinymediamanager.thirdparty.trakttv.TraktTv;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
+import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -69,7 +72,7 @@ import net.miginfocom.swing.MigLayout;
 
 /**
  * The class ExternalServicesSettingsPanel. Handle all settings for the external services
- * 
+ *
  * @author Manuel Laggner
  */
 class ExternalServicesSettingsPanel extends JPanel {
@@ -94,21 +97,41 @@ class ExternalServicesSettingsPanel extends JPanel {
   private JTextField          tfAiModel;
   private JComboBox           cbApiType;
 
+  private JButton             btnGetSimklPin;
+  private JButton             btnTestSimklConnection;
+  private JLabel              lblSimklStatus;
+  private JCheckBox           chckbxTraktTv;
+  private JCheckBox           chckbxSimklCom;
+
   ExternalServicesSettingsPanel() {
     // UI init
     initComponents();
 
     // data init
-    if (License.getInstance().isValidLicense()
-        && StringUtils.isNoneBlank(Settings.getInstance().getTraktAccessToken(), Settings.getInstance().getTraktRefreshToken())) {
-      lblTraktStatus.setText(TmmResourceBundle.getString("Settings.trakt.status.good"));
+    if (License.getInstance().isValidLicense()) {
+      chckbxTraktTv.setEnabled(true);
+      chckbxSimklCom.setEnabled(true);
+
+      if (StringUtils.isNoneBlank(TraktTv.getInstance().getAccessToken(), TraktTv.getInstance().getRefreshToken())) {
+        lblTraktStatus.setText(TmmResourceBundle.getString("Settings.trakt.status.good"));
+      }
+      else {
+        lblTraktStatus.setText(TmmResourceBundle.getString("Settings.trakt.status.bad"));
+      }
+
+      if (StringUtils.isNotBlank(Simkl.getInstance().getAccessToken())) {
+        lblSimklStatus.setText(TmmResourceBundle.getString("Settings.simkl.status.good"));
+      }
+      else {
+        lblSimklStatus.setText(TmmResourceBundle.getString("Settings.simkl.status.bad"));
+      }
     }
     else {
-      lblTraktStatus.setText(TmmResourceBundle.getString("Settings.trakt.status.bad"));
+      chckbxTraktTv.setEnabled(false);
+      chckbxSimklCom.setEnabled(false);
     }
 
     btnGetTraktPin.addActionListener(e -> getTraktPin());
-    btnGetTraktPin.setEnabled(License.getInstance().isValidLicense());
     btnTestTraktConnection.addActionListener(e -> {
       try {
         TraktTv.getInstance().refreshAccessToken();
@@ -118,15 +141,33 @@ class ExternalServicesSettingsPanel extends JPanel {
       catch (Exception e1) {
         TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.trakttv"),
             TmmResourceBundle.getString("Settings.trakt.testconnection.bad"));
+
+        // no connection possible, clear the tokens
+        TraktTv.getInstance().setAccessToken("");
+        TraktTv.getInstance().setRefreshToken("");
       }
     });
-    btnTestTraktConnection.setEnabled(License.getInstance().isValidLicense());
+
+    btnGetSimklPin.addActionListener(e -> getSimklPin());
+    btnTestSimklConnection.addActionListener(e -> {
+      if (Simkl.getInstance().testConnection()) {
+        TmmToastManager.showSuccessToast(this, TmmResourceBundle.getString("Settings.simkl"),
+            TmmResourceBundle.getString("Settings.simkl.testconnection.good"));
+      }
+      else {
+        TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.simkl"),
+            TmmResourceBundle.getString("Settings.simkl.testconnection.bad"));
+
+        // no connection possible, clear the token
+        Simkl.getInstance().setAccessToken("");
+      }
+    });
     btnTestAiConnection.addActionListener(e -> testAiConnection());
   }
 
   private void getTraktPin() {
-    settings.setTraktAccessToken("");
-    settings.setTraktRefreshToken("");
+    TraktTv.getInstance().setAccessToken("");
+    TraktTv.getInstance().setRefreshToken("");
 
     TraktTv traktTv = TraktTv.getInstance();
 
@@ -206,8 +247,8 @@ class ExternalServicesSettingsPanel extends JPanel {
     }
 
     if (StringUtils.isNoneBlank(accessToken, refreshToken)) {
-      settings.setTraktAccessToken(accessToken);
-      settings.setTraktRefreshToken(refreshToken);
+      TraktTv.getInstance().setAccessToken(accessToken);
+      TraktTv.getInstance().setRefreshToken(refreshToken);
       lblTraktStatus.setText(TmmResourceBundle.getString("Settings.trakt.status.good"));
       TmmToastManager.showSuccessToast(this, TmmResourceBundle.getString("Settings.trakttv"),
           TmmResourceBundle.getString("Settings.trakt.getpin.success"));
@@ -219,8 +260,111 @@ class ExternalServicesSettingsPanel extends JPanel {
     }
   }
 
+  private void getSimklPin() {
+    Simkl simkl = Simkl.getInstance();
+
+    String verificationUrl = "";
+    String userCode = "";
+    long pollIntervalMs = 2000;
+
+    // request a PIN code
+    try {
+      Map<String, String> response = simkl.getPinCode();
+      userCode = response.get("user_code");
+      verificationUrl = response.get("verification_uri");
+      String intervalStr = response.get("interval");
+      if (StringUtils.isNotBlank(intervalStr)) {
+        try {
+          pollIntervalMs = Math.max(1000, Long.parseLong(intervalStr) * 1000L);
+        }
+        catch (NumberFormatException ignored) {
+          // fall back to the default poll interval
+        }
+      }
+      if (StringUtils.isNoneBlank(userCode, verificationUrl)) {
+        TmmUIHelper.browseUrl(verificationUrl + "/" + userCode);
+      }
+      else {
+        throw new Exception("No verification url and user code received");
+      }
+    }
+    catch (Exception ex) {
+      // browser could not be opened, show a dialog box
+      TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.simkl"), TmmResourceBundle.getString("Settings.simkl.getpin.error"));
+      LOGGER.error("Error occurred while trying to get Simkl access code - '{}'", ex.getMessage());
+      return;
+    }
+
+    String url = verificationUrl + "/" + userCode;
+    String accessToken = "";
+
+    int retryCount = 0;
+    while (retryCount < 5) {
+      JPanel panel = new JPanel(new BorderLayout());
+      panel.add(new JLabel(TmmResourceBundle.getString("Settings.simkl.getpin.desc")), BorderLayout.NORTH);
+      LinkLabel linkLabel = new LinkLabel(url);
+      linkLabel.addActionListener(e -> {
+        try {
+          TmmUIHelper.browseUrl(url);
+        }
+        catch (Exception ignored) {
+          // ignored
+        }
+      });
+      linkLabel.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
+
+      panel.add(linkLabel, BorderLayout.CENTER);
+      panel.add(new JLabel(TmmResourceBundle.getString("Settings.simkl.getpin.desc2")), BorderLayout.SOUTH);
+
+      int answer = JOptionPane.showConfirmDialog(MainWindow.getFrame(), panel, TmmResourceBundle.getString("Settings.simkl"),
+          JOptionPane.OK_CANCEL_OPTION);
+
+      // user clicked abort
+      if (answer == JOptionPane.OK_OPTION) {
+        // try to get access token
+        try {
+          accessToken = simkl.pollForToken(userCode);
+
+          if (StringUtils.isNotBlank(accessToken)) {
+            break;
+          }
+
+          retryCount++;
+          TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.simkl"),
+              TmmResourceBundle.getString("Settings.simkl.getpin.error"));
+          try {
+            Thread.sleep(pollIntervalMs);
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+        }
+        catch (Exception ignored) {
+          // ignored
+        }
+      }
+      else if (answer == JOptionPane.CANCEL_OPTION) {
+        lblSimklStatus.setText(null);
+        return;
+      }
+    }
+
+    if (StringUtils.isNotBlank(accessToken)) {
+      simkl.setAccessToken(accessToken);
+      lblSimklStatus.setText(TmmResourceBundle.getString("Settings.simkl.status.good"));
+      TmmToastManager.showSuccessToast(this, TmmResourceBundle.getString("Settings.simkl"),
+          TmmResourceBundle.getString("Settings.simkl.getpin.success"));
+    }
+    else {
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.simkl.getpin.problem"),
+          TmmResourceBundle.getString("Settings.simkl.getpin"), JOptionPane.ERROR_MESSAGE);
+      lblSimklStatus.setText(TmmResourceBundle.getString("Settings.simkl.status.bad"));
+    }
+  }
+
   private void initComponents() {
-    setLayout(new MigLayout("", "[grow]", "[][15lp!][][15lp!][]"));
+    setLayout(new MigLayout("", "[grow]", "[][15lp!][][15lp!][][15lp!][]"));
     {
       JPanel panelTrakt = new JPanel();
       panelTrakt.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][10lp!][]")); // 16lp ~ width of the
@@ -234,23 +378,54 @@ class ExternalServicesSettingsPanel extends JPanel {
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelTrakt, lblTraktT, true);
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#trakttv"));
       add(collapsiblePanel, "cell 0 0,growx, wmin 0");
-      {
-        lblTraktStatus = new JLabel("");
-        panelTrakt.add(lblTraktStatus, "cell 1 0 2 1");
-      }
+
+      chckbxTraktTv = new JCheckBox(TmmResourceBundle.getString("Settings.trakt.enable"));
+      panelTrakt.add(chckbxTraktTv, "cell 1 0 2 1");
       {
         btnGetTraktPin = new JButton(TmmResourceBundle.getString("Settings.trakt.getpin"));
-        panelTrakt.add(btnGetTraktPin, "cell 1 1 2 1");
+        panelTrakt.add(btnGetTraktPin, "cell 2 1");
 
         btnTestTraktConnection = new JButton(TmmResourceBundle.getString("Settings.trakt.testconnection"));
-        panelTrakt.add(btnTestTraktConnection, "cell 1 1 2 1");
+        panelTrakt.add(btnTestTraktConnection, "cell 2 1");
+      }
+      {
+        lblTraktStatus = new JLabel("");
+        panelTrakt.add(lblTraktStatus, "cell 2 2");
       }
 
       JLabel lblTraktDateT = new TmmLabel(TmmResourceBundle.getString("Settings.trakt.date"));
-      panelTrakt.add(lblTraktDateT, "flowx,cell 1 3 2 1");
+      panelTrakt.add(lblTraktDateT, "flowx,cell 2 3");
 
       cbTraktDate = new JComboBox(DateField.values());
-      panelTrakt.add(cbTraktDate, "cell 1 3 2 1");
+      panelTrakt.add(cbTraktDate, "cell 2 3");
+    }
+    {
+      JPanel panelSimkl = new JPanel();
+      panelSimkl.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][]"));
+
+      JLabel lblSimklT = new TmmLabel(TmmResourceBundle.getString("Settings.simkl"), H3);
+
+      if (!License.getInstance().isValidLicense()) {
+        lblSimklT.setText("*PRO* " + lblSimklT.getText());
+      }
+
+      CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelSimkl, lblSimklT, true);
+      collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#simkl"));
+      add(collapsiblePanel, "cell 0 2,growx, wmin 0");
+
+      chckbxSimklCom = new JCheckBox(TmmResourceBundle.getString("Settings.simkl.enable"));
+      panelSimkl.add(chckbxSimklCom, "cell 1 0 2 1");
+      {
+        btnGetSimklPin = new JButton(TmmResourceBundle.getString("Settings.simkl.getpin"));
+        panelSimkl.add(btnGetSimklPin, "cell 2 1");
+
+        btnTestSimklConnection = new JButton(TmmResourceBundle.getString("Settings.simkl.testconnection"));
+        panelSimkl.add(btnTestSimklConnection, "cell 2 1");
+      }
+      {
+        lblSimklStatus = new JLabel("");
+        panelSimkl.add(lblSimklStatus, "cell 2 2");
+      }
     }
     {
       JPanel panelMdbList = new JPanel();
@@ -258,7 +433,7 @@ class ExternalServicesSettingsPanel extends JPanel {
       JLabel lblMdbListT = new TmmLabel(TmmResourceBundle.getString("Settings.external.rating.mdblist"), H3);
 
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelMdbList, lblMdbListT, true);
-      add(collapsiblePanel, "cell 0 2,growx, wmin 0");
+      add(collapsiblePanel, "cell 0 4,growx, wmin 0");
       {
         JLabel lblMdbListApiKeyT = new JLabel(TmmResourceBundle.getString("Settings.api.key"));
         panelMdbList.add(lblMdbListApiKeyT, "flowx,cell 1 0 2 1");
@@ -289,9 +464,9 @@ class ExternalServicesSettingsPanel extends JPanel {
       if (!License.getInstance().isValidLicense()) {
         lblAiT.setText("*PRO* " + lblAiT.getText());
       }
-      CollapsiblePanel collapsibleAi = new CollapsiblePanel(panelAi, lblAiT, true);
-      collapsibleAi.addExtraTitleComponent(new DocsButton("/settings#ai"));
-      add(collapsibleAi, "cell 0 4,growx, wmin 0");
+      CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelAi, lblAiT, true);
+      collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#ai"));
+      add(collapsiblePanel, "cell 0 6,growx,wmin 0");
 
       {
         JLabel lblEndpointUrl = new JLabel(TmmResourceBundle.getString("Settings.ai.endpointUrl"));
@@ -395,47 +570,86 @@ class ExternalServicesSettingsPanel extends JPanel {
         jComboBoxBeanProperty);
     autoBinding.bind();
     //
-    Property jCheckBoxBeanProperty = BeanProperty.create("selected");
-    Property jSpinnerBeanProperty = BeanProperty.create("enabled");
-    AutoBinding autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiRateLimit, jCheckBoxBeanProperty, spAiMaxCallsPerMinute,
-        jSpinnerBeanProperty);
-    autoBinding_1.bind();
+    Property settingsBeanProperty_1 = BeanProperty.create("mdbListApiKey");
+    Property jTextFieldBeanProperty = BeanProperty.create("text");
+    AutoBinding autobinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_1, pfMdbListApiKey,
+        jTextFieldBeanProperty);
+    autobinding_1.bind();
     //
-    AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiRateLimit, jCheckBoxBeanProperty, spAiMaxCallsPerHour,
-        jSpinnerBeanProperty);
+    Property jCheckBoxBeanProperty = BeanProperty.create("selected");
+    Property jButtonBeanProperty = BeanProperty.create("enabled");
+    AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxTraktTv, jCheckBoxBeanProperty, btnTestTraktConnection,
+        jButtonBeanProperty);
     autoBinding_2.bind();
     //
-    AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiRateLimit, jCheckBoxBeanProperty, spAiMinIntervalSeconds,
-        jSpinnerBeanProperty);
+    AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxTraktTv, jCheckBoxBeanProperty, cbTraktDate,
+        jButtonBeanProperty);
     autoBinding_3.bind();
     //
-    Property settingsBeanProperty_2 = BeanProperty.create("aiEndpointUrl");
-    Property jTextFieldBeanProperty_1 = BeanProperty.create("text");
-    AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_2, tfAiEndpointUrl,
-        jTextFieldBeanProperty_1);
-    autoBinding_4.bind();
-    //
-    Property settingsBeanProperty_1 = BeanProperty.create("aiApiKey");
-    Property jPasswordFieldBeanProperty = BeanProperty.create("text");
-    AutoBinding autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_1, pfAiApiKey,
-        jPasswordFieldBeanProperty);
-    autoBinding_5.bind();
-    //
-    Property settingsBeanProperty_3 = BeanProperty.create("mdbListApiKey");
-    Property jPasswordFieldBeanProperty_1 = BeanProperty.create("text");
-    AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_3, pfMdbListApiKey,
-        jPasswordFieldBeanProperty_1);
+    Property settingsBeanProperty_2 = BeanProperty.create("traktTvEnabled");
+    AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_2, chckbxTraktTv,
+        jCheckBoxBeanProperty);
     autoBinding_6.bind();
     //
-    Property settingsBeanProperty_4 = BeanProperty.create("aiModel");
-    Property jTextFieldBeanProperty = BeanProperty.create("text");
-    AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_4, tfAiModel,
-        jTextFieldBeanProperty);
+    Property settingsBeanProperty_3 = BeanProperty.create("simklComEnabled");
+    AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_3, chckbxSimklCom,
+        jCheckBoxBeanProperty);
     autoBinding_7.bind();
     //
-    Property settingsBeanProperty_5 = BeanProperty.create("aiProviderType");
-    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_5, cbApiType,
-        jComboBoxBeanProperty);
+    AutoBinding autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxSimklCom, jCheckBoxBeanProperty, btnGetSimklPin,
+        jButtonBeanProperty);
+    autoBinding_1.bind();
+    //
+    AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxSimklCom, jCheckBoxBeanProperty, btnTestSimklConnection,
+        jButtonBeanProperty);
+    autoBinding_4.bind();
+    //
+    AutoBinding autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxTraktTv, jCheckBoxBeanProperty, btnGetTraktPin,
+        jButtonBeanProperty);
+    autoBinding_5.bind();
+    //
+    Property settingsBeanProperty_4 = BeanProperty.create("aiEndpointUrl");
+    Property jTextFieldBeanProperty_1 = BeanProperty.create("text");
+    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_4, tfAiEndpointUrl,
+        jTextFieldBeanProperty_1);
     autoBinding_8.bind();
+    //
+    Property settingsBeanProperty_5 = BeanProperty.create("aiApiKey");
+    Property jPasswordFieldBeanProperty = BeanProperty.create("text");
+    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_5, pfAiApiKey,
+        jPasswordFieldBeanProperty);
+    autoBinding_9.bind();
+    //
+    Property settingsBeanProperty_6 = BeanProperty.create("aiModel");
+    Property jTextFieldBeanProperty_2 = BeanProperty.create("text");
+    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_6, tfAiModel,
+        jTextFieldBeanProperty_2);
+    autoBinding_10.bind();
+    //
+    Property settingsBeanProperty_7 = BeanProperty.create("aiRateLimitEnabled");
+    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_7, chckbxAiRateLimit,
+        jButtonBeanProperty);
+    autoBinding_11.bind();
+    //
+    Property settingsBeanProperty_8 = BeanProperty.create("aiMaxCallsPerMinute");
+    Property jSpinnerBeanProperty = BeanProperty.create("value");
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_8, spAiMaxCallsPerMinute,
+        jSpinnerBeanProperty);
+    autoBinding_12.bind();
+    //
+    Property settingsBeanProperty_9 = BeanProperty.create("aiMaxCallsPerHour");
+    AutoBinding autoBinding_13 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_9, spAiMaxCallsPerHour,
+        jSpinnerBeanProperty);
+    autoBinding_13.bind();
+    //
+    Property settingsBeanProperty_10 = BeanProperty.create("aiMinIntervalSeconds");
+    AutoBinding autoBinding_14 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_10, spAiMinIntervalSeconds,
+        jSpinnerBeanProperty);
+    autoBinding_14.bind();
+    //
+    Property settingsBeanProperty_11 = BeanProperty.create("aiProviderType");
+    AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_11, cbApiType,
+        jComboBoxBeanProperty);
+    autoBinding_15.bind();
   }
 }

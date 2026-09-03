@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,18 +40,24 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.TmmStore;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaRating;
+import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
+import org.tinymediamanager.license.License;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.thirdparty.simkl.Simkl;
+import org.tinymediamanager.thirdparty.trakttv.TraktTv;
 import org.tinymediamanager.ui.TmmUILayoutStore;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -157,11 +164,99 @@ public abstract class UpgradeTasks {
         properties.putProperty("movieset.movietrailer.table.visibleColumns", property);
       }
 
-      property = properties.getProperty("tvshow.trailerTable.table.visibleColumns");
+      property = properties.getProperty("tvshow.trailerTable.visibleColumns");
       if (property != null && !property.startsWith("download")) {
         property = "download:31," + property;
-        properties.putProperty("tvshow.trailerTable.table.visibleColumns", property);
+        properties.putProperty("tvshow.trailerTable.visibleColumns", property);
       }
+    }
+
+    if (StrgUtils.compareVersion(v, "5.3.2") < 0) {
+      // show trailer language column per default
+      TmmProperties properties = TmmProperties.getInstance();
+      String property = properties.getProperty("movie.movietrailer.table.visibleColumns");
+      if (property != null && !property.contains("language")) {
+        property = "language:70," + property;
+        properties.putProperty("movie.movietrailer.table.visibleColumns", property);
+      }
+      property = properties.getProperty("movieset.movietrailer.table.visibleColumns");
+      if (property != null && !property.contains("language")) {
+        property = "language:70," + property;
+        properties.putProperty("movieset.movietrailer.table.visibleColumns", property);
+      }
+      property = properties.getProperty("tvshow.trailerTable.visibleColumns");
+      if (property != null && !property.contains("language")) {
+        property = "language:70," + property;
+        properties.putProperty("tvshow.trailerTable.visibleColumns", property);
+      }
+    }
+
+    // migrate volatile data from tmm.prop to the TmmStore
+    // (runs on every startup, but is a no-op once the data has been migrated)
+    migrateVolatilePropertiesToTmmStore();
+
+    if (StrgUtils.compareVersion(v, "5.3.3") < 0) {
+      Settings settings = Settings.getInstance();
+
+      // enable external services if settings are available
+      if (StringUtils.isNotBlank(TraktTv.getInstance().getRefreshToken())) {
+        settings.setTraktTvEnabled(License.getInstance().isValidLicense());
+      }
+      if (StringUtils.isNotBlank(Simkl.getInstance().getAccessToken())) {
+        settings.setSimklComEnabled(License.getInstance().isValidLicense());
+      }
+
+      // check external services keys and remove them if they are not valid anymore
+      // but only on release builds (nightly/GIT builds might trigger the upgrade too often
+      if (ReleaseInfo.isPreRelease() || ReleaseInfo.isReleaseBuild()) {
+        // Trakt.tv
+        if (StringUtils.isNotBlank(TraktTv.getInstance().getRefreshToken())) {
+          try {
+            TraktTv.getInstance().refreshAccessToken();
+          }
+          catch (Exception e) {
+            // no connection possible, clear the tokens
+            TraktTv.getInstance().setAccessToken("");
+            TraktTv.getInstance().setRefreshToken("");
+            settings.setTraktTvEnabled(false);
+          }
+        }
+
+        // Simkl.com
+        if (StringUtils.isNotBlank(Simkl.getInstance().getAccessToken())) {
+          if (!Simkl.getInstance().testConnection()) {
+            // no connection possible, clear the token
+            Simkl.getInstance().setAccessToken("");
+            settings.setSimklComEnabled(false);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * migrate volatile data (timestamps, ..) which has been stored in the tmm.prop into the {@link TmmStore}
+   */
+  static void migrateVolatilePropertiesToTmmStore() {
+    TmmProperties properties = TmmProperties.getInstance();
+    boolean changed = false;
+
+    String lastUpdateCheck = properties.getProperty("lastUpdateCheck");
+    if (StringUtils.isNotBlank(lastUpdateCheck) && TmmStore.getInstance().get("tmm.update.lastCheck") == null) {
+      TmmStore.getInstance().put("tmm.update.lastCheck", lastUpdateCheck);
+      properties.removeProperty("lastUpdateCheck");
+      changed = true;
+    }
+
+    String lastYtDlpUpdateCheck = properties.getProperty("lastYtDlpUpdateCheck");
+    if (StringUtils.isNotBlank(lastYtDlpUpdateCheck) && TmmStore.getInstance().get("tmm.ytdlp.lastCheck") == null) {
+      TmmStore.getInstance().put("tmm.ytdlp.lastCheck", lastYtDlpUpdateCheck);
+      properties.removeProperty("lastYtDlpUpdateCheck");
+      changed = true;
+    }
+
+    if (changed) {
+      properties.writeProperties();
     }
   }
 
@@ -236,6 +331,30 @@ public abstract class UpgradeTasks {
     MediaRating rating = ratingMap.remove(oldId);
     if (rating != null) {
       ratingMap.putIfAbsent(newId, new MediaRating(newId, rating.getRating(), rating.getVotes(), rating.getMaxValue()));
+      registerForSaving(entity);
+    }
+  }
+
+  protected void upgradeTrailerLanguage(MediaEntity entity, MediaTrailer trailer) {
+    // we stored the language tag in the quality field for TVDB in the past...
+    if (!"tvdb".equalsIgnoreCase(trailer.getScrapedBy()) || StringUtils.isBlank(trailer.getQuality())) {
+      return;
+    }
+
+    // avoid false positives
+    switch (trailer.getQuality().toUpperCase(Locale.ROOT)) {
+      case "SD", "480P", "720P", "1080P", "4K", "UNKNOWN":
+        return;
+
+      default:
+        break;
+    }
+
+    // move the language tag from the quality field to the new language field
+    String languageInQuality = LanguageUtils.parseLanguageFromString(trailer.getQuality());
+    if (StringUtils.isNotBlank(languageInQuality)) {
+      trailer.setLanguage(languageInQuality);
+      trailer.setQuality("");
       registerForSaving(entity);
     }
   }

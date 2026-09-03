@@ -1,5 +1,29 @@
+Version 5.3.3
+=======================
++ [TV shows] added more rating sources for TV shows #3347
+---
+x [Movie sets] do not scrape unreleased movies
+x [TV shows] added an action to refresh only the TV show NFO via Kodi RPC #3351
+x [External Services] added a dedicated setting to enable/disable Trakt.tv and Simkl.com support
+
+
 Version 5.3.2
 =======================
++ [Simkl.com] added support for syncing watched status with Simkl.com
++ [Movies, TV shows] added squareart artwork type #3217
++ [Trailer] added language information for trailers and improved trailer handling to enhance automatic trailer selection #3343
+---
+x [Movies, TV shows] added a guard to prevent adding/processing nested data sources
+x [Movies, TV shows] import pre-existing date added from NFO files
+x [TV shows] enhanced update of single TV shows
+x [UI] some minor fixes for the range slider in the image chooser
+x [UI] removed completeness indicators for missing episodes
+x [UI] moved "Include external audio streams in NFO" to the NFO settings panel
+x [Core] fall back to the content folder if the systems temp folder is not writable
+x [Core] fixed parsing of dates in multithreaded environments #3344
+x [TVDB] fixed parsing of end-date #3349
+x [Fernsehserien.de] fixed error when searching for ongoing TV shows
+x [Tool] upgraded yt-dlp to 2026.08.19
 
 
 Version 5.3.1

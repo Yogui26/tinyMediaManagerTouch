@@ -17,6 +17,7 @@ package org.tinymediamanager.scraper.thetvdb;
 
 import static org.tinymediamanager.scraper.MediaMetadata.TVDB;
 import static org.tinymediamanager.scraper.entities.MediaEpisodeGroup.EpisodeGroupType.AIRED;
+import static org.tinymediamanager.scraper.util.LanguageUtils.parseLanguageFromString;
 
 import java.text.ParseException;
 import java.time.LocalDate;
@@ -263,11 +264,13 @@ public final class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       }
       else if (show.status.id == 2) {
         md.setStatus(MediaAiredStatus.ENDED);
-        try {
-          md.setYearEnd(DateUtils.toLocalD(DateUtils.parseDate(show.lastAired)).getYear());
-        }
-        catch (ParseException e) {
-          // cannot parse last aired - ignore
+        if (StringUtils.isNotBlank(show.lastAired)) {
+          try {
+            md.setYearEnd(DateUtils.toLocalDate(DateUtils.parseDate(show.lastAired)).getYear());
+          }
+          catch (Exception e) {
+            // cannot parse last aired - ignore
+          }
         }
       }
     }
@@ -402,12 +405,7 @@ public final class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
         t.setProvider("youtube");
       }
       t.setScrapedBy(getProviderInfo().getId());
-      if (getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames")) {
-        t.setQuality(LanguageUtils.getLocalizedLanguageNameFromLocalizedString(options.getLanguage().toLocale(), trailer.language));
-      }
-      else {
-        t.setQuality(trailer.language);
-      }
+      t.setLanguage(parseLanguageFromString(trailer.language));
       md.addTrailer(t);
     }
 
@@ -472,7 +470,7 @@ public final class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
 
     LocalDate releaseDate = null;
     if (options.getMetadata() != null && options.getMetadata().getReleaseDate() != null) {
-      releaseDate = DateUtils.toLocalD(options.getMetadata().getReleaseDate());
+      releaseDate = DateUtils.toLocalDate(options.getMetadata().getReleaseDate());
     }
     if (releaseDate == null && (seasonNr == -1 || episodeNr == -1) && episodeTvdbId == 0) {
       LOGGER.debug("no aired date/season number/episode number found");
@@ -514,8 +512,8 @@ public final class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       // we did not find the episode via season/episode number - search via release date
       for (MediaMetadata episode : episodes) {
         if (episode.getReleaseDate() != null) {
-          LocalDate epdate = DateUtils.toLocalD(episode.getReleaseDate());
-          if (epdate.equals(releaseDate)) {
+          LocalDate epdate = DateUtils.toLocalDate(episode.getReleaseDate());
+          if (releaseDate.equals(epdate)) {
             foundEpisode = episode;
             break;
           }
@@ -1214,12 +1212,7 @@ public final class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
           t.setProvider("youtube");
         }
         t.setScrapedBy(getProviderInfo().getId());
-        if (getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames")) {
-          t.setQuality(LanguageUtils.getLocalizedLanguageNameFromLocalizedString(options.getLanguage().toLocale(), trailer.language));
-        }
-        else {
-          t.setQuality(trailer.language);
-        }
+        t.setLanguage(parseLanguageFromString(trailer.language));
         trailers.add(t);
       }
       return trailers;

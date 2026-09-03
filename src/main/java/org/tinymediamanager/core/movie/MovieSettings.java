@@ -18,6 +18,8 @@ package org.tinymediamanager.core.movie;
 import static org.tinymediamanager.core.movie.MovieRenamerProfile.DEFAULT_RENAMER_PROFILE;
 
 import java.beans.PropertyChangeListener;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -41,7 +43,6 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.PostProcess;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TrailerQuality;
-import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.movie.connector.MovieConnectors;
 import org.tinymediamanager.core.movie.connector.MovieSetConnectors;
 import org.tinymediamanager.core.movie.filenaming.MovieBannerNaming;
@@ -61,6 +62,7 @@ import org.tinymediamanager.core.movie.filenaming.MovieSetFanartNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieSetNfoNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieSetPosterNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieSetThumbNaming;
+import org.tinymediamanager.core.movie.filenaming.MovieSquareartNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieThumbNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
@@ -104,6 +106,7 @@ public final class MovieSettings extends AbstractSettings {
   static final String                       CLEARLOGO_FILENAME             = "clearlogoFilename";
   static final String                       DISCART_FILENAME               = "discartFilename";
   static final String                       KEYART_FILENAME                = "keyartFilename";
+  static final String                       SQUAREART_FILENAME             = "squareartFilename";
   static final String                       MOVIE_SET_POSTER_FILENAME      = "movieSetPosterFilename";
   static final String                       MOVIE_SET_FANART_FILENAME      = "movieSetFanartFilename";
   static final String                       MOVIE_SET_BANNER_FILENAME      = "movieSetBannerFilename";
@@ -137,6 +140,7 @@ public final class MovieSettings extends AbstractSettings {
   final List<MovieClearlogoNaming>          clearlogoFilenames             = new ArrayList<>();
   final List<MovieDiscartNaming>            discartFilenames               = new ArrayList<>();
   final List<MovieKeyartNaming>             keyartFilenames                = new ArrayList<>();
+  final List<MovieSquareartNaming>          squareartFilenames             = new ArrayList<>();
 
   final List<MovieTrailerNaming>            trailerFilenames               = new ArrayList<>();
   final List<String>                        badWords                       = ObservableCollections.observableList(new ArrayList<>());
@@ -208,8 +212,8 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   useYtDlp;
   boolean                                   useTrailerPreference;
   boolean                                   automaticTrailerDownload;
+  MediaLanguages                            trailerLanguage;
   TrailerQuality                            trailerQuality;
-  TrailerSources                            trailerSource;
 
   // subtitle scraper
   MediaLanguages                            subtitleScraperLanguage;
@@ -361,8 +365,8 @@ public final class MovieSettings extends AbstractSettings {
     setUseYtDlp(true);
     setUseTrailerPreference(true);
     setAutomaticTrailerDownload(false);
+    setTrailerLanguage(ml);
     setTrailerQuality(TrailerQuality.HD_720);
-    setTrailerSource(TrailerSources.YOUTUBE);
 
     // subtitle scraper
     setSubtitleScraperLanguage(ml);
@@ -438,6 +442,9 @@ public final class MovieSettings extends AbstractSettings {
 
     clearKeyartFilenames();
     addKeyartFilename(MovieKeyartNaming.FILENAME_KEYART);
+
+    clearSquareartFilenames();
+    addSquareartFilename(MovieSquareartNaming.FILENAME_SQUAREART);
 
     clearMovieSetNfoFilenames();
     addMovieSetNfoFilename(MovieSetNfoNaming.KODI_NFO);
@@ -610,12 +617,29 @@ public final class MovieSettings extends AbstractSettings {
     firePropertyChange(Constants.DATA_SOURCE, null, movieDataSources);
   }
 
-  public void addMovieDataSources(String path) {
+  public boolean addMovieDataSources(String path) {
+    if (StringUtils.isBlank(path)) {
+      return false;
+    }
+
+    Path newDatasource = Paths.get(path).normalize().toAbsolutePath();
+    for (String ds : movieDataSources) {
+      if (StringUtils.isBlank(ds)) {
+        continue;
+      }
+
+      Path existingDatasource = Paths.get(ds).normalize().toAbsolutePath();
+      if (newDatasource.startsWith(existingDatasource) || existingDatasource.startsWith(newDatasource)) {
+        return false;
+      }
+    }
+
     if (!movieDataSources.contains(path)) {
       movieDataSources.add(path);
       firePropertyChange(MOVIE_DATA_SOURCE, null, movieDataSources);
       firePropertyChange(Constants.DATA_SOURCE, null, movieDataSources);
     }
+    return true;
   }
 
   public void removeMovieDataSources(String path) {
@@ -953,6 +977,22 @@ public final class MovieSettings extends AbstractSettings {
 
   public List<MovieKeyartNaming> getKeyartFilenames() {
     return keyartFilenames;
+  }
+
+  public void addSquareartFilename(MovieSquareartNaming filename) {
+    if (!squareartFilenames.contains(filename)) {
+      squareartFilenames.add(filename);
+      firePropertyChange(SQUAREART_FILENAME, null, squareartFilenames);
+    }
+  }
+
+  public void clearSquareartFilenames() {
+    squareartFilenames.clear();
+    firePropertyChange(SQUAREART_FILENAME, null, squareartFilenames);
+  }
+
+  public List<MovieSquareartNaming> getSquareartFilenames() {
+    return new ArrayList<>(this.squareartFilenames);
   }
 
   public PosterSizes getImagePosterSize() {
@@ -1558,6 +1598,16 @@ public final class MovieSettings extends AbstractSettings {
     firePropertyChange("automaticTrailerDownload", oldValue, newValue);
   }
 
+  public MediaLanguages getTrailerLanguage() {
+    return trailerLanguage;
+  }
+
+  public void setTrailerLanguage(MediaLanguages newValue) {
+    MediaLanguages oldValue = this.trailerLanguage;
+    this.trailerLanguage = newValue;
+    firePropertyChange("trailerLanguage", oldValue, newValue);
+  }
+
   public TrailerQuality getTrailerQuality() {
     return trailerQuality;
   }
@@ -1566,16 +1616,6 @@ public final class MovieSettings extends AbstractSettings {
     TrailerQuality oldValue = this.trailerQuality;
     this.trailerQuality = newValue;
     firePropertyChange("trailerQuality", oldValue, newValue);
-  }
-
-  public TrailerSources getTrailerSource() {
-    return trailerSource;
-  }
-
-  public void setTrailerSource(TrailerSources newValue) {
-    TrailerSources oldValue = this.trailerSource;
-    this.trailerSource = newValue;
-    firePropertyChange("trailerSource", oldValue, newValue);
   }
 
   public void setSyncTrakt(boolean newValue) {

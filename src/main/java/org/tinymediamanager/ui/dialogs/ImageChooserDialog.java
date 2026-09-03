@@ -361,6 +361,10 @@ public class ImageChooserDialog extends TmmDialog {
       case KEYART:
         setTitle(TmmResourceBundle.getString("image.choose.keyart"));
         break;
+
+      case SQUAREART:
+        setTitle(TmmResourceBundle.getString("image.choose.squareart"));
+        break;
     }
 
     /* UI components */
@@ -812,6 +816,7 @@ public class ImageChooserDialog extends TmmDialog {
 
       case POSTER:
       case KEYART:
+      case SQUAREART:
       default:
         size = ImageUtils.calculateSize(150, 250, originalImage.getWidth(), originalImage.getHeight(), true);
         break;
@@ -1061,8 +1066,9 @@ public class ImageChooserDialog extends TmmDialog {
     int suggestedWidthMax = getSuggestedMax(true);
     int targetWidthMax = Math.max(suggestedWidthMax, maxWidth);
     if (widthSlider.getMaximum() != targetWidthMax) {
-      widthSlider.setMaximum(targetWidthMax);
-      widthSlider.setHighValue(targetWidthMax);
+      int newWidth = roundHighValue(targetWidthMax);
+      widthSlider.setMaximum(newWidth); // enable the next tick to be print
+      widthSlider.setHighValue(newWidth);
     }
 
     int maxHeight = 0;
@@ -1075,13 +1081,24 @@ public class ImageChooserDialog extends TmmDialog {
     int suggestedHeightMax = getSuggestedMax(false);
     int targetHeightMax = Math.max(suggestedHeightMax, maxHeight);
     if (heightSlider.getMaximum() != targetHeightMax) {
-      heightSlider.setMaximum(targetHeightMax);
-      heightSlider.setHighValue(targetHeightMax);
+      int newHeight = roundHighValue(targetHeightMax);
+      heightSlider.setMaximum(newHeight); // enable the next tick to be print
+      heightSlider.setHighValue(newHeight);
     }
 
     // reconfigure ticks when range changes
     configureSliderTicks(widthSlider, true);
     configureSliderTicks(heightSlider, false);
+  }
+
+  private int roundHighValue(int value) {
+    if (value <= 0) {
+      return 0;
+    }
+
+    // multiply by 1.05 and round up to the next 100
+    int rounded = (int) Math.ceil(value * 1.05 / 100.0) * 100;
+    return rounded;
   }
 
   private void updateLanguageCombobox() {
@@ -1375,6 +1392,10 @@ public class ImageChooserDialog extends TmmDialog {
 
           case KEYART:
             art = new MediaArtwork("", MediaArtworkType.KEYART);
+            break;
+
+          case SQUAREART:
+            art = new MediaArtwork("", MediaArtworkType.SQUAREART);
             break;
 
           default:
@@ -1803,6 +1824,10 @@ public class ImageChooserDialog extends TmmDialog {
                 options.setArtworkType(MediaArtworkType.KEYART);
                 break;
 
+              case SQUAREART:
+                options.setArtworkType(MediaArtworkType.SQUAREART);
+                break;
+
               case THUMB:
                 options.setArtworkType(MediaArtworkType.THUMB);
                 break;
@@ -2128,6 +2153,10 @@ public class ImageChooserDialog extends TmmDialog {
       case KEYART:
         // TMDb posters: typically 500x750, 1000x1500, 2000x3000
         return isWidth ? new int[] { 500, 1000, 2000 } : new int[] { 750, 1500, 3000 };
+
+      case SQUAREART:
+        // square art: typically 500x500, 1000x1000
+        return isWidth ? new int[] { 500, 1000, 2000 } : new int[] { 500, 1000, 2000 };
 
       case BACKGROUND:
       case SEASON_FANART:

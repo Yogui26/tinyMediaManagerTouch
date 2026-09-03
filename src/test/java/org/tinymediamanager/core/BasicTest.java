@@ -76,6 +76,7 @@ public abstract class BasicTest {
 
     ReleaseInfo.init();
     TmmModuleManager.clearInstances();
+    TmmStore.setStoreFolder(settingsFolder.toString());
     Settings.getInstance(settingsFolder.toString());
 
     try {
@@ -103,7 +104,7 @@ public abstract class BasicTest {
     }
 
     if (StringUtils.isNotBlank(key)) {
-      License.getInstance().init530();
+      License.getInstance().init531();
       License.getInstance().setLicenseCode(key);
     }
   }

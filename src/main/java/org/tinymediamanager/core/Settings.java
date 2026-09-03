@@ -41,6 +41,7 @@ import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.thirdparty.upnp.Upnp;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -87,10 +88,13 @@ public final class Settings extends AbstractSettings {
   private String                                           proxyPassword;
   private int                                              maximumDownloadThreads       = 2;
 
-  private String                                           traktAccessToken             = "";
-  private String                                           traktRefreshToken            = "";
+  // external services
   private DateField                                        traktDateField               = DateField.DATE_ADDED;
 
+  private boolean                                          traktTvEnabled               = false;
+  private boolean                                          simklComEnabled              = false;
+
+  private boolean                                          kodiEnabled                  = false;
   private String                                           kodiHost                     = "";
   private int                                              kodiHttpPort                 = 8080;
   private int                                              kodiTcpPort                  = 9090;
@@ -207,6 +211,36 @@ public final class Settings extends AbstractSettings {
   @Override
   protected void upgradeSettings() {
     // not needed yet
+  }
+
+  @Override
+  @JsonAnySetter
+  public void setUnknownField(String property, Object value) {
+    if (value == null) {
+      return;
+    }
+
+    // migrate old properties to their new location
+    switch (property) {
+      // trakt.tv OAuth tokens have been moved from the settings JSON to the TmmStore
+      case "traktAccessToken", "traktRefreshToken" -> {
+        if (value instanceof String encrypted) {
+          try {
+            String plain = AesUtil.DEFAULT_INSTANCE.decrypt(AesUtil.DEFAULT_SALT, AesUtil.DEFAULT_VECTOR, AesUtil.DEFAULT_VECTOR, encrypted);
+            String key = "traktAccessToken".equals(property) ? "trakt.access_token.secret" : "trakt.refresh_token.secret";
+            if (StringUtils.isNotBlank(plain) && TmmStore.getInstance().get(key) == null) {
+              TmmStore.getInstance().put(key, plain);
+            }
+          }
+          catch (Exception e) {
+            LOGGER.warn("could not migrate legacy trakt.tv token '{}' - '{}'", property, e.getMessage());
+            super.setUnknownField(property, value);
+          }
+        }
+      }
+
+      default -> super.setUnknownField(property, value);
+    }
   }
 
   @Override
@@ -900,30 +934,6 @@ public final class Settings extends AbstractSettings {
     firePropertyChange(WOL_DEVICES, null, wolDevices);
   }
 
-  @JsonSerialize(using = EncryptedStringSerializer.class)
-  @JsonDeserialize(using = EncryptedStringDeserializer.class)
-  public String getTraktAccessToken() {
-    return traktAccessToken;
-  }
-
-  public void setTraktAccessToken(String newValue) {
-    String oldValue = this.traktAccessToken;
-    this.traktAccessToken = newValue.strip();
-    firePropertyChange("traktAccessToken", oldValue, newValue);
-  }
-
-  @JsonSerialize(using = EncryptedStringSerializer.class)
-  @JsonDeserialize(using = EncryptedStringDeserializer.class)
-  public String getTraktRefreshToken() {
-    return traktRefreshToken;
-  }
-
-  public void setTraktRefreshToken(String newValue) {
-    String oldValue = this.traktRefreshToken;
-    this.traktRefreshToken = newValue;
-    firePropertyChange("traktRefreshToken", oldValue, newValue);
-  }
-
   public DateField getTraktDateField() {
     return traktDateField;
   }
@@ -932,6 +942,26 @@ public final class Settings extends AbstractSettings {
     DateField oldValue = this.traktDateField;
     this.traktDateField = newValue;
     firePropertyChange("traktDateField", oldValue, newValue);
+  }
+
+  public boolean isTraktTvEnabled() {
+    return traktTvEnabled;
+  }
+
+  public void setTraktTvEnabled(boolean newValue) {
+    boolean oldValue = this.traktTvEnabled;
+    this.traktTvEnabled = newValue;
+    firePropertyChange("traktTvEnabled", oldValue, newValue);
+  }
+
+  public boolean isSimklComEnabled() {
+    return simklComEnabled;
+  }
+
+  public void setSimklComEnabled(boolean newValue) {
+    boolean oldValue = this.simklComEnabled;
+    this.simklComEnabled = newValue;
+    firePropertyChange("simklComEnabled", oldValue, newValue);
   }
 
   public String getKodiHost() {
