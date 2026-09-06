@@ -34,8 +34,9 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
-import org.tinymediamanager.ui.tvshows.dialogs.TvShowAiTranslatePlotDialog;
+import org.tinymediamanager.ui.tvshows.dialogs.TvShowAiTranslatePlotPanel;
 
 /**
  * The {@link TvShowEpisodeAiTranslatePlotAction} is used to translate the plot for episodes using AI
@@ -64,41 +65,46 @@ public class TvShowEpisodeAiTranslatePlotAction extends TmmAction {
       return;
     }
 
-    TvShowAiTranslatePlotDialog dialog = new TvShowAiTranslatePlotDialog();
-    dialog.setVisible(true);
+    ModalPopupPanel popupPanel = MainWindow.getInstance().createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("episode.ai.translateplot"));
 
-    if (!dialog.shouldProceed()) {
-      return;
-    }
+    TvShowAiTranslatePlotPanel inputPanel = new TvShowAiTranslatePlotPanel() {
+      @Override
+      protected void onClose() {
+        final MediaLanguages targetLanguage = getSelectedLanguage();
+        final String languageName = targetLanguage.getTitle();
 
-    final MediaLanguages targetLanguage = dialog.getSelectedLanguage();
-    final String languageName = targetLanguage.getTitle();
+        TmmTaskManager.getInstance()
+            .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("episode.ai.translateplot"), selectedEpisodes.size(), TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                int i = 0;
+                AiService aiService = new AiService();
 
-    TmmTaskManager.getInstance()
-        .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("episode.ai.translateplot"), selectedEpisodes.size(), TaskType.BACKGROUND_TASK) {
-          @Override
-          protected void doInBackground() {
-            int i = 0;
-            AiService aiService = new AiService();
-
-            for (TvShowEpisode episode : selectedEpisodes) {
-              try {
-                String translatedPlot = aiService.translatePlot(episode.getPlot(), languageName);
-                if (StringUtils.isNotBlank(translatedPlot)) {
-                  episode.setPlot(translatedPlot);
-                  episode.saveToDb();
+                for (TvShowEpisode episode : selectedEpisodes) {
+                  try {
+                    String translatedPlot = aiService.translatePlot(episode.getPlot(), languageName);
+                    if (StringUtils.isNotBlank(translatedPlot)) {
+                      episode.setPlot(translatedPlot);
+                      episode.saveToDb();
+                    }
+                  }
+                  catch (AiException ex) {
+                    LOGGER.error("AI error, aborting plot translation: {}", ex.getMessage());
+                    break;
+                  }
+                  publishState(++i);
+                  if (cancel) {
+                    break;
+                  }
                 }
               }
-              catch (AiException e) {
-                LOGGER.error("AI error, aborting plot translation: {}", e.getMessage());
-                break;
-              }
-              publishState(++i);
-              if (cancel) {
-                break;
-              }
-            }
-          }
-        });
+            });
+        super.onClose();
+      }
+    };
+
+    popupPanel.setContent(inputPanel);
+    MainWindow.getInstance().showModalPopupPanel(popupPanel);
   }
 }

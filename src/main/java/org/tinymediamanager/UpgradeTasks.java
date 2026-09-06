@@ -198,23 +198,25 @@ public abstract class UpgradeTasks {
     if (StrgUtils.compareVersion(v, "5.3.3") < 0) {
       Settings settings = Settings.getInstance();
 
-      // enable external services/devices if settings are available
-      if (StringUtils.isNotBlank(settings.getKodiHost())) {
-        settings.setKodiEnabled(true);
-      }
-      if (StringUtils.isNotBlank(settings.getMdbListApiKey())) {
-        settings.setMdbListEnabled(true);
-      }
-      if (StringUtils.isNotBlank(TraktTv.getInstance().getRefreshToken())) {
-        settings.setTraktTvEnabled(License.getInstance().isValidLicense());
-      }
-      if (StringUtils.isNotBlank(Simkl.getInstance().getAccessToken())) {
-        settings.setSimklComEnabled(License.getInstance().isValidLicense());
-      }
-
-      // check external services keys and remove them if they are not valid anymore
+      // upgrade external services/devices settings
       // but only on release builds (nightly/GIT builds might trigger the upgrade too often
       if (ReleaseInfo.isPreRelease() || ReleaseInfo.isReleaseBuild()) {
+        // enable external services/devices if settings are available
+        if (StringUtils.isNotBlank(settings.getKodiHost())) {
+          settings.setKodiEnabled(true);
+        }
+        if (StringUtils.isNotBlank(settings.getMdbListApiKey())) {
+          settings.setMdbListEnabled(true);
+        }
+        if (StringUtils.isNotBlank(TraktTv.getInstance().getRefreshToken())) {
+          settings.setTraktTvEnabled(License.getInstance().isValidLicense());
+        }
+        if (StringUtils.isNotBlank(Simkl.getInstance().getAccessToken())) {
+          settings.setSimklComEnabled(License.getInstance().isValidLicense());
+        }
+
+        // keys
+
         // Trakt.tv
         if (StringUtils.isNotBlank(TraktTv.getInstance().getRefreshToken())) {
           try {

@@ -34,8 +34,9 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
-import org.tinymediamanager.ui.movies.dialogs.MovieAiTranslatePlotDialog;
+import org.tinymediamanager.ui.movies.dialogs.MovieAiTranslatePlotPanel;
 import org.tinymediamanager.ui.moviesets.MovieSetUIModule;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
 
 /**
  * The {@link MovieSetAiTranslatePlotMovieAction} is used to translate the plot using AI
@@ -64,41 +65,46 @@ public class MovieSetAiTranslatePlotMovieAction extends TmmAction {
       return;
     }
 
-    MovieAiTranslatePlotDialog dialog = new MovieAiTranslatePlotDialog();
-    dialog.setVisible(true);
+    ModalPopupPanel popupPanel = MainWindow.getInstance().createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("movie.ai.translateplot"));
 
-    if (!dialog.shouldProceed()) {
-      return;
-    }
+    MovieAiTranslatePlotPanel inputPanel = new MovieAiTranslatePlotPanel() {
+      @Override
+      protected void onClose() {
+        final MediaLanguages targetLanguage = getSelectedLanguage();
+        final String languageName = targetLanguage.getTitle();
 
-    final MediaLanguages targetLanguage = dialog.getSelectedLanguage();
-    final String languageName = targetLanguage.getTitle();
+        TmmTaskManager.getInstance()
+            .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.translateplot"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                int i = 0;
+                AiService aiService = new AiService();
 
-    TmmTaskManager.getInstance()
-        .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.translateplot"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
-          @Override
-          protected void doInBackground() {
-            int i = 0;
-            AiService aiService = new AiService();
-
-            for (Movie movie : selectedMovies) {
-              try {
-                String translatedPlot = aiService.translatePlot(movie.getPlot(), languageName);
-                if (StringUtils.isNotBlank(translatedPlot)) {
-                  movie.setPlot(translatedPlot);
-                  movie.saveToDb();
+                for (Movie movie : selectedMovies) {
+                  try {
+                    String translatedPlot = aiService.translatePlot(movie.getPlot(), languageName);
+                    if (StringUtils.isNotBlank(translatedPlot)) {
+                      movie.setPlot(translatedPlot);
+                      movie.saveToDb();
+                    }
+                  }
+                  catch (AiException ex) {
+                    LOGGER.error("AI error, aborting plot translation: {}", ex.getMessage());
+                    break;
+                  }
+                  publishState(++i);
+                  if (cancel) {
+                    break;
+                  }
                 }
               }
-              catch (AiException e) {
-                LOGGER.error("AI error, aborting plot translation: {}", e.getMessage());
-                break;
-              }
-              publishState(++i);
-              if (cancel) {
-                break;
-              }
-            }
-          }
-        });
+            });
+        super.onClose();
+      }
+    };
+
+    popupPanel.setContent(inputPanel);
+    MainWindow.getInstance().showModalPopupPanel(popupPanel);
   }
 }

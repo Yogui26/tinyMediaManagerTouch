@@ -34,8 +34,9 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
-import org.tinymediamanager.ui.movies.dialogs.MovieAiCreateTaglineDialog;
+import org.tinymediamanager.ui.movies.dialogs.MovieAiCreateTaglinePanel;
 import org.tinymediamanager.ui.moviesets.MovieSetUIModule;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
 
 /**
  * The {@link MovieSetAiCreateTaglineMovieAction} is used to create a tagline using AI
@@ -64,42 +65,47 @@ public class MovieSetAiCreateTaglineMovieAction extends TmmAction {
       return;
     }
 
-    MovieAiCreateTaglineDialog dialog = new MovieAiCreateTaglineDialog();
-    dialog.setVisible(true);
+    ModalPopupPanel popupPanel = MainWindow.getInstance().createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("movie.ai.createtagline"));
 
-    if (!dialog.shouldProceed()) {
-      return;
-    }
+    MovieAiCreateTaglinePanel inputPanel = new MovieAiCreateTaglinePanel() {
+      @Override
+      protected void onClose() {
+        final MediaLanguages targetLanguage = getSelectedLanguage();
+        final int maxWords = getMaxWords();
+        final String languageName = targetLanguage.getTitle();
 
-    final MediaLanguages targetLanguage = dialog.getSelectedLanguage();
-    final int maxWords = dialog.getMaxWords();
-    final String languageName = targetLanguage.getTitle();
+        TmmTaskManager.getInstance()
+            .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.createtagline"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                int i = 0;
+                AiService aiService = new AiService();
 
-    TmmTaskManager.getInstance()
-        .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.createtagline"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
-          @Override
-          protected void doInBackground() {
-            int i = 0;
-            AiService aiService = new AiService();
-
-            for (Movie movie : selectedMovies) {
-              try {
-                String tagline = aiService.generateTagline(movie.getTitle(), movie.getPlot(), movie.getYear(), languageName, maxWords);
-                if (StringUtils.isNotBlank(tagline)) {
-                  movie.setTagline(tagline);
-                  movie.saveToDb();
+                for (Movie movie : selectedMovies) {
+                  try {
+                    String tagline = aiService.generateTagline(movie.getTitle(), movie.getPlot(), movie.getYear(), languageName, maxWords);
+                    if (StringUtils.isNotBlank(tagline)) {
+                      movie.setTagline(tagline);
+                      movie.saveToDb();
+                    }
+                  }
+                  catch (AiException ex) {
+                    LOGGER.error("AI error, aborting tagline generation: {}", ex.getMessage());
+                    break;
+                  }
+                  publishState(++i);
+                  if (cancel) {
+                    break;
+                  }
                 }
               }
-              catch (AiException ex) {
-                LOGGER.error("AI error, aborting tagline generation: {}", ex.getMessage());
-                break;
-              }
-              publishState(++i);
-              if (cancel) {
-                break;
-              }
-            }
-          }
-        });
+            });
+        super.onClose();
+      }
+    };
+
+    popupPanel.setContent(inputPanel);
+    MainWindow.getInstance().showModalPopupPanel(popupPanel);
   }
 }

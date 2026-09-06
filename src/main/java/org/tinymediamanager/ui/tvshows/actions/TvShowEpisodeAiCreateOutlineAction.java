@@ -34,8 +34,9 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
-import org.tinymediamanager.ui.tvshows.dialogs.TvShowAiCreateOutlineDialog;
+import org.tinymediamanager.ui.tvshows.dialogs.TvShowAiCreateOutlinePanel;
 
 /**
  * The {@link TvShowEpisodeAiCreateOutlineAction} is used to create an outline for episodes using AI
@@ -64,42 +65,47 @@ public class TvShowEpisodeAiCreateOutlineAction extends TmmAction {
       return;
     }
 
-    TvShowAiCreateOutlineDialog dialog = new TvShowAiCreateOutlineDialog();
-    dialog.setVisible(true);
+    ModalPopupPanel popupPanel = MainWindow.getInstance().createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("episode.ai.createoutline"));
 
-    if (!dialog.shouldProceed()) {
-      return;
-    }
+    TvShowAiCreateOutlinePanel inputPanel = new TvShowAiCreateOutlinePanel() {
+      @Override
+      protected void onClose() {
+        final MediaLanguages targetLanguage = getSelectedLanguage();
+        final int maxWords = getMaxWords();
+        final String languageName = targetLanguage.getTitle();
 
-    final MediaLanguages targetLanguage = dialog.getSelectedLanguage();
-    final int maxWords = dialog.getMaxWords();
-    final String languageName = targetLanguage.getTitle();
+        TmmTaskManager.getInstance()
+            .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("episode.ai.createoutline"), selectedEpisodes.size(), TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                int i = 0;
+                AiService aiService = new AiService();
 
-    TmmTaskManager.getInstance()
-        .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("episode.ai.createoutline"), selectedEpisodes.size(), TaskType.BACKGROUND_TASK) {
-          @Override
-          protected void doInBackground() {
-            int i = 0;
-            AiService aiService = new AiService();
-
-            for (TvShowEpisode episode : selectedEpisodes) {
-              try {
-                String outline = aiService.generateOutline(episode.getTitle(), episode.getPlot(), maxWords, languageName, 0);
-                if (StringUtils.isNotBlank(outline)) {
-                  episode.setOutline(outline);
-                  episode.saveToDb();
+                for (TvShowEpisode episode : selectedEpisodes) {
+                  try {
+                    String outline = aiService.generateOutline(episode.getTitle(), episode.getPlot(), maxWords, languageName, 0);
+                    if (StringUtils.isNotBlank(outline)) {
+                      episode.setOutline(outline);
+                      episode.saveToDb();
+                    }
+                  }
+                  catch (AiException ex) {
+                    LOGGER.error("AI error, aborting outline generation: {}", ex.getMessage());
+                    break;
+                  }
+                  publishState(++i);
+                  if (cancel) {
+                    break;
+                  }
                 }
               }
-              catch (AiException e) {
-                LOGGER.error("AI error, aborting outline generation: {}", e.getMessage());
-                break;
-              }
-              publishState(++i);
-              if (cancel) {
-                break;
-              }
-            }
-          }
-        });
+            });
+        super.onClose();
+      }
+    };
+
+    popupPanel.setContent(inputPanel);
+    MainWindow.getInstance().showModalPopupPanel(popupPanel);
   }
 }

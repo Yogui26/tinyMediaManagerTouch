@@ -19,6 +19,7 @@ See `src/main/java/org/tinymediamanager/core/movie/entities/Movie.java:1` for th
 - 2-space indentation (no tabs)
 - Opening brace on the same line, closing brace on a new line
 - Imports: static imports first, then grouped by origin
+- String null/empty checks: Use `StringUtils.isNotBlank(str)` instead of `str != null && !str.isBlank()`
 
 ## JavaDoc
 

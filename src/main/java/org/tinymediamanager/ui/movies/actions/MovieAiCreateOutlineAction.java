@@ -35,11 +35,12 @@ import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.movies.MovieUIModule;
-import org.tinymediamanager.ui.movies.dialogs.MovieAiCreateOutlineDialog;
+import org.tinymediamanager.ui.movies.dialogs.MovieAiCreateOutlinePanel;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
 
 /**
- * The {@link MovieAiCreateOutlineAction} ist used to create an outline using AI
- * 
+ * The {@link MovieAiCreateOutlineAction} is used to create an outline using AI
+ *
  * @author Manuel Laggner
  */
 public class MovieAiCreateOutlineAction extends TmmAction {
@@ -64,42 +65,47 @@ public class MovieAiCreateOutlineAction extends TmmAction {
       return;
     }
 
-    MovieAiCreateOutlineDialog dialog = new MovieAiCreateOutlineDialog();
-    dialog.setVisible(true);
+    ModalPopupPanel popupPanel = MainWindow.getInstance().createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("movie.ai.createoutline"));
 
-    if (!dialog.shouldProceed()) {
-      return;
-    }
+    MovieAiCreateOutlinePanel inputPanel = new MovieAiCreateOutlinePanel() {
+      @Override
+      protected void onClose() {
+        final MediaLanguages targetLanguage = getSelectedLanguage();
+        final int maxWords = getMaxWords();
+        final String languageName = targetLanguage.getTitle();
 
-    final MediaLanguages targetLanguage = dialog.getSelectedLanguage();
-    final int maxWords = dialog.getMaxWords();
-    final String languageName = targetLanguage.getTitle();
+        TmmTaskManager.getInstance()
+            .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.createoutline"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                int i = 0;
+                AiService aiService = new AiService();
 
-    TmmTaskManager.getInstance()
-        .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.createoutline"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
-          @Override
-          protected void doInBackground() {
-            int i = 0;
-            AiService aiService = new AiService();
-
-            for (Movie movie : selectedMovies) {
-              try {
-                String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(), maxWords, languageName, movie.getYear());
-                if (StringUtils.isNotBlank(outline)) {
-                  movie.setOutline(outline);
-                  movie.saveToDb();
+                for (Movie movie : selectedMovies) {
+                  try {
+                    String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(), maxWords, languageName, movie.getYear());
+                    if (StringUtils.isNotBlank(outline)) {
+                      movie.setOutline(outline);
+                      movie.saveToDb();
+                    }
+                  }
+                  catch (AiException ex) {
+                    LOGGER.error("AI error, aborting outline generation: {}", ex.getMessage());
+                    break;
+                  }
+                  publishState(++i);
+                  if (cancel) {
+                    break;
+                  }
                 }
               }
-              catch (AiException e) {
-                LOGGER.error("AI error, aborting outline generation: {}", e.getMessage());
-                break;
-              }
-              publishState(++i);
-              if (cancel) {
-                break;
-              }
-            }
-          }
-        });
+            });
+        super.onClose();
+      }
+    };
+
+    popupPanel.setContent(inputPanel);
+    MainWindow.getInstance().showModalPopupPanel(popupPanel);
   }
 }

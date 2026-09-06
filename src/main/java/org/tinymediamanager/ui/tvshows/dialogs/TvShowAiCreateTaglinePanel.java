@@ -15,13 +15,8 @@
  */
 package org.tinymediamanager.ui.tvshows.dialogs;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-
-import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
@@ -30,64 +25,38 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TmmStore;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.label.TmmLabel;
-import org.tinymediamanager.ui.dialogs.TmmDialog;
+import org.tinymediamanager.ui.panels.AbstractModalInputPanel;
 
 import net.miginfocom.swing.MigLayout;
 
 /**
- * The class {@link TvShowAiCreateTaglineDialog} is used to configure parameters for AI tagline generation.
+ * The class {@link TvShowAiCreateTaglinePanel} is used to configure parameters for AI tagline generation.
  *
  * @author Manuel Laggner
  */
-public class TvShowAiCreateTaglineDialog extends TmmDialog {
+public class TvShowAiCreateTaglinePanel extends AbstractModalInputPanel {
   private static final String             LANGUAGE_KEY  = "tvshow.ai.tagline.language";
   private static final String             MAX_WORDS_KEY = "tvshow.ai.tagline.maxwords";
   private final JComboBox<MediaLanguages> cbLanguage;
   private final JSpinner                  spMaxWords;
 
-  private boolean                         proceed       = false;
-
-  public TvShowAiCreateTaglineDialog() {
-    super(TmmResourceBundle.getString("tvshow.ai.createtagline"), "tvShowAiCreateTagline");
-    setMinimumSize(new Dimension(400, 180));
-
-    JPanel panelContent = new JPanel();
-    getContentPane().add(panelContent, BorderLayout.CENTER);
-    panelContent.setLayout(new MigLayout("", "[][200lp, grow]", "[][]"));
+  public TvShowAiCreateTaglinePanel() {
+    setLayout(new MigLayout("", "[][200lp, grow]", "[][]"));
 
     JLabel lblLanguage = new TmmLabel(TmmResourceBundle.getString("metatag.language"));
-    panelContent.add(lblLanguage, "cell 0 0,alignx right");
+    add(lblLanguage, "cell 0 0,alignx right");
 
     cbLanguage = new JComboBox<>(MediaLanguages.valuesSorted());
-    panelContent.add(cbLanguage, "cell 1 0,growx, wmin 0");
+    add(cbLanguage, "cell 1 0,growx, wmin 0");
 
     JLabel lblMaxWords = new TmmLabel(TmmResourceBundle.getString("movie.ai.tagline.maxwords"));
-    panelContent.add(lblMaxWords, "cell 0 1,alignx right");
+    add(lblMaxWords, "cell 0 1,alignx right");
 
     spMaxWords = new JSpinner(new SpinnerNumberModel(20, 5, 50, 1));
-    panelContent.add(spMaxWords, "cell 1 1,growx, wmin 0");
+    add(spMaxWords, "cell 1 1,growx, wmin 0");
 
-    {
-      JButton cancelButton = new JButton(TmmResourceBundle.getString("Button.cancel"));
-      cancelButton.setIcon(IconManager.CANCEL_INV);
-      cancelButton.addActionListener(e -> {
-        proceed = false;
-        setVisible(false);
-      });
-      addButton(cancelButton);
-
-      JButton btnProceed = new JButton(TmmResourceBundle.getString("Button.proceed"));
-      btnProceed.setIcon(IconManager.APPLY_INV);
-      btnProceed.addActionListener(e -> {
-        proceed = true;
-        TmmStore.getInstance().put(LANGUAGE_KEY, getSelectedLanguage().name());
-        TmmStore.getInstance().put(MAX_WORDS_KEY, String.valueOf(getMaxWords()));
-        setVisible(false);
-      });
-      addDefaultButton(btnProceed);
-    }
+    loadDefaults();
   }
 
   public MediaLanguages getSelectedLanguage() {
@@ -98,27 +67,23 @@ public class TvShowAiCreateTaglineDialog extends TmmDialog {
     return (Integer) spMaxWords.getValue();
   }
 
-  public boolean shouldProceed() {
-    return proceed;
-  }
-
-  @Override
-  public void setVisible(boolean visible) {
-    if (visible) {
-      loadDefaults();
-    }
-    super.setVisible(visible);
-  }
-
   private void loadDefaults() {
     String savedLanguage = TmmStore.getInstance().get(LANGUAGE_KEY);
     if (StringUtils.isNotBlank(savedLanguage)) {
-      cbLanguage.setSelectedItem(MediaLanguages.get(savedLanguage));
+      MediaLanguages lang = MediaLanguages.get(savedLanguage);
+      cbLanguage.setSelectedItem(lang);
     }
     else {
       cbLanguage.setSelectedItem(TvShowModuleManager.getInstance().getSettings().getScraperLanguage());
     }
 
-    spMaxWords.setValue(TmmStore.getInstance().getAsInt(MAX_WORDS_KEY, 10));
+    spMaxWords.setValue(TmmStore.getInstance().getAsInt(MAX_WORDS_KEY, 20));
+  }
+
+  @Override
+  protected void onClose() {
+    TmmStore.getInstance().put(LANGUAGE_KEY, getSelectedLanguage().name());
+    TmmStore.getInstance().put(MAX_WORDS_KEY, String.valueOf(getMaxWords()));
+    setVisible(false);
   }
 }
