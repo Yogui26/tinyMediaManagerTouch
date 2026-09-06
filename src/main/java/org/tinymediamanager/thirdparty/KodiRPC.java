@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
@@ -108,6 +109,15 @@ public class KodiRPC {
         MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.INFO, "Kodi connected"));
       }
     });
+  }
+
+  /**
+   * Check if the KodiRPC implemenation is enabled
+   * 
+   * @return true/false
+   */
+  public static boolean isEnabled() {
+    return Settings.getInstance().isKodiEnabled() && StringUtils.isNotBlank(Settings.getInstance().getKodiHost());
   }
 
   public static synchronized KodiRPC getInstance() {

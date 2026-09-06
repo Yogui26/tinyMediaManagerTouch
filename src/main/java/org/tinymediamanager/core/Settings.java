@@ -89,10 +89,13 @@ public final class Settings extends AbstractSettings {
   private int                                              maximumDownloadThreads       = 2;
 
   // external services
+  private boolean                                          traktTvEnabled               = false;
   private DateField                                        traktDateField               = DateField.DATE_ADDED;
 
-  private boolean                                          traktTvEnabled               = false;
   private boolean                                          simklComEnabled              = false;
+
+  private boolean                                          mdbListEnabled               = false;
+  private String                                           mdbListApiKey                = "";
 
   private boolean                                          kodiEnabled                  = false;
   private String                                           kodiHost                     = "";
@@ -162,6 +165,7 @@ public final class Settings extends AbstractSettings {
   private float                                            ardDarkLevelMaxPct           = 13f;
 
   // AI (LLM) settings
+  private boolean                                          aiEnabled                    = false;
   private String                                           aiEndpointUrl                = "";
   private String                                           aiApiKey                     = "";
   private String                                           aiModel                      = "";
@@ -171,19 +175,8 @@ public final class Settings extends AbstractSettings {
   private int                                              aiMaxCallsPerHour            = 1000;
   private int                                              aiMinIntervalSeconds         = 1;
 
-  public String getAiProviderType() {
-    return aiProviderType;
-  }
-
-  public void setAiProviderType(String aiProviderType) {
-    String oldValue = this.aiProviderType;
-    this.aiProviderType = aiProviderType;
-    firePropertyChange("aiProviderType", oldValue, aiProviderType);
-  }
-
   private boolean                                          enableAutomaticUpdate        = true;
   private int                                              automaticUpdateInterval      = 1;
-  private String                                           mdbListApiKey                = "";
 
   /**
    * Instantiates a new settings.
@@ -964,6 +957,16 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("simklComEnabled", oldValue, newValue);
   }
 
+  public boolean isKodiEnabled() {
+    return kodiEnabled;
+  }
+
+  public void setKodiEnabled(boolean newValue) {
+    boolean oldValue = this.kodiEnabled;
+    this.kodiEnabled = newValue;
+    firePropertyChange("kodiEnabled", oldValue, newValue);
+  }
+
   public String getKodiHost() {
     return kodiHost;
   }
@@ -1494,6 +1497,16 @@ public final class Settings extends AbstractSettings {
   // AI (LLM) settings
   // =======================================================================
 
+  public boolean isAiEnabled() {
+    return aiEnabled;
+  }
+
+  public void setAiEnabled(boolean newValue) {
+    boolean oldValue = this.aiEnabled;
+    this.aiEnabled = newValue;
+    firePropertyChange("aiEnabled", oldValue, newValue);
+  }
+
   public String getAiEndpointUrl() {
     return aiEndpointUrl;
   }
@@ -1502,6 +1515,16 @@ public final class Settings extends AbstractSettings {
     String oldValue = this.aiEndpointUrl;
     this.aiEndpointUrl = aiEndpointUrl;
     firePropertyChange("aiEndpointUrl", oldValue, aiEndpointUrl);
+  }
+
+  public String getAiProviderType() {
+    return aiProviderType;
+  }
+
+  public void setAiProviderType(String aiProviderType) {
+    String oldValue = this.aiProviderType;
+    this.aiProviderType = aiProviderType;
+    firePropertyChange("aiProviderType", oldValue, aiProviderType);
   }
 
   @JsonSerialize(using = EncryptedStringSerializer.class)
@@ -1644,11 +1667,16 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("automaticUpdateInterval", oldValue, newValue);
   }
 
-  /**
-   * gets saved Kodi HTTP port, or default
-   *
-   * @return the Kodi HTTP port
-   */
+  public boolean isMdbListEnabled() {
+    return mdbListEnabled;
+  }
+
+  public void setMdbListEnabled(boolean newValue) {
+    boolean oldValue = this.mdbListEnabled;
+    this.mdbListEnabled = newValue;
+    firePropertyChange("mdbListEnabled", oldValue, newValue);
+  }
+
   @JsonSerialize(using = EncryptedStringSerializer.class)
   @JsonDeserialize(using = EncryptedStringDeserializer.class)
   public String getMdbListApiKey() {

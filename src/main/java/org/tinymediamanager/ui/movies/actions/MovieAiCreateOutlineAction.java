@@ -21,17 +21,21 @@ import java.util.List;
 import javax.swing.JOptionPane;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.ai.AiException;
 import org.tinymediamanager.core.ai.AiService;
-import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle.TaskType;
 import org.tinymediamanager.core.threading.TmmTaskManager;
+import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.movies.MovieUIModule;
+import org.tinymediamanager.ui.movies.dialogs.MovieAiCreateOutlineDialog;
 
 /**
  * The {@link MovieAiCreateOutlineAction} ist used to create an outline using AI
@@ -39,6 +43,8 @@ import org.tinymediamanager.ui.movies.MovieUIModule;
  * @author Manuel Laggner
  */
 public class MovieAiCreateOutlineAction extends TmmAction {
+  private static final Logger LOGGER = LoggerFactory.getLogger(MovieAiCreateOutlineAction.class);
+
   public MovieAiCreateOutlineAction() {
     putValue(NAME, TmmResourceBundle.getString("movie.ai.createoutline"));
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.ai.createoutline.desc"));
@@ -58,7 +64,17 @@ public class MovieAiCreateOutlineAction extends TmmAction {
       return;
     }
 
-    // generate all outline
+    MovieAiCreateOutlineDialog dialog = new MovieAiCreateOutlineDialog();
+    dialog.setVisible(true);
+
+    if (!dialog.shouldProceed()) {
+      return;
+    }
+
+    final MediaLanguages targetLanguage = dialog.getSelectedLanguage();
+    final int maxWords = dialog.getMaxWords();
+    final String languageName = targetLanguage.getTitle();
+
     TmmTaskManager.getInstance()
         .addUnnamedTask(new TmmTask(TmmResourceBundle.getString("movie.ai.createoutline"), selectedMovies.size(), TaskType.BACKGROUND_TASK) {
           @Override
@@ -67,10 +83,16 @@ public class MovieAiCreateOutlineAction extends TmmAction {
             AiService aiService = new AiService();
 
             for (Movie movie : selectedMovies) {
-              String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(),
-                  MovieModuleManager.getInstance().getSettings().getAiOutlineMaxWords());
-              if (StringUtils.isNotBlank(outline)) {
-                movie.setOutline(outline);
+              try {
+                String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(), maxWords, languageName, movie.getYear());
+                if (StringUtils.isNotBlank(outline)) {
+                  movie.setOutline(outline);
+                  movie.saveToDb();
+                }
+              }
+              catch (AiException e) {
+                LOGGER.error("AI error, aborting outline generation: {}", e.getMessage());
+                break;
               }
               publishState(++i);
               if (cancel) {

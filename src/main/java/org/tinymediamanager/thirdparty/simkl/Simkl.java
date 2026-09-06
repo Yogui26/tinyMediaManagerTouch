@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.ReleaseInfo;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TmmStore;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -253,6 +254,10 @@ public class Simkl implements TmmFeature {
    */
   public boolean isEnabled() {
     if (!isFeatureEnabled()) {
+      return false;
+    }
+
+    if (!Settings.getInstance().isSimklComEnabled()) {
       return false;
     }
 

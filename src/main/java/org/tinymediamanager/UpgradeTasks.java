@@ -198,7 +198,13 @@ public abstract class UpgradeTasks {
     if (StrgUtils.compareVersion(v, "5.3.3") < 0) {
       Settings settings = Settings.getInstance();
 
-      // enable external services if settings are available
+      // enable external services/devices if settings are available
+      if (StringUtils.isNotBlank(settings.getKodiHost())) {
+        settings.setKodiEnabled(true);
+      }
+      if (StringUtils.isNotBlank(settings.getMdbListApiKey())) {
+        settings.setMdbListEnabled(true);
+      }
       if (StringUtils.isNotBlank(TraktTv.getInstance().getRefreshToken())) {
         settings.setTraktTvEnabled(License.getInstance().isValidLicense());
       }

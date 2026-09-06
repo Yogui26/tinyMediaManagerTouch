@@ -281,13 +281,6 @@ public final class MovieSettings extends AbstractSettings {
   final List<MovieSetDiscartNaming>         movieSetDiscartFilenames       = new ArrayList<>();
   final Map<String, List<UIFilters>>        movieSetUiFilterPresets        = new HashMap<>();
 
-  // AI settings
-  String                                    aiPlotTranslationModel;
-  String                                    aiTaglineModel;
-  int                                       aiTaglineMaxWords;
-  String                                    aiOutlineModel;
-  int                                       aiOutlineMaxWords;
-
   final PropertyChangeListener              propertyChangeListener;
 
   public MovieSettings() {
@@ -506,10 +499,6 @@ public final class MovieSettings extends AbstractSettings {
 
     setUniversalFilterFields(List.of(UniversalFilterFields.values()));
     setScraperMetadataConfig(List.of(MovieScraperMetadataConfig.values()));
-
-    // AI settings
-    setAiTaglineMaxWords(10);
-    setAiOutlineMaxWords(50);
   }
 
   @Override
@@ -2248,55 +2237,5 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.resetNewFlagOnUds;
     this.resetNewFlagOnUds = newValue;
     firePropertyChange("resetNewFlagOnUds", oldValue, newValue);
-  }
-
-  public String getAiPlotTranslationModel() {
-    return aiPlotTranslationModel;
-  }
-
-  public void setAiPlotTranslationModel(String newValue) {
-    String oldValue = this.aiPlotTranslationModel;
-    this.aiPlotTranslationModel = newValue;
-    firePropertyChange("aiPlotTranslationModel", oldValue, newValue);
-  }
-
-  public String getAiTaglineModel() {
-    return aiTaglineModel;
-  }
-
-  public void setAiTaglineModel(String newValue) {
-    String oldValue = this.aiTaglineModel;
-    this.aiTaglineModel = newValue;
-    firePropertyChange("aiTaglineModel", oldValue, newValue);
-  }
-
-  public int getAiTaglineMaxWords() {
-    return aiTaglineMaxWords;
-  }
-
-  public void setAiTaglineMaxWords(int newValue) {
-    int oldValue = this.aiTaglineMaxWords;
-    this.aiTaglineMaxWords = newValue;
-    firePropertyChange("aiTaglineMaxWords", oldValue, newValue);
-  }
-
-  public String getAiOutlineModel() {
-    return aiOutlineModel;
-  }
-
-  public void setAiOutlineModel(String newValue) {
-    String oldValue = this.aiOutlineModel;
-    this.aiOutlineModel = newValue;
-    firePropertyChange("aiOutlineModel", oldValue, newValue);
-  }
-
-  public int getAiOutlineMaxWords() {
-    return aiOutlineMaxWords;
-  }
-
-  public void setAiOutlineMaxWords(int newValue) {
-    int oldValue = this.aiOutlineMaxWords;
-    this.aiOutlineMaxWords = newValue;
-    firePropertyChange("aiOutlineMaxWords", oldValue, newValue);
   }
 }

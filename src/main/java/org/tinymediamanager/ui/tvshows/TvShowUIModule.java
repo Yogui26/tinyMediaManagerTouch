@@ -28,7 +28,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.Globals;
 import org.tinymediamanager.core.PostProcess;
 import org.tinymediamanager.core.Settings;
@@ -56,6 +55,9 @@ import org.tinymediamanager.ui.thirdparty.KodiRPCMenu;
 import org.tinymediamanager.ui.tvshows.actions.DebugDumpShowAction;
 import org.tinymediamanager.ui.tvshows.actions.DebugDumpShowActionWithChilds;
 import org.tinymediamanager.ui.tvshows.actions.TvShowAddDatasourceAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowAiCreateOutlineAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowAiCreateTaglineAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowAiTranslatePlotAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowAspectRatioDetectAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowBulkEditAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowChangeDatasourceAction;
@@ -69,6 +71,8 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadActorImagesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadMissingArtworkAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadThemeAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowEditAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowEpisodeAiCreateOutlineAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowEpisodeAiTranslatePlotAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowExportAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowFetchImdbTop250;
 import org.tinymediamanager.ui.tvshows.actions.TvShowFetchRatingsAction;
@@ -587,6 +591,19 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     postProcessingMenu.setIcon(IconManager.MENU);
     popupMenu.add(postProcessingMenu);
 
+    // AI
+    JMenu aiMenu = new JMenu(TmmResourceBundle.getString("Settings.ai"));
+    aiMenu.setIcon(IconManager.AI_BLUE);
+    aiMenu.add(new TmmMenuLabel(TmmResourceBundle.getString("metatag.tvshow")));
+    aiMenu.add(createAndRegisterAction(TvShowAiTranslatePlotAction.class));
+    aiMenu.add(createAndRegisterAction(TvShowAiCreateOutlineAction.class));
+    aiMenu.add(createAndRegisterAction(TvShowAiCreateTaglineAction.class));
+    aiMenu.addSeparator();
+    aiMenu.add(new TmmMenuLabel(TmmResourceBundle.getString("metatag.episode")));
+    aiMenu.add(createAndRegisterAction(TvShowEpisodeAiTranslatePlotAction.class));
+    aiMenu.add(createAndRegisterAction(TvShowEpisodeAiCreateOutlineAction.class));
+    popupMenu.add(aiMenu);
+
     popupMenu.addSeparator();
     popupMenu.add(createAndRegisterAction(TvShowRemoveAction.class));
     popupMenu.add(createAndRegisterAction(TvShowDeleteAction.class));
@@ -603,9 +620,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     popupMenu.addPopupMenuListener(new PopupMenuListener() {
       @Override
       public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-        Settings settings = Settings.getInstance();
-
-        if (StringUtils.isNotBlank(settings.getKodiHost())) {
+        if (KodiRPC.isEnabled()) {
           kodiRPCMenu.setText(KodiRPC.getInstance().getVersion());
           kodiRPCMenu.setEnabled(true);
         }
@@ -614,18 +629,25 @@ public class TvShowUIModule extends AbstractTmmUIModule {
           kodiRPCMenu.setEnabled(false);
         }
 
-        if (settings.isTraktTvEnabled() && TraktTv.getInstance().isEnabled()) {
+        if (TraktTv.getInstance().isEnabled()) {
           traktMenu.setEnabled(true);
         }
         else {
           traktMenu.setEnabled(false);
         }
 
-        if (settings.isSimklComEnabled() && Simkl.getInstance().isFeatureEnabled()) {
+        if (Simkl.getInstance().isFeatureEnabled()) {
           simklMenu.setEnabled(true);
         }
         else {
           simklMenu.setEnabled(false);
+        }
+
+        if (Settings.getInstance().isAiEnabled()) {
+          aiMenu.setEnabled(true);
+        }
+        else {
+          aiMenu.setEnabled(false);
         }
 
         // Post-processing

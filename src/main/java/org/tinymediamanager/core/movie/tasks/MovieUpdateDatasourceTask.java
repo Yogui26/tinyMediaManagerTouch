@@ -499,7 +499,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       cleanup(dsAsPath.toAbsolutePath().toString());
 
       // map Kodi entries
-      if (StringUtils.isNotBlank(Settings.getInstance().getKodiHost())) {
+      if (KodiRPC.isEnabled()) {
         // call async to avoid slowdown of UDS
         TmmTaskManager.getInstance().addUnnamedTask(() -> KodiRPC.getInstance().updateMovieMappings());
       }

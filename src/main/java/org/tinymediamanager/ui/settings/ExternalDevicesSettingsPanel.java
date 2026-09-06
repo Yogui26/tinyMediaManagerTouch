@@ -63,6 +63,7 @@ class ExternalDevicesSettingsPanel extends JPanel {
   private final Settings      settings = Settings.getInstance();
 
   private TmmTable            tableWolDevices;
+  private JCheckBox           chckbxKodiEnabled;
   private JTextField          tfKodiHost;
   private JTextField          tfKodiTcpPort;
   private JTextField          tfKodiHttpPort;
@@ -74,6 +75,8 @@ class ExternalDevicesSettingsPanel extends JPanel {
   private JCheckBox           chckbxUpnpShareLibrary;
   private JTextField          tfUpnpPort;
   private JCheckBox           chckbxUpnpRemotePlay;
+  private JButton             btnKodiConnect;
+  private JButton             btnKodiDisconnect;
 
   ExternalDevicesSettingsPanel() {
 
@@ -174,21 +177,24 @@ class ExternalDevicesSettingsPanel extends JPanel {
       }
     }
     {
-      JPanel panelKodi = new JPanel(new MigLayout("hidemode 1, insets 0", "[20lp!][15lp][][]", "[]"));
+      JPanel panelKodi = new JPanel(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][15lp][][]", "[][][][][][]"));
 
       JLabel lblKodiT = new TmmLabel("Kodi / XBMC", H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelKodi, lblKodiT, true);
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#kodixbmc"));
       add(collapsiblePanel, "cell 0 2,growx,wmin 0");
       {
+        chckbxKodiEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.kodi.enable"));
+        panelKodi.add(chckbxKodiEnabled, "cell 1 0 3 1");
+
         JLabel lblKodiHostT = new JLabel(TmmResourceBundle.getString("Settings.kodi.host"));
-        panelKodi.add(lblKodiHostT, "cell 1 0");
+        panelKodi.add(lblKodiHostT, "cell 2 1,alignx trailing");
 
         tfKodiHost = new JTextField();
-        panelKodi.add(tfKodiHost, "cell 2 0");
+        panelKodi.add(tfKodiHost, "cell 3 1");
         tfKodiHost.setColumns(20);
 
-        JButton btnKodiConnect = new JButton(TmmResourceBundle.getString("Settings.kodi.connect"));
+        btnKodiConnect = new JButton(TmmResourceBundle.getString("Settings.kodi.connect"));
         btnKodiConnect.addActionListener(e -> {
           HostConfig c = new HostConfig(tfKodiHost.getText(), tfKodiHttpPort.getText(), tfKodiTcpPort.getText(), tfKodiUsername.getText(),
               new String(tfKodiPassword.getPassword()));
@@ -201,38 +207,38 @@ class ExternalDevicesSettingsPanel extends JPanel {
                 .pushMessage(new Message(Message.MessageLevel.ERROR, "KodiRPC", "Could not connect to Kodi: " + cex.getMessage()));
           }
         });
-        panelKodi.add(btnKodiConnect, "cell 3 0,growx");
+        panelKodi.add(btnKodiConnect, "cell 4 1,growx");
 
         JLabel lblKodiHttpPortT = new JLabel(TmmResourceBundle.getString("Settings.kodi.httpport"));
-        panelKodi.add(lblKodiHttpPortT, "cell 1 1");
+        panelKodi.add(lblKodiHttpPortT, "cell 2 2,alignx trailing");
 
         tfKodiHttpPort = new JTextField();
-        panelKodi.add(tfKodiHttpPort, "cell 2 1");
+        panelKodi.add(tfKodiHttpPort, "cell 3 2");
         tfKodiHttpPort.setColumns(20);
 
-        JButton btnKodiDisconnect = new JButton(TmmResourceBundle.getString("Settings.kodi.disconnect"));
+        btnKodiDisconnect = new JButton(TmmResourceBundle.getString("Settings.kodi.disconnect"));
         btnKodiDisconnect.addActionListener(e -> KodiRPC.getInstance().disconnect());
-        panelKodi.add(btnKodiDisconnect, "cell 3 1,growx");
+        panelKodi.add(btnKodiDisconnect, "cell 4 2,growx");
 
         JLabel lblKodiTcpPortT = new JLabel(TmmResourceBundle.getString("Settings.kodi.tcpport"));
-        panelKodi.add(lblKodiTcpPortT, "cell 1 2");
+        panelKodi.add(lblKodiTcpPortT, "cell 2 3,alignx trailing");
 
         tfKodiTcpPort = new JTextField();
-        panelKodi.add(tfKodiTcpPort, "cell 2 2");
+        panelKodi.add(tfKodiTcpPort, "cell 3 3");
         tfKodiTcpPort.setColumns(20);
 
         JLabel lblKodiUsernameT = new JLabel(TmmResourceBundle.getString("Settings.kodi.user"));
-        panelKodi.add(lblKodiUsernameT, "cell 1 3");
+        panelKodi.add(lblKodiUsernameT, "cell 2 4,alignx trailing");
 
         tfKodiUsername = new JTextField();
-        panelKodi.add(tfKodiUsername, "cell 2 3");
+        panelKodi.add(tfKodiUsername, "cell 3 4");
         tfKodiUsername.setColumns(20);
 
         JLabel lblKodiPasswordT = new JLabel(TmmResourceBundle.getString("Settings.kodi.pass"));
-        panelKodi.add(lblKodiPasswordT, "cell 1 4");
+        panelKodi.add(lblKodiPasswordT, "cell 2 5,alignx trailing");
 
         tfKodiPassword = new JPasswordField();
-        panelKodi.add(tfKodiPassword, "cell 2 4");
+        panelKodi.add(tfKodiPassword, "cell 3 5");
         tfKodiPassword.setColumns(20);
       }
     }
@@ -274,6 +280,33 @@ class ExternalDevicesSettingsPanel extends JPanel {
     //
     jTableBinding.setEditable(false);
     jTableBinding.bind();
+    //
+    Property settingsBeanProperty_9 = BeanProperty.create("kodiEnabled");
+    Property jCheckBoxBeanProperty_2 = BeanProperty.create("selected");
+    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_9, chckbxKodiEnabled,
+        jCheckBoxBeanProperty_2);
+    autoBinding_9.bind();
+    //
+    Property jTextFieldBeanProperty_6 = BeanProperty.create("enabled");
+    AutoBinding autoBinding_14 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, tfKodiHost,
+        jTextFieldBeanProperty_6);
+    autoBinding_14.bind();
+    //
+    AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, tfKodiHttpPort,
+        jTextFieldBeanProperty_6);
+    autoBinding_15.bind();
+    //
+    AutoBinding autoBinding_16 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, tfKodiTcpPort,
+        jTextFieldBeanProperty_6);
+    autoBinding_16.bind();
+    //
+    AutoBinding autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, tfKodiUsername,
+        jTextFieldBeanProperty_6);
+    autoBinding_17.bind();
+    //
+    AutoBinding autoBinding_18 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, tfKodiPassword,
+        jTextFieldBeanProperty_6);
+    autoBinding_18.bind();
     //
     Property settingsBeanProperty_2 = BeanProperty.create("kodiUsername");
     Property jTextFieldBeanProperty_1 = BeanProperty.create("text");
@@ -326,5 +359,13 @@ class ExternalDevicesSettingsPanel extends JPanel {
     AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_8, chckbxUpnpRemotePlay,
         jCheckBoxBeanProperty);
     autoBinding_8.bind();
+    //
+    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, btnKodiConnect,
+        jTextFieldBeanProperty_6);
+    autoBinding_10.bind();
+    //
+    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxKodiEnabled, jCheckBoxBeanProperty_2, btnKodiDisconnect,
+        jTextFieldBeanProperty_6);
+    autoBinding_11.bind();
   }
 }

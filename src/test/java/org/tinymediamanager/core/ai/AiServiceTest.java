@@ -16,6 +16,7 @@
 package org.tinymediamanager.core.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.After;
 import org.junit.Before;
@@ -118,13 +119,13 @@ public class AiServiceTest {
   // =======================================================================
 
   @Test
-  public void testBlankTitleAndPlotReturnsEmpty() {
+  public void testBlankTitleAndPlotReturnsEmpty() throws AiException {
     String result = service.generateTagline("", "", 0, "German", 10);
     assertThat(result).isEqualTo("");
   }
 
   @Test
-  public void testSuccessfulTaglineGeneration() {
+  public void testSuccessfulTaglineGeneration() throws AiException {
     server.enqueue(new MockResponse().setResponseCode(200)
         .setBody("{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Just do it.\"},\"finish_reason\":\"stop\"}]}"));
 
@@ -133,21 +134,19 @@ public class AiServiceTest {
   }
 
   @Test
-  public void testTaglineApiErrorReturnsEmpty() {
+  public void testTaglineApiErrorThrowsException() {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":{\"message\":\"Bad request\"}}"));
 
-    String result = service.generateTagline("Test", "A plot.", 2024, "English", 5);
-    assertThat(result).isEqualTo("");
+    assertThatThrownBy(() -> service.generateTagline("Test", "A plot.", 2024, "English", 5)).isInstanceOf(AiException.class);
   }
 
   @Test
-  public void testTaglineServerErrorReturnsEmpty() {
+  public void testTaglineServerErrorThrowsException() {
     for (int i = 0; i < 4; i++) {
       server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
     }
 
-    String result = service.generateTagline("Test", "A plot.", 2024, "English", 5);
-    assertThat(result).isEqualTo("");
+    assertThatThrownBy(() -> service.generateTagline("Test", "A plot.", 2024, "English", 5)).isInstanceOf(AiException.class);
   }
 
   // =======================================================================
@@ -155,36 +154,34 @@ public class AiServiceTest {
   // =======================================================================
 
   @Test
-  public void testBlankTitleAndPlotReturnsEmptyOutline() {
-    String result = service.generateOutline("", "", 50);
+  public void testBlankTitleAndPlotReturnsEmptyOutline() throws AiException {
+    String result = service.generateOutline("", "", 50, "English", 2024);
     assertThat(result).isEqualTo("");
   }
 
   @Test
-  public void testSuccessfulOutlineGeneration() {
+  public void testSuccessfulOutlineGeneration() throws AiException {
     server.enqueue(new MockResponse().setResponseCode(200)
         .setBody(
             "{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"A hero saves the day.\"},\"finish_reason\":\"stop\"}]}"));
 
-    String result = service.generateOutline("Test Movie", "A movie about testing.", 50);
+    String result = service.generateOutline("Test Movie", "A movie about testing.", 50, "English", 2024);
     assertThat(result).isEqualTo("A hero saves the day.");
   }
 
   @Test
-  public void testOutlineApiErrorReturnsEmpty() {
+  public void testOutlineApiErrorThrowsException() {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":{\"message\":\"Bad request\"}}"));
 
-    String result = service.generateOutline("Test", "A plot.", 50);
-    assertThat(result).isEqualTo("");
+    assertThatThrownBy(() -> service.generateOutline("Test", "A plot.", 50, "English", 2024)).isInstanceOf(AiException.class);
   }
 
   @Test
-  public void testOutlineServerErrorReturnsEmpty() {
+  public void testOutlineServerErrorThrowsException() {
     for (int i = 0; i < 4; i++) {
       server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
     }
 
-    String result = service.generateOutline("Test", "A plot.", 50);
-    assertThat(result).isEqualTo("");
+    assertThatThrownBy(() -> service.generateOutline("Test", "A plot.", 50, "English", 2024)).isInstanceOf(AiException.class);
   }
 }

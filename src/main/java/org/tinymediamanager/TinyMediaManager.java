@@ -586,7 +586,7 @@ public final class TinyMediaManager {
       LOGGER.error("Could not start UPnP server - '{}'", e.getMessage());
     }
 
-    if (!Settings.getInstance().getKodiHost().isBlank()) {
+    if (KodiRPC.isEnabled()) {
       try {
         KodiRPC.getInstance().connect();
       }

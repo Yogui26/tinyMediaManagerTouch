@@ -45,17 +45,18 @@ import retrofit2.Response;
  * @author Myron Boyle
  */
 public final class MdbListMetadataProvider implements IMediaProvider, IRatingProvider {
-  public static final String        ID     = "mdblist";
-  private static final Logger       LOGGER = LoggerFactory.getLogger(MdbListMetadataProvider.class);
+  public static final String      ID     = "mdblist";
+  private static final Logger     LOGGER = LoggerFactory.getLogger(MdbListMetadataProvider.class);
 
-  protected final MediaProviderInfo providerInfo;
-  protected MdbListController       controller;
+  private final MediaProviderInfo providerInfo;
+
+  private MdbListController       controller;
 
   public MdbListMetadataProvider() {
     providerInfo = createMediaProviderInfo();
   }
 
-  protected MediaProviderInfo createMediaProviderInfo() {
+  private MediaProviderInfo createMediaProviderInfo() {
     return new MediaProviderInfo(ID, "", "mdblist.com",
         "MDBLIst - The Ultimate Dynamic List Manager<br><br>mdblist.com is your go-to tool for creating dynamic, auto-updating movie and show lists tailored to your preferences. Seamlessly integrated with Stremio, it combines the power of multiple rating platforms like IMDb, TMDb, Letterboxd, Rotten Tomatoes, Metacritic, MyAnimeList, and RogerEbert. Whether you’re building a watchlist, tracking ratings, or syncing your library progress, mdblist.com makes it effortless.",
         MdbListMetadataProvider.class.getResource("/org/tinymediamanager/scraper/mdblist.png"));
@@ -63,10 +64,10 @@ public final class MdbListMetadataProvider implements IMediaProvider, IRatingPro
 
   @Override
   public boolean isActive() {
-    return isFeatureEnabled() && isApiKeyAvailable(Settings.getInstance().getMdbListApiKey());
+    return isFeatureEnabled() && Settings.getInstance().isMdbListEnabled() && isApiKeyAvailable(Settings.getInstance().getMdbListApiKey());
   }
 
-  protected synchronized void initAPI() throws ScrapeException {
+  private synchronized void initAPI() throws ScrapeException {
     if (controller == null) {
       if (!isActive()) {
         throw new ScrapeException(new FeatureNotEnabledException(this));

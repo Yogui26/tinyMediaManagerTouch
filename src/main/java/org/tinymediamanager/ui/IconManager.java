@@ -101,6 +101,7 @@ public class IconManager {
 
   // font awesome icons for actions in the popup menu
   public static final ImageIcon              ADD                          = createMenuIcon("plus.svg");
+  public static final ImageIcon              AI_BLUE                      = createMenuIcon("microchip-ai.svg");
   public static final ImageIcon              APPLY                        = createMenuIcon("circle-check.svg");
   public static final ImageIcon              ASPECT_RATIO_BLUE            = createMenuIcon("ruler-combined-solid.svg");
   public static final ImageIcon              BARCODE                      = createMenuIcon("barcode.svg");

@@ -28,7 +28,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.Globals;
 import org.tinymediamanager.core.PostProcess;
 import org.tinymediamanager.core.Settings;
@@ -52,6 +51,8 @@ import org.tinymediamanager.ui.movies.actions.DebugDumpMovieAction;
 import org.tinymediamanager.ui.movies.actions.DebugLoadMovieAction;
 import org.tinymediamanager.ui.movies.actions.MovieAddDatasourceAction;
 import org.tinymediamanager.ui.movies.actions.MovieAiCreateOutlineAction;
+import org.tinymediamanager.ui.movies.actions.MovieAiCreateTaglineAction;
+import org.tinymediamanager.ui.movies.actions.MovieAiTranslatePlotAction;
 import org.tinymediamanager.ui.movies.actions.MovieAspectRatioDetectAction;
 import org.tinymediamanager.ui.movies.actions.MovieAssignMovieSetAction;
 import org.tinymediamanager.ui.movies.actions.MovieBulkEditAction;
@@ -481,6 +482,14 @@ public class MovieUIModule extends AbstractTmmUIModule {
     postProcessingMenu.setIcon(IconManager.MENU);
     popupMenu.add(postProcessingMenu);
 
+    // AI
+    JMenu aiMenu = new JMenu(TmmResourceBundle.getString("Settings.ai"));
+    aiMenu.setIcon(IconManager.AI_BLUE);
+    aiMenu.add(createAndRegisterAction(MovieAiTranslatePlotAction.class));
+    aiMenu.add(createAndRegisterAction(MovieAiCreateOutlineAction.class));
+    aiMenu.add(createAndRegisterAction(MovieAiCreateTaglineAction.class));
+    popupMenu.add(aiMenu);
+
     popupMenu.addSeparator();
     popupMenu.add(createAndRegisterAction(MovieRemoveAction.class));
     popupMenu.add(createAndRegisterAction(MovieDeleteAction.class));
@@ -494,16 +503,11 @@ public class MovieUIModule extends AbstractTmmUIModule {
       popupMenu.add(debugMenu);
     }
 
-    // AI
-    popupMenu.add(createAndRegisterAction(MovieAiCreateOutlineAction.class));
-
     // activate/deactivate menu items based on some status
     popupMenu.addPopupMenuListener(new PopupMenuListener() {
       @Override
       public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-        Settings settings = Settings.getInstance();
-
-        if (StringUtils.isNotBlank(settings.getKodiHost())) {
+        if (KodiRPC.isEnabled()) {
           kodiRPCMenu.setText(KodiRPC.getInstance().getVersion());
           kodiRPCMenu.setEnabled(true);
         }
@@ -512,18 +516,25 @@ public class MovieUIModule extends AbstractTmmUIModule {
           kodiRPCMenu.setEnabled(false);
         }
 
-        if (settings.isTraktTvEnabled() && TraktTv.getInstance().isEnabled()) {
+        if (TraktTv.getInstance().isEnabled()) {
           traktMenu.setEnabled(true);
         }
         else {
           traktMenu.setEnabled(false);
         }
 
-        if (settings.isSimklComEnabled() && Simkl.getInstance().isEnabled()) {
+        if (Simkl.getInstance().isEnabled()) {
           simklMenu.setEnabled(true);
         }
         else {
           simklMenu.setEnabled(false);
+        }
+
+        if (Settings.getInstance().isAiEnabled()) {
+          aiMenu.setEnabled(true);
+        }
+        else {
+          aiMenu.setEnabled(false);
         }
 
         // Post-processing

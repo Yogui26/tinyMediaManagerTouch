@@ -61,8 +61,6 @@ import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.LinkLabel;
-import org.tinymediamanager.ui.components.button.SquareIconButton;
-import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
@@ -76,32 +74,35 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 class ExternalServicesSettingsPanel extends JPanel {
-  private static final Logger LOGGER   = LoggerFactory.getLogger(ExternalServicesSettingsPanel.class);
+  private static final Logger  LOGGER   = LoggerFactory.getLogger(ExternalServicesSettingsPanel.class);
 
-  private final Settings      settings = Settings.getInstance();
+  private final Settings       settings = Settings.getInstance();
 
-  private JButton             btnGetTraktPin;
-  private JButton             btnTestTraktConnection;
-  private JLabel              lblTraktStatus;
-  private JPasswordField      pfMdbListApiKey;
-  private JComboBox           cbTraktDate;
+  private JButton              btnGetTraktPin;
+  private JButton              btnTestTraktConnection;
+  private JLabel               lblTraktStatus;
+  private JPasswordField       pfMdbListApiKey;
+  private JComboBox<DateField> cbTraktDate;
 
-  private JTextField          tfAiEndpointUrl;
-  private JPasswordField      pfAiApiKey;
-  private JButton             btnTestAiConnection;
-  private JCheckBox           chckbxAiRateLimit;
-  private JSpinner            spAiMaxCallsPerMinute;
-  private JSpinner            spAiMaxCallsPerHour;
-  private JSpinner            spAiMinIntervalSeconds;
-  private JLabel              lblAiTestResult;
-  private JTextField          tfAiModel;
-  private JComboBox           cbApiType;
+  private JTextField           tfAiEndpointUrl;
+  private JPasswordField       pfAiApiKey;
+  private JButton              btnTestAiConnection;
+  private JCheckBox            chckbxAiEnabled;
+  private JCheckBox            chckbxAiRateLimit;
+  private JSpinner             spAiMaxCallsPerMinute;
+  private JSpinner             spAiMaxCallsPerHour;
+  private JSpinner             spAiMinIntervalSeconds;
+  private JLabel               lblAiTestResult;
+  private JTextField           tfAiModel;
+  private JComboBox<String>    cbApiType;
 
-  private JButton             btnGetSimklPin;
-  private JButton             btnTestSimklConnection;
-  private JLabel              lblSimklStatus;
-  private JCheckBox           chckbxTraktTv;
-  private JCheckBox           chckbxSimklCom;
+  private JButton              btnGetSimklPin;
+  private JButton              btnTestSimklConnection;
+  private JLabel               lblSimklStatus;
+  private JCheckBox            chckbxTraktTv;
+  private JCheckBox            chckbxSimklCom;
+  private JCheckBox            chckbxMdblistEnabled;
+  private JButton              btnCopyMdblistApiKey;
 
   ExternalServicesSettingsPanel() {
     // UI init
@@ -392,12 +393,13 @@ class ExternalServicesSettingsPanel extends JPanel {
         lblTraktStatus = new JLabel("");
         panelTrakt.add(lblTraktStatus, "cell 2 2");
       }
+      {
+        JLabel lblTraktDateT = new JLabel(TmmResourceBundle.getString("Settings.trakt.date"));
+        panelTrakt.add(lblTraktDateT, "flowx,cell 2 3");
 
-      JLabel lblTraktDateT = new TmmLabel(TmmResourceBundle.getString("Settings.trakt.date"));
-      panelTrakt.add(lblTraktDateT, "flowx,cell 2 3");
-
-      cbTraktDate = new JComboBox(DateField.values());
-      panelTrakt.add(cbTraktDate, "cell 2 3");
+        cbTraktDate = new JComboBox<>(DateField.values());
+        panelTrakt.add(cbTraktDate, "cell 2 3");
+      }
     }
     {
       JPanel panelSimkl = new JPanel();
@@ -429,37 +431,40 @@ class ExternalServicesSettingsPanel extends JPanel {
     }
     {
       JPanel panelMdbList = new JPanel();
-      panelMdbList.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[]"));
+      panelMdbList.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][][grow]", "[][][]"));
       JLabel lblMdbListT = new TmmLabel(TmmResourceBundle.getString("Settings.external.rating.mdblist"), H3);
 
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelMdbList, lblMdbListT, true);
       add(collapsiblePanel, "cell 0 4,growx, wmin 0");
+
+      chckbxMdblistEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.external.rating.mdblist.enable"));
+      panelMdbList.add(chckbxMdblistEnabled, "cell 1 0 3 1");
       {
         JLabel lblMdbListApiKeyT = new JLabel(TmmResourceBundle.getString("Settings.api.key"));
-        panelMdbList.add(lblMdbListApiKeyT, "flowx,cell 1 0 2 1");
+        panelMdbList.add(lblMdbListApiKeyT, "flowx,cell 2 1,alignx trailing");
 
         pfMdbListApiKey = new JPasswordField();
-        panelMdbList.add(pfMdbListApiKey, "cell 1 0 2 1");
+        panelMdbList.add(pfMdbListApiKey, "cell 3 1");
         pfMdbListApiKey.setColumns(30);
 
-        JButton btnCopyMdblistApiKey = new SquareIconButton(IconManager.COPY);
+        btnCopyMdblistApiKey = new SquareIconButton(IconManager.COPY);
         btnCopyMdblistApiKey.setToolTipText(TmmResourceBundle.getString("Settings.apikey.copy.desc"));
         btnCopyMdblistApiKey.addActionListener(l -> {
           Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
           clipboard.setContents(new StringSelection(new String(pfMdbListApiKey.getPassword())), null);
           TmmToastManager.showSuccessToast(this, TmmResourceBundle.getString("Settings.apikey.copy.done"));
         });
-        panelMdbList.add(btnCopyMdblistApiKey, "cell 1 0 2 1");
+        panelMdbList.add(btnCopyMdblistApiKey, "cell 3 1");
 
         JTextArea tpMediaPlayer = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.external.rating.mdblist.hint"));
-        panelMdbList.add(tpMediaPlayer, "cell 1 1 2 1,growx, wmin 0");
+        panelMdbList.add(tpMediaPlayer, "cell 2 2 2 1,growx,wmin 0");
         TmmFontHelper.changeFont(tpMediaPlayer, L2);
       }
 
     }
     {
       JPanel panelAi = new JPanel();
-      panelAi.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][][300lp,grow][300lp,grow]", "[][][][][][15lp!][][grow]"));
+      panelAi.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][16lp!][][300lp,grow][300lp,grow]", "[][][][][][][15lp!][][grow]"));
       JLabel lblAiT = new TmmLabel(TmmResourceBundle.getString("Settings.ai"), H3);
       if (!License.getInstance().isValidLicense()) {
         lblAiT.setText("*PRO* " + lblAiT.getText());
@@ -469,23 +474,26 @@ class ExternalServicesSettingsPanel extends JPanel {
       add(collapsiblePanel, "cell 0 6,growx,wmin 0");
 
       {
+        chckbxAiEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.ai.enable"));
+        panelAi.add(chckbxAiEnabled, "cell 1 0 5 1");
+
         JLabel lblEndpointUrl = new JLabel(TmmResourceBundle.getString("Settings.ai.endpointUrl"));
-        panelAi.add(lblEndpointUrl, "cell 1 0 2 1,alignx right");
+        panelAi.add(lblEndpointUrl, "cell 2 1 2 1,alignx right");
         tfAiEndpointUrl = new JTextField();
         tfAiEndpointUrl.setColumns(40);
-        panelAi.add(tfAiEndpointUrl, "cell 3 0,growx");
+        panelAi.add(tfAiEndpointUrl, "cell 4 1,growx");
 
         JLabel lblApiType = new JLabel(TmmResourceBundle.getString("Settings.ai.apitype"));
-        panelAi.add(lblApiType, "cell 1 1 2 1,alignx right");
+        panelAi.add(lblApiType, "cell 2 2 2 1,alignx right");
 
-        cbApiType = new JComboBox(new String[] { "OpenAI", "Anthropic" });
-        panelAi.add(cbApiType, "cell 3 1,growx");
+        cbApiType = new JComboBox<>(new String[] { "OpenAI", "Anthropic" });
+        panelAi.add(cbApiType, "cell 4 2,growx");
 
         JLabel lblApiKey = new JLabel(TmmResourceBundle.getString("Settings.ai.apiKey"));
-        panelAi.add(lblApiKey, "cell 1 2 2 1,alignx right");
+        panelAi.add(lblApiKey, "cell 2 3 2 1,alignx right");
         pfAiApiKey = new JPasswordField();
         pfAiApiKey.setColumns(30);
-        panelAi.add(pfAiApiKey, "cell 3 2,growx");
+        panelAi.add(pfAiApiKey, "cell 4 3,growx");
 
         JButton btnCopyAiApiKey = new SquareIconButton(IconManager.COPY);
         btnCopyAiApiKey.setToolTipText(TmmResourceBundle.getString("Settings.apikey.copy.desc"));
@@ -494,24 +502,24 @@ class ExternalServicesSettingsPanel extends JPanel {
           clipboard.setContents(new StringSelection(new String(pfAiApiKey.getPassword())), null);
           TmmToastManager.showSuccessToast(this, TmmResourceBundle.getString("Settings.apikey.copy.done"));
         });
-        panelAi.add(btnCopyAiApiKey, "cell 4 2");
+        panelAi.add(btnCopyAiApiKey, "cell 5 3");
 
         JLabel lblAiModel = new JLabel(TmmResourceBundle.getString("Settings.ai.model"));
-        panelAi.add(lblAiModel, "cell 1 3 2 1,alignx right");
+        panelAi.add(lblAiModel, "cell 2 4 2 1,alignx right");
 
         tfAiModel = new JTextField();
-        panelAi.add(tfAiModel, "cell 3 3,growx");
+        panelAi.add(tfAiModel, "cell 4 4,growx");
         tfAiModel.setColumns(40);
 
         btnTestAiConnection = new JButton(TmmResourceBundle.getString("Settings.ai.testConnection"));
         btnTestAiConnection.setEnabled(License.getInstance().isValidLicense());
-        panelAi.add(btnTestAiConnection, "cell 4 3");
+        panelAi.add(btnTestAiConnection, "cell 5 4");
 
         chckbxAiRateLimit = new JCheckBox(TmmResourceBundle.getString("Settings.ai.rateLimitEnabled"));
-        panelAi.add(chckbxAiRateLimit, "cell 1 6 4 1");
+        panelAi.add(chckbxAiRateLimit, "cell 2 7 4 1");
 
         JPanel panel = new JPanel();
-        panelAi.add(panel, "cell 2 7 3 1,grow");
+        panelAi.add(panel, "cell 3 8 3 1,grow");
         panel.setLayout(new MigLayout("insets 0", "[][]", "[][][]"));
 
         JLabel lblMaxPerMin = new JLabel(TmmResourceBundle.getString("Settings.ai.maxCallsPerMinute"));
@@ -531,7 +539,7 @@ class ExternalServicesSettingsPanel extends JPanel {
       }
 
       lblAiTestResult = new JLabel("");
-      panelAi.add(lblAiTestResult, "cell 3 4 2 1");
+      panelAi.add(lblAiTestResult, "cell 4 5 2 1");
     }
     initDataBindings();
   }
@@ -608,6 +616,32 @@ class ExternalServicesSettingsPanel extends JPanel {
         jButtonBeanProperty);
     autoBinding_5.bind();
     //
+    Property settingsBeanProperty_12 = BeanProperty.create("aiEnabled");
+    AutoBinding autoBinding_16 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_12, chckbxAiEnabled,
+        jCheckBoxBeanProperty);
+    autoBinding_16.bind();
+    //
+    Property jTextFieldBeanProperty_3 = BeanProperty.create("enabled");
+    AutoBinding autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, tfAiEndpointUrl,
+        jTextFieldBeanProperty_3);
+    autoBinding_17.bind();
+    //
+    AutoBinding autoBinding_18 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, cbApiType,
+        jTextFieldBeanProperty_3);
+    autoBinding_18.bind();
+    //
+    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, pfAiApiKey,
+        jTextFieldBeanProperty_3);
+    autoBinding_19.bind();
+    //
+    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, tfAiModel,
+        jTextFieldBeanProperty_3);
+    autoBinding_20.bind();
+    //
+    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, btnTestAiConnection,
+        jButtonBeanProperty);
+    autoBinding_21.bind();
+    //
     Property settingsBeanProperty_4 = BeanProperty.create("aiEndpointUrl");
     Property jTextFieldBeanProperty_1 = BeanProperty.create("text");
     AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_4, tfAiEndpointUrl,
@@ -651,5 +685,34 @@ class ExternalServicesSettingsPanel extends JPanel {
     AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_11, cbApiType,
         jComboBoxBeanProperty);
     autoBinding_15.bind();
+    //
+    Property settingsBeanProperty_13 = BeanProperty.create("mdbListEnabled");
+    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_13, chckbxMdblistEnabled,
+        jCheckBoxBeanProperty);
+    autoBinding_22.bind();
+    //
+    AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, chckbxAiRateLimit,
+        jButtonBeanProperty);
+    autoBinding_23.bind();
+    //
+    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMaxCallsPerMinute,
+        jButtonBeanProperty);
+    autoBinding_24.bind();
+    //
+    AutoBinding autoBinding_25 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMaxCallsPerHour,
+        jButtonBeanProperty);
+    autoBinding_25.bind();
+    //
+    AutoBinding autoBinding_26 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMinIntervalSeconds,
+        jButtonBeanProperty);
+    autoBinding_26.bind();
+    //
+    AutoBinding autoBinding_27 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxMdblistEnabled, jCheckBoxBeanProperty, pfMdbListApiKey,
+        jButtonBeanProperty);
+    autoBinding_27.bind();
+    //
+    AutoBinding autoBinding_28 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxMdblistEnabled, jCheckBoxBeanProperty, btnCopyMdblistApiKey,
+        jButtonBeanProperty);
+    autoBinding_28.bind();
   }
 }

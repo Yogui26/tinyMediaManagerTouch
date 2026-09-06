@@ -97,7 +97,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
   }
 
   @Test
-  public void testTranslationToGerman() {
+  public void testTranslationToGerman() throws AiException {
     Settings settings = Settings.getInstance();
     settings.setAiEndpointUrl(endpointUrl);
     settings.setAiApiKey(apiKey);
@@ -115,7 +115,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
   }
 
   @Test
-  public void testTranslationToFrench() {
+  public void testTranslationToFrench() throws AiException {
     Settings settings = Settings.getInstance();
     settings.setAiEndpointUrl(endpointUrl);
     settings.setAiApiKey(apiKey);
@@ -181,7 +181,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
   }
 
   @Test
-  public void testTranslationPerformance() {
+  public void testTranslationPerformance() throws AiException {
     Settings settings = Settings.getInstance();
     settings.setAiEndpointUrl(endpointUrl);
     settings.setAiApiKey(apiKey);

@@ -30,10 +30,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.Globals;
 import org.tinymediamanager.core.PostProcess;
-import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSetMoviePostProcessExecutor;
@@ -41,15 +39,19 @@ import org.tinymediamanager.core.movie.MovieSetPostProcessExecutor;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.threading.TmmTaskManager;
-import org.tinymediamanager.license.License;
 import org.tinymediamanager.thirdparty.KodiRPC;
+import org.tinymediamanager.thirdparty.simkl.Simkl;
 import org.tinymediamanager.thirdparty.trakttv.TraktTv;
 import org.tinymediamanager.ui.AbstractTmmUIModule;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.actions.ClearSimklSyncStateAction;
 import org.tinymediamanager.ui.components.label.TmmMenuLabel;
 import org.tinymediamanager.ui.components.tabbedpane.MainTabbedPane;
 import org.tinymediamanager.ui.dialogs.PostProcessResultDialog;
 import org.tinymediamanager.ui.movies.MovieSelectionModel;
+import org.tinymediamanager.ui.movies.actions.MovieSimklRemoveFromWatchedAction;
+import org.tinymediamanager.ui.movies.actions.MovieSyncSelectedWatchedSimklAction;
+import org.tinymediamanager.ui.movies.actions.MovieSyncSimklAction;
 import org.tinymediamanager.ui.movies.panels.MovieArtworkPanel;
 import org.tinymediamanager.ui.movies.panels.MovieCastPanel;
 import org.tinymediamanager.ui.movies.panels.MovieInformationPanel;
@@ -57,6 +59,10 @@ import org.tinymediamanager.ui.movies.panels.MovieMediaInformationPanel;
 import org.tinymediamanager.ui.movies.panels.MovieTrailerPanel;
 import org.tinymediamanager.ui.moviesets.actions.DebugDumpMovieSetAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetAddAction;
+import org.tinymediamanager.ui.moviesets.actions.MovieSetAiCreateOutlineMovieAction;
+import org.tinymediamanager.ui.moviesets.actions.MovieSetAiCreateTaglineMovieAction;
+import org.tinymediamanager.ui.moviesets.actions.MovieSetAiTranslatePlotAction;
+import org.tinymediamanager.ui.moviesets.actions.MovieSetAiTranslatePlotMovieAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetBulkEditMovieAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetCleanupArtworkAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetEditAction;
@@ -278,12 +284,34 @@ public class MovieSetUIModule extends AbstractTmmUIModule {
     traktMenu.add(createAndRegisterAction(MovieSetSyncSelectedRatingTraktTvAction.class));
     popupMenu.add(traktMenu);
 
+    JMenu simklMenu = new JMenu("Simkl.com");
+    simklMenu.setIcon(IconManager.MENU);
+    simklMenu.add(createAndRegisterAction(MovieSyncSimklAction.class));
+    simklMenu.add(createAndRegisterAction(MovieSyncSelectedWatchedSimklAction.class));
+    simklMenu.addSeparator();
+    simklMenu.add(createAndRegisterAction(MovieSimklRemoveFromWatchedAction.class));
+    simklMenu.addSeparator();
+    simklMenu.add(createAndRegisterAction(ClearSimklSyncStateAction.class));
+    popupMenu.add(simklMenu);
+
     JMenu kodiRPCMenu = KodiRPCMenu.createMenuKodiMenuRightClickMovieSets();
     popupMenu.add(kodiRPCMenu);
 
     JMenu postProcessingMenu = new JMenu(TmmResourceBundle.getString("Settings.postprocessing"));
     postProcessingMenu.setIcon(IconManager.MENU);
     popupMenu.add(postProcessingMenu);
+
+    // AI
+    JMenu aiMenu = new JMenu(TmmResourceBundle.getString("Settings.ai"));
+    aiMenu.setIcon(IconManager.AI_BLUE);
+    aiMenu.add(new TmmMenuLabel(TmmResourceBundle.getString("metatag.movieset")));
+    aiMenu.add(createAndRegisterAction(MovieSetAiTranslatePlotAction.class));
+    aiMenu.addSeparator();
+    aiMenu.add(new TmmMenuLabel(TmmResourceBundle.getString("metatag.movie")));
+    aiMenu.add(createAndRegisterAction(MovieSetAiTranslatePlotMovieAction.class));
+    aiMenu.add(createAndRegisterAction(MovieSetAiCreateOutlineMovieAction.class));
+    aiMenu.add(createAndRegisterAction(MovieSetAiCreateTaglineMovieAction.class));
+    popupMenu.add(aiMenu);
 
     if (Globals.isDebug()) {
       final JMenu debugMenu = new JMenu("Debug");
@@ -296,7 +324,7 @@ public class MovieSetUIModule extends AbstractTmmUIModule {
     popupMenu.addPopupMenuListener(new PopupMenuListener() {
       @Override
       public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-        if (StringUtils.isNotBlank(Settings.getInstance().getKodiHost())) {
+        if (KodiRPC.isEnabled()) {
           kodiRPCMenu.setText(KodiRPC.getInstance().getVersion());
           kodiRPCMenu.setEnabled(true);
         }
@@ -305,11 +333,18 @@ public class MovieSetUIModule extends AbstractTmmUIModule {
           kodiRPCMenu.setEnabled(false);
         }
 
-        if (License.getInstance().isValidLicense() && StringUtils.isNotBlank(TraktTv.getInstance().getAccessToken())) {
+        if (TraktTv.getInstance().isEnabled()) {
           traktMenu.setEnabled(true);
         }
         else {
           traktMenu.setEnabled(false);
+        }
+
+        if (Simkl.getInstance().isEnabled()) {
+          simklMenu.setEnabled(true);
+        }
+        else {
+          simklMenu.setEnabled(false);
         }
 
         // Post-processing

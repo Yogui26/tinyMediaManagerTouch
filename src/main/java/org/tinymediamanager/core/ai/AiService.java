@@ -18,7 +18,6 @@ package org.tinymediamanager.core.ai;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -55,12 +54,12 @@ public class AiService {
   static final String         PROMPT_TAGLINE_USER     = "Generate a tagline in {targetLanguage} for:\nTitle: {title}\nPlot: {plot}\nYear: {year}";
 
   static final String         PROMPT_OUTLINE_SYSTEM   = "You are a professional plot writer for movies and TV shows. "
-      + "Generate a brief, spoiler-free outline (maximum {maxWords} words) for the given media. "
+      + "Generate a brief, spoiler-free outline (maximum {maxWords} words) for the given media in {targetLanguage}. "
       + "An outline is a short description of the storyline without analysis, personal opinion, or actor names. "
       + "Do NOT start with 'This film is about' or 'This is a story about'. " + "Do NOT include the title at the beginning of the outline. "
-      + "Return only the outline text, no explanations. Return the outline in the same language as the given plot!";
+      + "Return only the outline text, no explanations.";
 
-  static final String         PROMPT_OUTLINE_USER     = "Generate an outline for:\nTitle: {title}\nPlot: {plot}";
+  static final String         PROMPT_OUTLINE_USER     = "Generate an outline in {targetLanguage} for:\nTitle: {title}\nPlot: {plot}\nYear: {year}";
 
   // ---------------------------------------------------------------------------
   // Plot translation
@@ -74,49 +73,41 @@ public class AiService {
    * @param targetLanguage
    *          the target language (e.g. "German", "French", "Bavarian")
    * @return the translated plot, or the original plot if translation fails or is disabled
+   * @throws AiException
+   *           if the AI provider cannot be reached or returns an error
    */
-  public String translatePlot(String plot, String targetLanguage) {
+  public String translatePlot(String plot, String targetLanguage) throws AiException {
     if (StringUtils.isBlank(plot)) {
-      return plot;
+      return "";
     }
 
     if (StringUtils.isBlank(targetLanguage)) {
       return plot;
     }
 
-    String languageName = targetLanguage;
+    AiClient client = AiManager.getInstance().getDefaultClient();
 
-    try {
-      AiClient client = AiManager.getInstance().getDefaultClient();
-
-      String cacheKey = AiCache.generateKey(client.getProviderName(), "", buildCacheRequest("translate", plot, languageName));
-      String cached = AiCache.getInstance().get(cacheKey);
-      if (cached != null) {
-        LOGGER.debug("Using cached translation for plot ({})", languageName);
-        return cached;
-      }
-
-      Map<String, String> variables = Map.of("targetLanguage", languageName, "plot", plot);
-
-      List<AiMessage> messages = new ArrayList<>();
-      messages.add(AiMessage.system(substitute(PROMPT_TRANSLATE_SYSTEM, variables)));
-      messages.add(AiMessage.user(substitute(PROMPT_TRANSLATE_USER, variables)));
-
-      AiRequest request = new AiRequest(null, messages);
-      request.setTemperature(0.3);
-      request.setMaxTokens(4000);
-
-      String result = executeWithRetry(client, request, cacheKey, "plot translation to " + languageName);
-      if (StringUtils.isNotBlank(result)) {
-        AiCache.getInstance().put(cacheKey, result);
-        return result;
-      }
+    String cacheKey = AiCache.generateKey(client.getProviderName(), "", buildCacheRequest("translate", plot, targetLanguage));
+    String cached = AiCache.getInstance().get(cacheKey);
+    if (cached != null) {
+      LOGGER.debug("Using cached translation for plot ({})", targetLanguage);
+      return cached;
     }
-    catch (AiException e) {
-      LOGGER.error("Failed to translate plot to {}: {}", languageName, e.getMessage());
-    }
-    catch (Exception e) {
-      LOGGER.error("Unexpected error during plot translation: {}", e.getMessage());
+
+    Map<String, String> variables = Map.of("targetLanguage", targetLanguage, "plot", plot);
+
+    List<AiMessage> messages = new ArrayList<>();
+    messages.add(AiMessage.system(substitute(PROMPT_TRANSLATE_SYSTEM, variables)));
+    messages.add(AiMessage.user(substitute(PROMPT_TRANSLATE_USER, variables)));
+
+    AiRequest request = new AiRequest(null, messages);
+    request.setTemperature(0.3);
+    request.setMaxTokens(4000);
+
+    String result = executeWithRetry(client, request, cacheKey, "plot translation to " + targetLanguage);
+    if (StringUtils.isNotBlank(result)) {
+      AiCache.getInstance().put(cacheKey, result);
+      return result;
     }
 
     return plot;
@@ -140,46 +131,38 @@ public class AiService {
    * @param maxWords
    *          the maximum word count for the generated tagline
    * @return the generated tagline, or the empty string if generation fails
+   * @throws AiException
+   *           if the AI provider cannot be reached or returns an error
    */
-  public String generateTagline(String title, String plot, int year, String targetLanguage, int maxWords) {
-    if (StringUtils.isBlank(title) && StringUtils.isBlank(plot)) {
+  public String generateTagline(String title, String plot, int year, String targetLanguage, int maxWords) throws AiException {
+    if (StringUtils.isAnyBlank(title, plot, targetLanguage)) {
       return "";
     }
 
-    String lang = Objects.toString(targetLanguage, "English");
+    AiClient client = AiManager.getInstance().getDefaultClient();
 
-    try {
-      AiClient client = AiManager.getInstance().getDefaultClient();
-
-      String cacheKey = AiCache.generateKey(client.getProviderName(), "",
-          buildCacheRequest("tagline", title + "|" + plot + "|" + year + "|" + lang, "tagline"));
-      String cached = AiCache.getInstance().get(cacheKey);
-      if (cached != null) {
-        LOGGER.debug("Using cached tagline for '{}'", title);
-        return cached;
-      }
-
-      Map<String, String> variables = Map.of("title", StringUtils.defaultString(title), "plot", StringUtils.defaultString(plot), "year",
-          String.valueOf(year), "targetLanguage", lang, "maxWords", String.valueOf(Math.max(maxWords, 10)));
-
-      List<AiMessage> messages = new ArrayList<>();
-      messages.add(AiMessage.system(substitute(PROMPT_TAGLINE_SYSTEM, variables)));
-      messages.add(AiMessage.user(substitute(PROMPT_TAGLINE_USER, variables)));
-
-      AiRequest request = new AiRequest(null, messages);
-      request.setTemperature(0.8);
-
-      String result = executeWithRetry(client, request, cacheKey, "tagline generation for '" + title + "'");
-      if (StringUtils.isNotBlank(result)) {
-        AiCache.getInstance().put(cacheKey, result);
-        return result;
-      }
+    String cacheKey = AiCache.generateKey(client.getProviderName(), "",
+        buildCacheRequest("tagline", title + "|" + plot + "|" + year + "|" + targetLanguage, "tagline"));
+    String cached = AiCache.getInstance().get(cacheKey);
+    if (cached != null) {
+      LOGGER.debug("Using cached tagline for '{}'", title);
+      return cached;
     }
-    catch (AiException e) {
-      LOGGER.error("Failed to generate tagline for '{}': {}", title, e.getMessage());
-    }
-    catch (Exception e) {
-      LOGGER.error("Unexpected error during tagline generation: {}", e.getMessage());
+
+    Map<String, String> variables = Map.of("title", StringUtils.defaultString(title), "plot", StringUtils.defaultString(plot), "year",
+        String.valueOf(year), "targetLanguage", targetLanguage, "maxWords", String.valueOf(Math.max(maxWords, 10)));
+
+    List<AiMessage> messages = new ArrayList<>();
+    messages.add(AiMessage.system(substitute(PROMPT_TAGLINE_SYSTEM, variables)));
+    messages.add(AiMessage.user(substitute(PROMPT_TAGLINE_USER, variables)));
+
+    AiRequest request = new AiRequest(null, messages);
+    request.setTemperature(0.8);
+
+    String result = executeWithRetry(client, request, cacheKey, "tagline generation for '" + title + "'");
+    if (StringUtils.isNotBlank(result)) {
+      AiCache.getInstance().put(cacheKey, result);
+      return result;
     }
 
     return "";
@@ -201,44 +184,44 @@ public class AiService {
    *          the full plot/overview text
    * @param maxWords
    *          the maximum word count for the generated outline
+   * @param targetLanguage
+   *          the target language for the outline (e.g. "German", "English")
+   * @param year
+   *          the release year (may be 0)
    * @return the generated outline, or the empty string if generation fails
+   * @throws AiException
+   *           if the AI provider cannot be reached or returns an error
    */
-  public String generateOutline(String title, String plot, int maxWords) {
+  public String generateOutline(String title, String plot, int maxWords, String targetLanguage, int year) throws AiException {
     if (StringUtils.isBlank(title) && StringUtils.isBlank(plot)) {
       return "";
     }
 
-    try {
-      AiClient client = AiManager.getInstance().getDefaultClient();
+    AiClient client = AiManager.getInstance().getDefaultClient();
 
-      String cacheKey = AiCache.generateKey(client.getProviderName(), "", buildCacheRequest("outline", title + "|" + plot, "outline"));
-      String cached = AiCache.getInstance().get(cacheKey);
-      if (cached != null) {
-        LOGGER.debug("Using cached outline for '{}'", title);
-        return cached;
-      }
-
-      Map<String, String> variables = Map.of("title", StringUtils.defaultString(title), "plot", StringUtils.defaultString(plot), "maxWords",
-          String.valueOf(Math.max(maxWords, 10)));
-
-      List<AiMessage> messages = new ArrayList<>();
-      messages.add(AiMessage.system(substitute(PROMPT_OUTLINE_SYSTEM, variables)));
-      messages.add(AiMessage.user(substitute(PROMPT_OUTLINE_USER, variables)));
-
-      AiRequest request = new AiRequest(null, messages);
-      request.setTemperature(0.5);
-
-      String result = executeWithRetry(client, request, cacheKey, "outline generation for '" + title + "'");
-      if (StringUtils.isNotBlank(result)) {
-        AiCache.getInstance().put(cacheKey, result);
-        return result;
-      }
+    String languageName = StringUtils.defaultIfBlank(targetLanguage, "English");
+    String cacheKey = AiCache.generateKey(client.getProviderName(), "",
+        buildCacheRequest("outline", title + "|" + plot + "|" + year + "|" + languageName, "outline"));
+    String cached = AiCache.getInstance().get(cacheKey);
+    if (cached != null) {
+      LOGGER.debug("Using cached outline for '{}' ({})", title, languageName);
+      return cached;
     }
-    catch (AiException e) {
-      LOGGER.error("Failed to generate outline for '{}': {}", title, e.getMessage());
-    }
-    catch (Exception e) {
-      LOGGER.error("Unexpected error during outline generation: {}", e.getMessage());
+
+    Map<String, String> variables = Map.of("title", StringUtils.defaultString(title), "plot", StringUtils.defaultString(plot), "maxWords",
+        String.valueOf(Math.max(maxWords, 10)), "targetLanguage", languageName, "year", String.valueOf(year));
+
+    List<AiMessage> messages = new ArrayList<>();
+    messages.add(AiMessage.system(substitute(PROMPT_OUTLINE_SYSTEM, variables)));
+    messages.add(AiMessage.user(substitute(PROMPT_OUTLINE_USER, variables)));
+
+    AiRequest request = new AiRequest(null, messages);
+    request.setTemperature(0.5);
+
+    String result = executeWithRetry(client, request, cacheKey, "outline generation for '" + title + "' in " + languageName);
+    if (StringUtils.isNotBlank(result)) {
+      AiCache.getInstance().put(cacheKey, result);
+      return result;
     }
 
     return "";
