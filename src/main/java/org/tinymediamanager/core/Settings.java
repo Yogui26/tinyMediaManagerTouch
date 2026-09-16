@@ -81,6 +81,7 @@ public final class Settings extends AbstractSettings {
   private final List<String>                               customAspectRatios           = ObservableCollections.observableList(new ArrayList<>());
 
   private String                                           version                      = "";
+  private int                                              settingsVersion              = 0;
 
   private String                                           proxyHost;
   private String                                           proxyPort;
@@ -88,7 +89,11 @@ public final class Settings extends AbstractSettings {
   private String                                           proxyPassword;
   private int                                              maximumDownloadThreads       = 2;
 
+  // external services
   private DateField                                        traktDateField               = DateField.DATE_ADDED;
+
+  private boolean                                          traktTvEnabled               = false;
+  private boolean                                          simklComEnabled              = false;
 
   private String                                           kodiHost                     = "";
   private int                                              kodiHttpPort                 = 8080;
@@ -349,6 +354,19 @@ public final class Settings extends AbstractSettings {
    */
   public void setVersion(String version) {
     this.version = version;
+  }
+
+  /**
+   * Get the current settings version (incremented on every upgrade of the settings file)
+   * 
+   * @return the current settings version
+   */
+  public int getSettingsVersion() {
+    return settingsVersion;
+  }
+
+  public void setSettingsVersion(int settingsVersion) {
+    this.settingsVersion = settingsVersion;
   }
 
   /**
@@ -917,6 +935,26 @@ public final class Settings extends AbstractSettings {
     DateField oldValue = this.traktDateField;
     this.traktDateField = newValue;
     firePropertyChange("traktDateField", oldValue, newValue);
+  }
+
+  public boolean isTraktTvEnabled() {
+    return traktTvEnabled;
+  }
+
+  public void setTraktTvEnabled(boolean newValue) {
+    boolean oldValue = this.traktTvEnabled;
+    this.traktTvEnabled = newValue;
+    firePropertyChange("traktTvEnabled", oldValue, newValue);
+  }
+
+  public boolean isSimklComEnabled() {
+    return simklComEnabled;
+  }
+
+  public void setSimklComEnabled(boolean newValue) {
+    boolean oldValue = this.simklComEnabled;
+    this.simklComEnabled = newValue;
+    firePropertyChange("simklComEnabled", oldValue, newValue);
   }
 
   public String getKodiHost() {
