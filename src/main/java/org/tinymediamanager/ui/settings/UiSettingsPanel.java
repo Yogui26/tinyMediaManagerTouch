@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -36,6 +37,7 @@ import javax.swing.JTextArea;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.plaf.FontUIResource;
 
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
@@ -56,6 +58,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
+import org.tinymediamanager.ui.TmmUIScaling;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.combobox.LocaleComboBox;
 import org.tinymediamanager.ui.components.label.LinkLabel;
@@ -100,6 +103,7 @@ class UiSettingsPanel extends JPanel {
   private JComboBox                  cbDateFormat;
   private JComboBox                  cbTimeFormat;
   private JLabel                     lblTimeFormatT;
+  private JComboBox<Integer>         cbUiScale;
 
   UiSettingsPanel() {
     LocaleComboBox actualLocale = null;
@@ -139,6 +143,7 @@ class UiSettingsPanel extends JPanel {
     if (index < 0) {
       cbFontFamily.setSelectedIndex(0);
     }
+    cbUiScale.setSelectedItem(settings.getUiScalePercent());
     cbFontSize.setSelectedItem(settings.getFontSize());
     index = cbFontSize.getSelectedIndex();
     if (index < 0) {
@@ -167,6 +172,7 @@ class UiSettingsPanel extends JPanel {
     cbFontFamily.addActionListener(actionListener);
     cbFontSize.addActionListener(actionListener);
     cbTheme.addActionListener(actionListener);
+    cbUiScale.addActionListener(actionListener);
     chckbxAutomaticUpdates.addActionListener(actionListener);
 
     settings.addPropertyChangeListener(evt -> {
@@ -247,7 +253,7 @@ class UiSettingsPanel extends JPanel {
     setLayout(new MigLayout("hidemode 1", "[grow]", "[][15lp!][][15lp!][]"));
     {
       JPanel panelUiSettings = new JPanel();
-      panelUiSettings.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][50lp][400lp]", "[][][][][5lp!][][][5lp!][][][]"));
+      panelUiSettings.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][50lp][400lp]", "[][][][][5lp!][][][5lp!][][][][5lp!][][]"));
 
       JLabel lblUiSettingsT = new TmmLabel(TmmResourceBundle.getString("Settings.ui"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelUiSettings, lblUiSettingsT, true);
@@ -289,6 +295,15 @@ class UiSettingsPanel extends JPanel {
 
         JTextArea tpFontHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.fonts.hint"));
         panelUiSettings.add(tpFontHint, "cell 2 10 2 1,growx");
+
+        JLabel lblUiScale = new JLabel(TmmResourceBundle.getString("Settings.uiscale"));
+        panelUiSettings.add(lblUiScale, "cell 1 12 2 1");
+        cbUiScale = new JComboBox<>(Settings.UI_SCALE_PERCENTAGES.toArray(new Integer[0]));
+        cbUiScale.setRenderer((list, value, index, selected, focus) -> new DefaultListCellRenderer()
+            .getListCellRendererComponent(list, value + "%", index, selected, focus));
+        lblUiScale.setLabelFor(cbUiScale);
+        panelUiSettings.add(cbUiScale, "cell 3 12");
+        panelUiSettings.add(new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.uiscale.hint")), "cell 2 13 2 1,growx");
       }
     }
 
@@ -414,6 +429,7 @@ class UiSettingsPanel extends JPanel {
       settings.setTheme(theme);
       try {
         TmmUIHelper.setTheme();
+        TmmUIScaling.applyFont(new FontUIResource(settings.getFontFamily(), Font.PLAIN, settings.getFontSize()));
         TmmUIHelper.updateUI();
       }
       catch (Exception e) {
@@ -429,11 +445,12 @@ class UiSettingsPanel extends JPanel {
       settings.setFontSize(fontSize);
 
       Font font = UIManager.getFont("defaultFont");
-      Font newFont = new Font(fontFamily, font.getStyle(), fontSize);
-      UIManager.put("defaultFont", newFont);
+      TmmUIScaling.applyFont(new FontUIResource(fontFamily, font.getStyle(), fontSize));
 
       TmmUIHelper.updateUI();
     }
+
+    settings.setUiScalePercent((Integer) cbUiScale.getSelectedItem());
 
     // image chooser folder
     settings.setImageChooserUseEntityFolder(rbImageChooserEntityFolder.isSelected());

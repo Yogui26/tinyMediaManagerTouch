@@ -143,7 +143,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
     // need this panel for layouting
     JPanel dataPanel = new JPanel();
     dataPanel.setLayout(new CardLayout());
-    detailPanel.add(dataPanel, "cell 0 0, grow");
+    detailPanel.add(dataPanel, "cell 0 0, grow, wmin 0, hmin 0");
 
     // tabbed pane containing the movie data
     JTabbedPane tabbedPane = new MainTabbedPane() {

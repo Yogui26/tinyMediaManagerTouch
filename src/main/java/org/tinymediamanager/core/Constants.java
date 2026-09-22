@@ -25,6 +25,9 @@ public final class Constants {
 
   public static final String ACTORS                 = "actors";
   public static final String ACTORS_AS_STRING       = "actorsAsString";
+  /** Persisted application zoom percentage. */
+  public static final String UI_SCALE_PERCENT = "uiScalePercent";
+
   public static final String ADDED_EPISODE          = "addedEpisode";
   public static final String ADDED_MOVIE            = "addedMovie";
   public static final String ADDED_MOVIE_SET        = "addedMovieSet";

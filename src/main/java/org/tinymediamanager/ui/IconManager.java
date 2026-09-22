@@ -36,6 +36,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.ui.components.toolbar.ToolbarMenu;
 import org.tinymediamanager.ui.images.TmmAwesomeIcon;
+import org.tinymediamanager.ui.images.TmmScaledIcon;
 import org.tinymediamanager.ui.images.TmmSvgIcon;
 import org.tinymediamanager.ui.images.TmmTextIcon;
 
@@ -393,7 +394,7 @@ public class IconManager {
       if (!autoSize) {
         icon.setAutosize(SVGIcon.AUTOSIZE_NONE);
       }
-      return icon;
+      return new TmmScaledIcon(icon);
     }
     catch (Exception e) {
       return EMPTY_IMAGE;

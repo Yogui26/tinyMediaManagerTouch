@@ -170,21 +170,21 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     if (color != null) {
       rootPanel.setBackground(color);
     }
-    rootPanel.setLayout(new MigLayout("insets 0", "[]0lp[900lp:n,grow]", "[300lp:400lp,grow,shrink 0]"));
+    rootPanel.setLayout(new MigLayout("insets 0", "[]0lp[0:900lp,grow]", "[0:400lp,grow]"));
 
     // to draw the shadow beneath the toolbar, encapsulate the panel
     JLayer<JComponent> rootLayer = new JLayer<>(rootPanel, new ShadowLayerUI()); // $hide$ - do not parse this in wbpro
     getContentPane().add(rootLayer, BorderLayout.CENTER);
 
     menuPanel = new MainMenuPanel();
-    rootPanel.add(menuPanel, "cell 0 0, growy");
+    rootPanel.add(menuPanel, "cell 0 0, growy, hmin 0");
 
     JSplitPane splitPane = new JSplitPane();
     splitPane.setContinuousLayout(true);
     splitPane.setResizeWeight(0.5);
     splitPane.setOneTouchExpandable(true);
     splitPane.setName("mainWindow.splitPane");
-    rootPanel.add(splitPane, "cell 1 0, grow");
+    rootPanel.add(splitPane, "cell 1 0, grow, wmin 0, hmin 0");
 
     masterPanel = new JPanel();
     masterPanel.setLayout(new CardLayout(0, 0));

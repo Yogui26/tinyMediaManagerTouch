@@ -19,7 +19,9 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
-import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HexFormat;
@@ -37,13 +39,15 @@ import javax.swing.event.HyperlinkEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUIHelper;
+import org.tinymediamanager.ui.TmmUIScaling;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
 import org.tinymediamanager.ui.components.label.LinkLabel;
+
+import com.formdev.flatlaf.util.UIScale;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -59,17 +63,16 @@ public class WhatsNewDialog extends TmmDialog {
     // includes the dialog's name to force the dialog to be centered above the main window
     super(MainWindow.getInstance(), TmmResourceBundle.getString("whatsnew.title"), "whatsnewdialog"); // includes the dialog's name in the settings
 
-    setMinimumSize(new Dimension(800, 600));
     {
       JPanel panelContent = new JPanel();
       getContentPane().add(panelContent, BorderLayout.CENTER);
-      panelContent.setLayout(new MigLayout("", "[700lp,grow]", "[400lp,grow][]"));
+      panelContent.setLayout(new MigLayout("", "[0:700lp,grow]", "[0:400lp,grow][]"));
 
       JScrollPane scrollPane = new NoBorderScrollPane();
-      panelContent.add(scrollPane, "cell 0 0,grow");
+      panelContent.add(scrollPane, "cell 0 0,grow,wmin 0,hmin 0");
 
       JTextPane textPane = new JTextPane();
-      textPane.setFont(new Font(Font.MONOSPACED, Font.PLAIN, Settings.getInstance().getFontSize() + 1));
+      TmmUIScaling.applyChangelogFont(textPane);
       scrollPane.setViewportView(textPane);
 
       textPane.setContentType("text/html");
@@ -110,9 +113,13 @@ public class WhatsNewDialog extends TmmDialog {
 
   @Override
   public Dimension getPreferredSize() {
-    Dimension superPref = super.getPreferredSize();
-    return new Dimension((int) (700 > superPref.getWidth() ? superPref.getWidth() : 700),
-        (int) (500 > superPref.getHeight() ? superPref.getHeight() : 500));
+    // Prefer a scaled window, but keep the Close button on screen at large zoom levels.
+    Rectangle screen = getGraphicsConfiguration().getBounds();
+    Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+    // Leave room for native decorations, whose insets may be unknown until the window is shown.
+    int availableWidth = (int) ((screen.width - insets.left - insets.right) * 0.9);
+    int availableHeight = (int) ((screen.height - insets.top - insets.bottom) * 0.9);
+    return new Dimension(Math.min(UIScale.scale(800), availableWidth), Math.min(UIScale.scale(600), availableHeight));
   }
 
   private String prepareTextAsHtml(String originalText) {

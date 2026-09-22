@@ -52,6 +52,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * @author Manuel Laggner
  */
 public final class Settings extends AbstractSettings {
+  /** Supported application zoom percentages. */
+  public static final List<Integer> UI_SCALE_PERCENTAGES = List.of(100, 125, 150, 175, 200, 250, 300);
+
   private static final Logger                              LOGGER                       = LoggerFactory.getLogger(Settings.class);
 
   /**
@@ -116,6 +119,7 @@ public final class Settings extends AbstractSettings {
   private String                                           ytDlpParams                  = "";
 
   private String                                           theme                        = "Light";
+  private int                                              uiScalePercent               = 100;
   private int                                              fontSize                     = 12;
   private String                                           fontFamily                   = "Dialog";
 
@@ -1106,6 +1110,23 @@ public final class Settings extends AbstractSettings {
     String oldValue = this.theme;
     this.theme = newValue;
     firePropertyChange("theme", oldValue, newValue);
+  }
+
+  /**
+   * @return the application zoom percentage, independent of desktop scaling
+   */
+  public int getUiScalePercent() {
+    return UI_SCALE_PERCENTAGES.contains(uiScalePercent) ? uiScalePercent : 100;
+  }
+
+  /**
+   * @param newValue
+   *          the zoom percentage to apply after restarting; unsupported values reset to 100
+   */
+  public void setUiScalePercent(int newValue) {
+    int oldValue = getUiScalePercent();
+    uiScalePercent = UI_SCALE_PERCENTAGES.contains(newValue) ? newValue : 100;
+    firePropertyChange(Constants.UI_SCALE_PERCENT, oldValue, uiScalePercent);
   }
 
   public void setFontSize(int newValue) {

@@ -70,6 +70,7 @@ import org.tinymediamanager.updater.UpdateCheck;
 import org.tinymediamanager.updater.UpdaterFactory;
 
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.util.UIScale;
 import com.formdev.flatlaf.util.SystemFileChooser;
 
 /**
@@ -104,7 +105,8 @@ public class TmmUIHelper {
       Font font = Font.decode(Settings.getInstance().getFontFamily());
       FontUIResource savedFont = new FontUIResource(font.getFamily(), font.getStyle(), Settings.getInstance().getFontSize());
 
-      UIManager.put("defaultFont", savedFont);
+      TmmUIScaling.applyFont(savedFont);
+      UIScale.setZoomFactor(Settings.getInstance().getUiScalePercent() / 100f);
     }
     catch (Exception e) {
       LOGGER.warn("Could not set default font '{}' - '{}'", Settings.getInstance().getFontFamily(), e.getMessage());
@@ -627,14 +629,16 @@ public class TmmUIHelper {
    * Update UI of all application windows immediately. Invoke after changing anything in the LaF.
    */
   public static void updateUI() {
+    // update icons before layout delegates calculate preferred sizes
+    IconManager.updateIcons();
+
     // update all visible components
     for (Window w : Window.getWindows()) {
       SwingUtilities.updateComponentTreeUI(w);
       w.invalidate();
+      w.validate();
+      w.repaint();
     }
-
-    // update icons
-    IconManager.updateIcons();
   }
 
   /**
