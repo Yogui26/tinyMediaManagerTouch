@@ -17,7 +17,10 @@ package org.tinymediamanager.core.ai.openai;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -57,6 +60,7 @@ public class OpenAiChatClient implements AiClient {
 
   private final String           name;
   private final String           apiUrl;
+  private final String           baseUrl;
   private final String           apiKey;
   private final String           model;
   private final int              maxTokens;
@@ -83,18 +87,77 @@ public class OpenAiChatClient implements AiClient {
         TmmHttpClient.newBuilder().connectTimeout(60, TimeUnit.SECONDS).writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build());
   }
 
+  /**
+   * Creates a new OpenAI-compatible chat client with base URL and chat endpoint.
+   *
+   * @param name
+   *          the provider name
+   * @param baseUrl
+   *          the base API URL (e.g. https://api.openai.com/v1)
+   * @param chatEndpoint
+   *          the chat endpoint (e.g. /chat/completions)
+   * @param apiKey
+   *          the API key
+   * @param model
+   *          the model name (e.g. gpt-4o-mini)
+   * @param maxTokens
+   *          the maximum tokens for responses
+   * @param temperature
+   *          the temperature (0.0 - 2.0)
+   */
+  public OpenAiChatClient(String name, String baseUrl, String chatEndpoint, String apiKey, String model, int maxTokens, double temperature) {
+    this(name, baseUrl, chatEndpoint, apiKey, model, maxTokens, temperature,
+        TmmHttpClient.newBuilder().connectTimeout(60, TimeUnit.SECONDS).writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build());
+  }
+
   // package-private for testing - allows injecting a simpler HTTP client without the 429 retry interceptor
   public OpenAiChatClient(String name, String apiUrl, String apiKey, String model, int maxTokens, double temperature, OkHttpClient httpClient) {
     this.name = name;
     this.apiUrl = apiUrl;
+    this.baseUrl = extractBaseUrl(apiUrl);
     this.apiKey = apiKey;
     this.model = model;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
-
-    this.objectMapper = JsonMapper.builder().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
-
     this.httpClient = httpClient;
+    this.objectMapper = JsonMapper.builder().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
+  }
+
+  // package-private for testing with base URL + endpoint
+  public OpenAiChatClient(String name, String baseUrl, String chatEndpoint, String apiKey, String model, int maxTokens, double temperature,
+      OkHttpClient httpClient) {
+    this.name = name;
+    this.apiUrl = buildFullUrl(baseUrl, chatEndpoint);
+    this.baseUrl = baseUrl;
+    this.apiKey = apiKey;
+    this.model = model;
+    this.maxTokens = maxTokens;
+    this.temperature = temperature;
+    this.httpClient = httpClient;
+    this.objectMapper = JsonMapper.builder().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
+  }
+
+  private static String extractBaseUrl(String apiUrl) {
+    if (apiUrl == null || apiUrl.isEmpty()) {
+      return apiUrl;
+    }
+    int lastPathIndex = apiUrl.lastIndexOf('/');
+    if (lastPathIndex > 0) {
+      return apiUrl.substring(0, lastPathIndex);
+    }
+    return apiUrl;
+  }
+
+  private static String buildFullUrl(String baseUrl, String endpoint) {
+    if (baseUrl == null || baseUrl.isEmpty()) {
+      return endpoint;
+    }
+    if (endpoint == null || endpoint.isEmpty()) {
+      return baseUrl;
+    }
+    String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+    String end = endpoint.startsWith("/") ? endpoint.substring(1) : endpoint;
+    return base + "/" + end;
   }
 
   @Override
@@ -222,5 +285,48 @@ public class OpenAiChatClient implements AiClient {
   @Override
   public String toString() {
     return "OpenAiChatClient{" + "name='" + name + '\'' + ", model='" + model + '\'' + '}';
+  }
+
+  @Override
+  public List<String> listModels() throws AiException {
+    String modelsUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) + "/models" : baseUrl + "/models";
+
+    Request httpRequest = new Request.Builder().url(modelsUrl)
+        .addHeader("Authorization", "Bearer " + apiKey)
+        .addHeader("Content-Type", "application/json")
+        .get()
+        .build();
+
+    try (Response response = httpClient.newCall(httpRequest).execute()) {
+      int statusCode = response.code();
+      String responseBody = response.body() != null ? response.body().string() : "";
+
+      if (statusCode == 401 || statusCode == 403) {
+        throw new Authentication("Authentication failed (HTTP " + statusCode + "): " + extractErrorMessage(responseBody));
+      }
+      if (statusCode >= 400) {
+        throw new AiException.Api(statusCode, "Failed to fetch models (HTTP " + statusCode + "): " + extractErrorMessage(responseBody));
+      }
+
+      OpenAiModelsResponse modelsResponse;
+      try {
+        modelsResponse = objectMapper.readValue(responseBody, OpenAiModelsResponse.class);
+      }
+      catch (Exception e) {
+        throw new AiException("Failed to parse models response", e);
+      }
+
+      if (modelsResponse.getData() != null) {
+        return modelsResponse.getData().stream().map(m -> m.getId()).collect(Collectors.toList());
+      }
+
+      return new ArrayList<>();
+    }
+    catch (AiException e) {
+      throw e;
+    }
+    catch (IOException e) {
+      throw new AiException.Network("Network error: " + e.getMessage(), e);
+    }
   }
 }

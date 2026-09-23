@@ -107,7 +107,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
     AiService service = new AiService();
 
     String plot = "A young wizard discovers his magical heritage and battles the dark lord who killed his parents.";
-    String result = service.translatePlot(plot, "German");
+    String result = service.translatePlot(plot, "German", "");
 
     assertThat(result).isNotBlank();
     assertThat(result).doesNotContain("young wizard discovers his magical heritage");
@@ -126,7 +126,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
     AiService service = new AiService();
 
     String plot = "A young wizard discovers his magical heritage.";
-    String result = service.translatePlot(plot, "French");
+    String result = service.translatePlot(plot, "French", "");
 
     assertThat(result).isNotBlank();
     assertThat(result).doesNotContain("young wizard discovers");
@@ -207,7 +207,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
     // Warmup run (tracked — fast time indicates a cached result)
     LOGGER.info("Performing warmup run for performance measurement...");
     long warmupStart = System.nanoTime();
-    String warmup = service.translatePlot(longPlot, "German");
+    String warmup = service.translatePlot(longPlot, "German", "");
     long warmupMs = (System.nanoTime() - warmupStart) / 1_000_000;
     assertThat(warmup).isNotBlank();
     LOGGER.info("Warmup complete: {} ms ({} chars){}", warmupMs, warmup.length(), warmupMs < 500 ? " — likely cached" : "");
@@ -220,7 +220,7 @@ public class ITAiClientIntegrationTest extends BasicITest {
 
     for (int i = 1; i <= runs; i++) {
       long start = System.nanoTime();
-      String result = service.translatePlot(longPlot, "German");
+      String result = service.translatePlot(longPlot, "German", "");
       long elapsedMs = (System.nanoTime() - start) / 1_000_000;
       totalMs += elapsedMs;
       minMs = Math.min(minMs, elapsedMs);

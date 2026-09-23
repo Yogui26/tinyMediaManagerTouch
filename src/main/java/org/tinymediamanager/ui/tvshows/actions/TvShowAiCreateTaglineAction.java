@@ -73,6 +73,7 @@ public class TvShowAiCreateTaglineAction extends TmmAction {
       protected void onClose() {
         final MediaLanguages targetLanguage = getSelectedLanguage();
         final int maxWords = getMaxWords();
+        final String model = getModel();
         final String languageName = targetLanguage.getTitle();
 
         TmmTaskManager.getInstance()
@@ -84,7 +85,7 @@ public class TvShowAiCreateTaglineAction extends TmmAction {
 
                 for (TvShow tvShow : selectedTvShows) {
                   try {
-                    String tagline = aiService.generateTagline(tvShow.getTitle(), tvShow.getPlot(), tvShow.getYear(), languageName, maxWords);
+                    String tagline = aiService.generateTagline(tvShow.getTitle(), tvShow.getPlot(), tvShow.getYear(), languageName, maxWords, model);
                     if (StringUtils.isNotBlank(tagline)) {
                       tvShow.setTagline(tagline);
                       tvShow.saveToDb();

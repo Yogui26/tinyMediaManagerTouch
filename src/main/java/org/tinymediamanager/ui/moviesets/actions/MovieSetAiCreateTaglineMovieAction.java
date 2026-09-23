@@ -73,6 +73,7 @@ public class MovieSetAiCreateTaglineMovieAction extends TmmAction {
       protected void onClose() {
         final MediaLanguages targetLanguage = getSelectedLanguage();
         final int maxWords = getMaxWords();
+        final String model = getModel();
         final String languageName = targetLanguage.getTitle();
 
         TmmTaskManager.getInstance()
@@ -84,7 +85,7 @@ public class MovieSetAiCreateTaglineMovieAction extends TmmAction {
 
                 for (Movie movie : selectedMovies) {
                   try {
-                    String tagline = aiService.generateTagline(movie.getTitle(), movie.getPlot(), movie.getYear(), languageName, maxWords);
+                    String tagline = aiService.generateTagline(movie.getTitle(), movie.getPlot(), movie.getYear(), languageName, maxWords, model);
                     if (StringUtils.isNotBlank(tagline)) {
                       movie.setTagline(tagline);
                       movie.saveToDb();

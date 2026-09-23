@@ -16,6 +16,7 @@
 package org.tinymediamanager.core.ai;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * The interface {@link AiClient} defines the contract for calling an OpenAI-compatible chat completions API.
@@ -63,4 +64,13 @@ public interface AiClient {
    * @return the provider name
    */
   String getProviderName();
+
+  /**
+   * Fetches the list of available models from the AI provider.
+   *
+   * @return list of model IDs
+   * @throws AiException
+   *           if fetching models fails
+   */
+  List<String> listModels() throws AiException;
 }

@@ -120,7 +120,7 @@ public class AiServiceTest {
 
   @Test
   public void testBlankTitleAndPlotReturnsEmpty() throws AiException {
-    String result = service.generateTagline("", "", 0, "German", 10);
+    String result = service.generateTagline("", "", 0, "German", 10, "");
     assertThat(result).isEqualTo("");
   }
 
@@ -129,7 +129,7 @@ public class AiServiceTest {
     server.enqueue(new MockResponse().setResponseCode(200)
         .setBody("{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Just do it.\"},\"finish_reason\":\"stop\"}]}"));
 
-    String result = service.generateTagline("Test Movie", "A movie about testing.", 2024, "English", 5);
+    String result = service.generateTagline("Test Movie", "A movie about testing.", 2024, "English", 5, "");
     assertThat(result).isEqualTo("Just do it.");
   }
 
@@ -137,7 +137,7 @@ public class AiServiceTest {
   public void testTaglineApiErrorThrowsException() {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":{\"message\":\"Bad request\"}}"));
 
-    assertThatThrownBy(() -> service.generateTagline("Test", "A plot.", 2024, "English", 5)).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.generateTagline("Test", "A plot.", 2024, "English", 5, "")).isInstanceOf(AiException.class);
   }
 
   @Test
@@ -146,7 +146,7 @@ public class AiServiceTest {
       server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
     }
 
-    assertThatThrownBy(() -> service.generateTagline("Test", "A plot.", 2024, "English", 5)).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.generateTagline("Test", "A plot.", 2024, "English", 5, "")).isInstanceOf(AiException.class);
   }
 
   // =======================================================================
@@ -155,7 +155,7 @@ public class AiServiceTest {
 
   @Test
   public void testBlankTitleAndPlotReturnsEmptyOutline() throws AiException {
-    String result = service.generateOutline("", "", 50, "English", 2024);
+    String result = service.generateOutline("", "", 50, "English", 2024, "");
     assertThat(result).isEqualTo("");
   }
 
@@ -165,7 +165,7 @@ public class AiServiceTest {
         .setBody(
             "{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"A hero saves the day.\"},\"finish_reason\":\"stop\"}]}"));
 
-    String result = service.generateOutline("Test Movie", "A movie about testing.", 50, "English", 2024);
+    String result = service.generateOutline("Test Movie", "A movie about testing.", 50, "English", 2024, "");
     assertThat(result).isEqualTo("A hero saves the day.");
   }
 
@@ -173,7 +173,7 @@ public class AiServiceTest {
   public void testOutlineApiErrorThrowsException() {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":{\"message\":\"Bad request\"}}"));
 
-    assertThatThrownBy(() -> service.generateOutline("Test", "A plot.", 50, "English", 2024)).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.generateOutline("Test", "A plot.", 50, "English", 2024, "")).isInstanceOf(AiException.class);
   }
 
   @Test
@@ -182,6 +182,6 @@ public class AiServiceTest {
       server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
     }
 
-    assertThatThrownBy(() -> service.generateOutline("Test", "A plot.", 50, "English", 2024)).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.generateOutline("Test", "A plot.", 50, "English", 2024, "")).isInstanceOf(AiException.class);
   }
 }

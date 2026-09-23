@@ -72,6 +72,7 @@ public class MovieSetAiTranslatePlotAction extends TmmAction {
       @Override
       protected void onClose() {
         final MediaLanguages targetLanguage = getSelectedLanguage();
+        final String model = getModel();
         final String languageName = targetLanguage.getTitle();
 
         TmmTaskManager.getInstance()
@@ -84,7 +85,7 @@ public class MovieSetAiTranslatePlotAction extends TmmAction {
 
                     for (MovieSet movieSet : selectedMovieSets) {
                       try {
-                        String translatedPlot = aiService.translatePlot(movieSet.getPlot(), languageName);
+                        String translatedPlot = aiService.translatePlot(movieSet.getPlot(), languageName, model);
                         if (StringUtils.isNotBlank(translatedPlot)) {
                           movieSet.setPlot(translatedPlot);
                           movieSet.saveToDb();

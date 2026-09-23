@@ -72,6 +72,7 @@ public class TvShowEpisodeAiTranslatePlotAction extends TmmAction {
       @Override
       protected void onClose() {
         final MediaLanguages targetLanguage = getSelectedLanguage();
+        final String model = getModel();
         final String languageName = targetLanguage.getTitle();
 
         TmmTaskManager.getInstance()
@@ -83,7 +84,7 @@ public class TvShowEpisodeAiTranslatePlotAction extends TmmAction {
 
                 for (TvShowEpisode episode : selectedEpisodes) {
                   try {
-                    String translatedPlot = aiService.translatePlot(episode.getPlot(), languageName);
+                    String translatedPlot = aiService.translatePlot(episode.getPlot(), languageName, model);
                     if (StringUtils.isNotBlank(translatedPlot)) {
                       episode.setPlot(translatedPlot);
                       episode.saveToDb();

@@ -73,6 +73,7 @@ public class MovieAiCreateOutlineAction extends TmmAction {
       protected void onClose() {
         final MediaLanguages targetLanguage = getSelectedLanguage();
         final int maxWords = getMaxWords();
+        final String model = getModel();
         final String languageName = targetLanguage.getTitle();
 
         TmmTaskManager.getInstance()
@@ -84,7 +85,7 @@ public class MovieAiCreateOutlineAction extends TmmAction {
 
                 for (Movie movie : selectedMovies) {
                   try {
-                    String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(), maxWords, languageName, movie.getYear());
+                    String outline = aiService.generateOutline(movie.getTitle(), movie.getPlot(), maxWords, languageName, movie.getYear(), model);
                     if (StringUtils.isNotBlank(outline)) {
                       movie.setOutline(outline);
                       movie.saveToDb();

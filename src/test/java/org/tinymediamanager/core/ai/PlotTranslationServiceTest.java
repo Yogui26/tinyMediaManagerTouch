@@ -88,14 +88,14 @@ public class PlotTranslationServiceTest {
 
   @Test
   public void testBlankPlotReturnsOriginal() throws AiException {
-    String result = service.translatePlot("", "German");
+    String result = service.translatePlot("", "German", "");
     assertThat(result).isEqualTo("");
   }
 
   @Test
   public void testNullLanguageReturnsOriginal() throws AiException {
     String plot = "Some plot";
-    String result = service.translatePlot(plot, null);
+    String result = service.translatePlot(plot, null, "");
     assertThat(result).isEqualTo(plot);
   }
 
@@ -111,7 +111,7 @@ public class PlotTranslationServiceTest {
             + "        \"role\": \"assistant\",\n" + "        \"content\": \"Dies ist ein übersetzter Handlungstext.\"\n" + "      },\n"
             + "      \"finish_reason\": \"stop\"\n" + "    }\n" + "  ]\n" + "}"));
 
-    String result = service.translatePlot("This is a plot text.", "German");
+    String result = service.translatePlot("This is a plot text.", "German", "");
     assertThat(result).isEqualTo("Dies ist ein übersetzter Handlungstext.");
   }
 
@@ -123,7 +123,7 @@ public class PlotTranslationServiceTest {
             + "        \"role\": \"assistant\",\n" + "        \"content\": \"Ceci est un texte traduit en français.\"\n" + "      },\n"
             + "      \"finish_reason\": \"stop\"\n" + "    }\n" + "  ]\n" + "}"));
 
-    String result = service.translatePlot("This is a plot text.", "French");
+    String result = service.translatePlot("This is a plot text.", "French", "");
     assertThat(result).isEqualTo("Ceci est un texte traduit en français.");
   }
 
@@ -133,7 +133,7 @@ public class PlotTranslationServiceTest {
         .setBody("{\n" + "  \"choices\": [\n" + "    {\n" + "      \"message\": {\n" + "        \"content\": \"  Trimmed result.  \"\n" + "      },\n"
             + "      \"finish_reason\": \"stop\"\n" + "    }\n" + "  ]\n" + "}"));
 
-    String result = service.translatePlot("Some plot", "English");
+    String result = service.translatePlot("Some plot", "English", "");
     assertThat(result).isEqualTo("Trimmed result.");
   }
 
@@ -145,7 +145,7 @@ public class PlotTranslationServiceTest {
   public void testApiErrorThrowsException() {
     server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":{\"message\":\"Bad request\"}}"));
 
-    assertThatThrownBy(() -> service.translatePlot("Original plot text", "German")).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.translatePlot("Original plot text", "German", "")).isInstanceOf(AiException.class);
   }
 
   @Test
@@ -155,13 +155,13 @@ public class PlotTranslationServiceTest {
       server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
     }
 
-    assertThatThrownBy(() -> service.translatePlot("Some plot", "German")).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.translatePlot("Some plot", "German", "")).isInstanceOf(AiException.class);
   }
 
   @Test
   public void testMalformedResponseThrowsException() {
     server.enqueue(new MockResponse().setResponseCode(200).setBody("not json at all"));
 
-    assertThatThrownBy(() -> service.translatePlot("Some plot", "German")).isInstanceOf(AiException.class);
+    assertThatThrownBy(() -> service.translatePlot("Some plot", "German", "")).isInstanceOf(AiException.class);
   }
 }

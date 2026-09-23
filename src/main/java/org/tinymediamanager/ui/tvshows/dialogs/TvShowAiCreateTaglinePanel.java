@@ -15,14 +15,17 @@
  */
 package org.tinymediamanager.ui.tvshows.dialogs;
 
+import java.util.List;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
 import org.apache.commons.lang3.StringUtils;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TmmStore;
+import org.tinymediamanager.core.ai.AiManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -40,32 +43,67 @@ public class TvShowAiCreateTaglinePanel extends AbstractModalInputPanel {
   private static final String             MAX_WORDS_KEY = "tvshow.ai.tagline.maxwords";
   private final JComboBox<MediaLanguages> cbLanguage;
   private final JSpinner                  spMaxWords;
+  private final JComboBox<String>         cbModel;
 
-  public TvShowAiCreateTaglinePanel() {
-    setLayout(new MigLayout("", "[][200lp, grow]", "[][]"));
+   public TvShowAiCreateTaglinePanel() {
+     setLayout(new MigLayout("", "[][][grow]", "[][][]"));
 
-    JLabel lblLanguage = new TmmLabel(TmmResourceBundle.getString("metatag.language"));
-    add(lblLanguage, "cell 0 0,alignx right");
+     JLabel lblLanguage = new TmmLabel(TmmResourceBundle.getString("metatag.language"));
+     add(lblLanguage, "cell 0 0,alignx right");
 
-    cbLanguage = new JComboBox<>(MediaLanguages.valuesSorted());
-    add(cbLanguage, "cell 1 0,growx, wmin 0");
+     cbLanguage = new JComboBox<>(MediaLanguages.valuesSorted());
+     add(cbLanguage, "cell 1 0,growx, wmin 0");
 
-    JLabel lblMaxWords = new TmmLabel(TmmResourceBundle.getString("movie.ai.tagline.maxwords"));
-    add(lblMaxWords, "cell 0 1,alignx right");
+     JLabel lblMaxWords = new TmmLabel(TmmResourceBundle.getString("movie.ai.tagline.maxwords"));
+     add(lblMaxWords, "cell 0 1,alignx right");
 
-    spMaxWords = new JSpinner(new SpinnerNumberModel(20, 5, 50, 1));
-    add(spMaxWords, "cell 1 1,growx, wmin 0");
+     spMaxWords = new JSpinner(new SpinnerNumberModel(20, 5, 50, 1));
+     add(spMaxWords, "cell 1 1,growx, wmin 0");
 
-    loadDefaults();
-  }
+     JLabel lblModel = new TmmLabel(TmmResourceBundle.getString("Settings.ai.model"));
+     add(lblModel, "cell 0 2,alignx right");
 
-  public MediaLanguages getSelectedLanguage() {
-    return (MediaLanguages) cbLanguage.getSelectedItem();
-  }
+     cbModel = new JComboBox<>();
+     cbModel.addItem("");
+     List<String> cachedModels = AiManager.getAvailableModels();
+     if (cachedModels != null && !cachedModels.isEmpty()) {
+       cachedModels.forEach(cbModel::addItem);
+     }
+     String currentModel = Settings.getInstance().getAiModel();
+     if (StringUtils.isNotBlank(currentModel)) {
+       boolean found = false;
+       for (int i = 0; i < cbModel.getItemCount(); i++) {
+         if (currentModel.equals(cbModel.getItemAt(i))) {
+           found = true;
+           break;
+         }
+       }
+       if (!found) {
+         cbModel.addItem(currentModel);
+       }
+     }
+     if (StringUtils.isNotBlank(currentModel)) {
+       cbModel.setSelectedItem(currentModel);
+     }
+     else {
+       cbModel.setSelectedItem("");
+     }
+     add(cbModel, "cell 1 2,growx, wmin 0");
 
-  public int getMaxWords() {
-    return (Integer) spMaxWords.getValue();
-  }
+     loadDefaults();
+   }
+
+   public MediaLanguages getSelectedLanguage() {
+     return (MediaLanguages) cbLanguage.getSelectedItem();
+   }
+
+   public int getMaxWords() {
+     return (Integer) spMaxWords.getValue();
+   }
+
+   public String getModel() {
+     return (String) cbModel.getSelectedItem();
+   }
 
   private void loadDefaults() {
     String savedLanguage = TmmStore.getInstance().get(LANGUAGE_KEY);

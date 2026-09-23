@@ -22,6 +22,8 @@ import java.awt.BorderLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionListener;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
@@ -74,9 +76,10 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 class ExternalServicesSettingsPanel extends JPanel {
-  private static final Logger  LOGGER   = LoggerFactory.getLogger(ExternalServicesSettingsPanel.class);
+  private static final Logger  LOGGER          = LoggerFactory.getLogger(ExternalServicesSettingsPanel.class);
 
-  private final Settings       settings = Settings.getInstance();
+  private final Settings       settings        = Settings.getInstance();
+  private final ActionListener modelListener;
 
   private JButton              btnGetTraktPin;
   private JButton              btnTestTraktConnection;
@@ -85,6 +88,7 @@ class ExternalServicesSettingsPanel extends JPanel {
   private JComboBox<DateField> cbTraktDate;
 
   private JTextField           tfAiEndpointUrl;
+  private JTextField           tfAiChatEndpoint;
   private JPasswordField       pfAiApiKey;
   private JButton              btnTestAiConnection;
   private JCheckBox            chckbxAiEnabled;
@@ -93,8 +97,10 @@ class ExternalServicesSettingsPanel extends JPanel {
   private JSpinner             spAiMaxCallsPerHour;
   private JSpinner             spAiMinIntervalSeconds;
   private JLabel               lblAiTestResult;
-  private JTextField           tfAiModel;
+  private JComboBox<String>    cbAiModel;
   private JComboBox<String>    cbApiType;
+  private JButton              btnFetchAiModels;
+  private boolean              aiModelsFetched = false;
 
   private JButton              btnGetSimklPin;
   private JButton              btnTestSimklConnection;
@@ -105,6 +111,16 @@ class ExternalServicesSettingsPanel extends JPanel {
   private JButton              btnCopyMdblistApiKey;
 
   ExternalServicesSettingsPanel() {
+    modelListener = e -> {
+      Object obj = cbAiModel.getSelectedItem();
+      if (obj instanceof String model) {
+        settings.setAiModel(model);
+      }
+      else {
+        settings.setAiModel("");
+      }
+    };
+
     // UI init
     initComponents();
 
@@ -164,6 +180,20 @@ class ExternalServicesSettingsPanel extends JPanel {
       }
     });
     btnTestAiConnection.addActionListener(e -> testAiConnection());
+    btnFetchAiModels.addActionListener(e -> fetchAiModels());
+
+    cbAiModel.addActionListener(modelListener);
+
+    // Fetch AI models
+    if (!aiModelsFetched && License.getInstance().isValidLicense()) {
+      Settings settings = Settings.getInstance();
+      String baseUrl = settings.getAiEndpointUrl();
+      String apiKey = settings.getAiApiKey();
+
+      if (StringUtils.isNotBlank(baseUrl) && StringUtils.isNotBlank(apiKey)) {
+        fetchAiModels();
+      }
+    }
   }
 
   private void getTraktPin() {
@@ -488,6 +518,13 @@ class ExternalServicesSettingsPanel extends JPanel {
 
         cbApiType = new JComboBox<>(new String[] { "OpenAI", "Anthropic" });
         panelAi.add(cbApiType, "cell 4 2,growx");
+        cbApiType.addActionListener(e -> updateDefaultChatEndpoint());
+
+        JLabel lblChatEndpoint = new JLabel(TmmResourceBundle.getString("Settings.ai.chatEndpoint"));
+        panelAi.add(lblChatEndpoint, "cell 2 3 2 1,alignx right");
+        tfAiChatEndpoint = new JTextField();
+        tfAiChatEndpoint.setColumns(40);
+        panelAi.add(tfAiChatEndpoint, "cell 4 3,growx");
 
         JLabel lblApiKey = new JLabel(TmmResourceBundle.getString("Settings.ai.apiKey"));
         panelAi.add(lblApiKey, "cell 2 3 2 1,alignx right");
@@ -507,13 +544,25 @@ class ExternalServicesSettingsPanel extends JPanel {
         JLabel lblAiModel = new JLabel(TmmResourceBundle.getString("Settings.ai.model"));
         panelAi.add(lblAiModel, "cell 2 4 2 1,alignx right");
 
-        tfAiModel = new JTextField();
-        panelAi.add(tfAiModel, "cell 4 4,growx");
-        tfAiModel.setColumns(40);
+        cbApiType.addActionListener(e -> {
+          aiModelsFetched = false;
+          AiManager.clearModelsCache();
+          cbAiModel.removeAllItems();
+          cbAiModel.addItem("");
+        });
+
+        cbAiModel = new JComboBox<>();
+        panelAi.add(cbAiModel, "cell 4 4,growx");
+
+        btnFetchAiModels = new SquareIconButton(IconManager.REFRESH);
+        btnFetchAiModels.setToolTipText(TmmResourceBundle.getString("Settings.ai.fetchModels"));
+        btnFetchAiModels.setEnabled(License.getInstance().isValidLicense());
+        btnFetchAiModels.addActionListener(e -> fetchAiModels());
+        panelAi.add(btnFetchAiModels, "cell 5 4");
 
         btnTestAiConnection = new JButton(TmmResourceBundle.getString("Settings.ai.testConnection"));
         btnTestAiConnection.setEnabled(License.getInstance().isValidLicense());
-        panelAi.add(btnTestAiConnection, "cell 5 4");
+        panelAi.add(btnTestAiConnection, "cell 2 5 2 1");
 
         chckbxAiRateLimit = new JCheckBox(TmmResourceBundle.getString("Settings.ai.rateLimitEnabled"));
         panelAi.add(chckbxAiRateLimit, "cell 2 7 4 1");
@@ -541,7 +590,122 @@ class ExternalServicesSettingsPanel extends JPanel {
       lblAiTestResult = new JLabel("");
       panelAi.add(lblAiTestResult, "cell 4 5 2 1");
     }
+
     initDataBindings();
+
+    // Populate model dropdown - use cached models from AI manager (no persistence)
+    Settings settings = Settings.getInstance();
+    String currentModel = settings.getAiModel();
+    List<String> cachedModels = AiManager.getAvailableModels();
+
+    // Always add empty option first (represents "no model selected")
+    cbAiModel.addItem("");
+
+    // Add cached models if available
+    if (cachedModels != null && !cachedModels.isEmpty()) {
+      cachedModels.forEach(cbAiModel::addItem);
+    }
+
+    // Add current model if not in list (so it's always visible)
+    if (StringUtils.isNotBlank(currentModel)) {
+      boolean found = false;
+      for (int i = 0; i < cbAiModel.getItemCount(); i++) {
+        if (currentModel.equals(cbAiModel.getItemAt(i))) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        cbAiModel.addItem(currentModel);
+      }
+    }
+
+    // Set current model as selected, or empty if no current model
+    if (StringUtils.isNotBlank(currentModel)) {
+      cbAiModel.setSelectedItem(currentModel);
+    }
+    else {
+      cbAiModel.setSelectedItem("");
+    }
+
+    // Populate chat endpoint from settings
+    updateDefaultChatEndpoint();
+  }
+
+  private void updateDefaultChatEndpoint() {
+    Settings settings = Settings.getInstance();
+    String providerType = settings.getAiProviderType();
+
+    if ("anthropic".equalsIgnoreCase(providerType)) {
+      tfAiChatEndpoint.setText("/messages");
+    }
+    else {
+      tfAiChatEndpoint.setText("/chat/completions");
+    }
+  }
+
+  private void fetchAiModels() {
+    Settings settings = Settings.getInstance();
+    String baseUrl = settings.getAiEndpointUrl();
+    String apiKey = settings.getAiApiKey();
+
+    if (StringUtils.isBlank(baseUrl) || StringUtils.isBlank(apiKey)) {
+      TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.ai"),
+          TmmResourceBundle.getString("Settings.ai.missingEndpointOrKey"));
+      return;
+    }
+
+    btnFetchAiModels.setEnabled(false);
+    cbAiModel.removeActionListener(modelListener);
+
+    String currentModel = settings.getAiModel();
+
+    cbAiModel.removeAllItems();
+
+    new Thread(() -> {
+      try {
+        List<String> models = AiManager.getInstance().fetchAndCacheModels();
+
+        SwingUtilities.invokeLater(() -> {
+          // Always add empty option
+          cbAiModel.addItem("");
+
+          if (models == null || models.isEmpty()) {
+            cbAiModel.addItem(TmmResourceBundle.getString("Settings.ai.noModels"));
+          }
+          else {
+            models.forEach(cbAiModel::addItem);
+          }
+
+          // Update current model selection if needed
+          boolean found = false;
+          if (StringUtils.isNotBlank(currentModel)) {
+            for (int i = 0; i < cbAiModel.getItemCount(); i++) {
+              if (currentModel.equals(cbAiModel.getItemAt(i))) {
+                found = true;
+                cbAiModel.setSelectedItem(currentModel);
+                break;
+              }
+            }
+          }
+          if (!found) {
+            cbAiModel.setSelectedItem("");
+          }
+
+          aiModelsFetched = true;
+          btnFetchAiModels.setEnabled(true);
+          cbAiModel.addActionListener(modelListener);
+        });
+      }
+      catch (Exception e) {
+        SwingUtilities.invokeLater(() -> {
+          cbAiModel.removeAllItems();
+          cbAiModel.addItem("");
+          btnFetchAiModels.setEnabled(true);
+          cbAiModel.addActionListener(modelListener);
+        });
+      }
+    }).start();
   }
 
   private void testAiConnection() {
@@ -634,13 +798,17 @@ class ExternalServicesSettingsPanel extends JPanel {
         jTextFieldBeanProperty_3);
     autoBinding_19.bind();
     //
-    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, tfAiModel,
+    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, cbAiModel,
         jTextFieldBeanProperty_3);
     autoBinding_20.bind();
     //
-    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, btnTestAiConnection,
+    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, btnFetchAiModels,
         jButtonBeanProperty);
     autoBinding_21.bind();
+    //
+    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, btnTestAiConnection,
+        jButtonBeanProperty);
+    autoBinding_22.bind();
     //
     Property settingsBeanProperty_4 = BeanProperty.create("aiEndpointUrl");
     Property jTextFieldBeanProperty_1 = BeanProperty.create("text");
@@ -648,17 +816,17 @@ class ExternalServicesSettingsPanel extends JPanel {
         jTextFieldBeanProperty_1);
     autoBinding_8.bind();
     //
+    Property settingsBeanProperty_4a = BeanProperty.create("aiChatEndpoint");
+    Property jTextFieldBeanProperty_4a = BeanProperty.create("text");
+    AutoBinding autoBinding_8a = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_4a, tfAiChatEndpoint,
+        jTextFieldBeanProperty_4a);
+    autoBinding_8a.bind();
+    //
     Property settingsBeanProperty_5 = BeanProperty.create("aiApiKey");
     Property jPasswordFieldBeanProperty = BeanProperty.create("text");
     AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_5, pfAiApiKey,
         jPasswordFieldBeanProperty);
     autoBinding_9.bind();
-    //
-    Property settingsBeanProperty_6 = BeanProperty.create("aiModel");
-    Property jTextFieldBeanProperty_2 = BeanProperty.create("text");
-    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_6, tfAiModel,
-        jTextFieldBeanProperty_2);
-    autoBinding_10.bind();
     //
     Property settingsBeanProperty_7 = BeanProperty.create("aiRateLimitEnabled");
     AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_7, chckbxAiRateLimit,
@@ -687,32 +855,32 @@ class ExternalServicesSettingsPanel extends JPanel {
     autoBinding_15.bind();
     //
     Property settingsBeanProperty_13 = BeanProperty.create("mdbListEnabled");
-    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_13, chckbxMdblistEnabled,
+    AutoBinding autoBinding_29 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_13, chckbxMdblistEnabled,
         jCheckBoxBeanProperty);
-    autoBinding_22.bind();
+    autoBinding_29.bind();
     //
-    AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, chckbxAiRateLimit,
+    AutoBinding autoBinding_30 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, chckbxAiRateLimit,
         jButtonBeanProperty);
-    autoBinding_23.bind();
+    autoBinding_30.bind();
     //
-    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMaxCallsPerMinute,
+    AutoBinding autoBinding_31 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMaxCallsPerMinute,
         jButtonBeanProperty);
-    autoBinding_24.bind();
+    autoBinding_31.bind();
     //
-    AutoBinding autoBinding_25 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMaxCallsPerHour,
+    AutoBinding autoBinding_32 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMaxCallsPerHour,
         jButtonBeanProperty);
-    autoBinding_25.bind();
+    autoBinding_32.bind();
     //
-    AutoBinding autoBinding_26 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMinIntervalSeconds,
+    AutoBinding autoBinding_33 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxAiEnabled, jCheckBoxBeanProperty, spAiMinIntervalSeconds,
         jButtonBeanProperty);
-    autoBinding_26.bind();
+    autoBinding_33.bind();
     //
-    AutoBinding autoBinding_27 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxMdblistEnabled, jCheckBoxBeanProperty, pfMdbListApiKey,
+    AutoBinding autoBinding_34 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxMdblistEnabled, jCheckBoxBeanProperty, pfMdbListApiKey,
         jButtonBeanProperty);
-    autoBinding_27.bind();
+    autoBinding_34.bind();
     //
-    AutoBinding autoBinding_28 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxMdblistEnabled, jCheckBoxBeanProperty, btnCopyMdblistApiKey,
+    AutoBinding autoBinding_35 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxMdblistEnabled, jCheckBoxBeanProperty, btnCopyMdblistApiKey,
         jButtonBeanProperty);
-    autoBinding_28.bind();
+    autoBinding_35.bind();
   }
 }

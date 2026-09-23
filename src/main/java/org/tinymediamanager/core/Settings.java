@@ -167,6 +167,7 @@ public final class Settings extends AbstractSettings {
   // AI (LLM) settings
   private boolean                                          aiEnabled                    = false;
   private String                                           aiEndpointUrl                = "";
+  private String                                           aiChatEndpoint               = "chat/completions";
   private String                                           aiApiKey                     = "";
   private String                                           aiModel                      = "";
   private String                                           aiProviderType               = "openai";
@@ -1517,6 +1518,16 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("aiEndpointUrl", oldValue, aiEndpointUrl);
   }
 
+  public String getAiChatEndpoint() {
+    return aiChatEndpoint;
+  }
+
+  public void setAiChatEndpoint(String aiChatEndpoint) {
+    String oldValue = this.aiChatEndpoint;
+    this.aiChatEndpoint = aiChatEndpoint;
+    firePropertyChange("aiChatEndpoint", oldValue, aiChatEndpoint);
+  }
+
   public String getAiProviderType() {
     return aiProviderType;
   }
@@ -1589,7 +1600,7 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("aiMinIntervalSeconds", oldValue, aiMinIntervalSeconds);
   }
 
-  public boolean isEnableHttpServer() {
+   public boolean isEnableHttpServer() {
     return enableHttpServer;
   }
 

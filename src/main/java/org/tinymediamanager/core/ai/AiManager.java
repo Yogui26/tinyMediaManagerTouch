@@ -15,6 +15,8 @@
  */
 package org.tinymediamanager.core.ai;
 
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,8 @@ public class AiManager implements TmmFeature {
 
   private static AiManager    instance;
   private AiClient            defaultClient;
+
+  private static List<String> availableModels;
 
   private AiManager() {
     // private constructor
@@ -89,6 +93,59 @@ public class AiManager implements TmmFeature {
   }
 
   /**
+   * Fetches available models from the AI provider and caches them in memory. Does not persist to settings.
+   *
+   * @return list of available model names, or null if fetch failed
+   */
+  public List<String> fetchAndCacheModels() {
+    Settings settings = Settings.getInstance();
+    String providerType = settings.getAiProviderType();
+    String baseUrl = settings.getAiEndpointUrl();
+    String chatEndpoint = settings.getAiChatEndpoint();
+    String apiKey = settings.getAiApiKey();
+
+    if (StringUtils.isBlank(baseUrl) || StringUtils.isBlank(apiKey)) {
+      availableModels = null;
+      return null;
+    }
+
+    try {
+      AiClient client;
+      String fullUrl = buildFullUrl(baseUrl, chatEndpoint);
+      if ("anthropic".equalsIgnoreCase(providerType)) {
+        client = new AnthropicChatClient(providerType, baseUrl, chatEndpoint, apiKey, "", DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
+      }
+      else {
+        client = new OpenAiChatClient(providerType, baseUrl, chatEndpoint, apiKey, "", DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
+      }
+
+      availableModels = client.listModels();
+      return availableModels;
+    }
+    catch (Exception e) {
+      LOGGER.warn("Failed to fetch AI models: " + e.getMessage());
+      availableModels = null;
+      return null;
+    }
+  }
+
+  /**
+   * Gets the cached list of available models from the AI provider.
+   *
+   * @return list of available models, or null if not yet fetched or fetch failed
+   */
+  public static List<String> getAvailableModels() {
+    return availableModels;
+  }
+
+  /**
+   * Clears the cached models list.
+   */
+  public static void clearModelsCache() {
+    availableModels = null;
+  }
+
+  /**
    * Rebuilds the client from current settings (e.g. after settings changed).
    */
   public void resetClient() {
@@ -98,17 +155,31 @@ public class AiManager implements TmmFeature {
 
   private AiClient createClient(Settings settings, String model) {
     String providerType = settings.getAiProviderType();
-    String endpointUrl = settings.getAiEndpointUrl();
+    String baseUrl = settings.getAiEndpointUrl();
+    String chatEndpoint = settings.getAiChatEndpoint();
     String apiKey = settings.getAiApiKey();
 
-    LOGGER.debug("Creating AI client for provider: {} at endpoint: {} (model: {})", providerType, endpointUrl, model);
+    String fullUrl = buildFullUrl(baseUrl, chatEndpoint);
+    LOGGER.debug("Creating AI client for provider: {} at endpoint: {} (model: {})", providerType, fullUrl, model);
 
     if ("anthropic".equalsIgnoreCase(providerType)) {
-      return new AnthropicChatClient(providerType, endpointUrl, apiKey, model, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
+      return new AnthropicChatClient(providerType, baseUrl, chatEndpoint, apiKey, model, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
     }
 
     // Default to OpenAI-compatible endpoint
-    return new OpenAiChatClient(providerType, endpointUrl, apiKey, model, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
+    return new OpenAiChatClient(providerType, baseUrl, chatEndpoint, apiKey, model, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE);
+  }
+
+  private static String buildFullUrl(String baseUrl, String chatEndpoint) {
+    if (baseUrl == null || baseUrl.isEmpty()) {
+      return chatEndpoint;
+    }
+    if (chatEndpoint == null || chatEndpoint.isEmpty()) {
+      return baseUrl;
+    }
+    String base = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+    String end = chatEndpoint.startsWith("/") ? chatEndpoint : "/" + chatEndpoint;
+    return base + end;
   }
 
   /**
