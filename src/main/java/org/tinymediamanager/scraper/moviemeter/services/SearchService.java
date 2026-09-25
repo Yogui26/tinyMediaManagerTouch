@@ -18,6 +18,7 @@ package org.tinymediamanager.scraper.moviemeter.services;
 import java.util.List;
 
 import org.tinymediamanager.scraper.moviemeter.entities.MMFilm;
+import org.tinymediamanager.scraper.moviemeter.entities.MMSeries;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -26,4 +27,8 @@ import retrofit2.http.Query;
 public interface SearchService {
   @GET("film/")
   Call<List<MMFilm>> searchFilm(@Query("q") String query);
+
+  // YES - film url for show, just a param... pfff
+  @GET("film/?entity=show")
+  Call<List<MMSeries>> searchSeries(@Query("q") String query);
 }
