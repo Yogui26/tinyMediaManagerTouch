@@ -128,6 +128,8 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   @JsonProperty
   private String                     hdrFormat         = "";
   @JsonProperty
+  private HdrInfo                    hdrInfo           = null;
+  @JsonProperty
   protected Map<String, String>      checksums         = null;
 
   private List<MediaFileAudioStream> audioStreams      = null;
@@ -1793,6 +1795,14 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    */
   public String getHdrFormat() {
     return this.hdrFormat;
+  }
+
+  public HdrInfo getHdrInfo() {
+    return hdrInfo;
+  }
+
+  public void setHdrInfo(HdrInfo hdrInfo) {
+    this.hdrInfo = hdrInfo;
   }
 
   @JsonProperty

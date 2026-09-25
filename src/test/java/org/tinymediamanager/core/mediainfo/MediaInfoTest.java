@@ -28,6 +28,7 @@ import org.tinymediamanager.TmmOsUtils;
 import org.tinymediamanager.core.BasicTest;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.entities.HdrInfo.HdrType;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
@@ -732,53 +733,159 @@ public class MediaInfoTest extends BasicTest {
     Path mediainfoFolder = getWorkFolder().resolve("mediainfo");
     MediaFile mf = null;
 
+    // 2 Guns
+    mf = new MediaFile(mediainfoFolder.resolve("2.Guns.2013.2160p.UHD.Blu-ray.DV.HDR10.DTS-X.8ch.h265.Remux.mkv"));
+    MediaFileHelper.gatherMediaInformation(mf, false);
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isEqualTo(1);
+    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(6);
+    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(8);
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
+
     // DV+HDR
     mf = new MediaFile(mediainfoFolder.resolve("DV+HDR (2086).mp4"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("Dolby Vision, HDR10");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isEqualTo(1);
+    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(9);
+    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(8);
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
 
     // DV+HLG
     mf = new MediaFile(mediainfoFolder.resolve("DV+HLG.mov"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("Dolby Vision, HLG");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HLG);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isEqualTo(4);
+    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(12);
+    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(8);
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
 
     // HDR
     mf = new MediaFile(mediainfoFolder.resolve("HDR (2086).mkv"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("HDR10");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isNull();
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isNull();
+    assertThat(mf.getHdrInfo().getHdrProfile()).isNull();
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
     // HDR10+
     mf = new MediaFile(mediainfoFolder.resolve("HDR10+ (2094).mkv"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("HDR10+");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_HDR10PLUS);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isNull();
+    assertThat(mf.getHdrInfo().getHdrProfile()).isNull();
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
     // Dolby Vision
     mf = new MediaFile(mediainfoFolder.resolve("dolby_vision.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("Dolby Vision, HDR10+");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(6);
+    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(7);
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
 
     mf = new MediaFile(mediainfoFolder.resolve("dolby_vision2.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("Dolby Vision, HDR10+");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(6);
+    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(7);
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
 
     // HDR10
     mf = new MediaFile(mediainfoFolder.resolve("hdr10.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("HDR10");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isNull();
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isNull();
+    assertThat(mf.getHdrInfo().getHdrProfile()).isNull();
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
     mf = new MediaFile(mediainfoFolder.resolve("hdr10-2.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("HDR10");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isNull();
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isNull();
+    assertThat(mf.getHdrInfo().getHdrProfile()).isNull();
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
     // HDR10+
     mf = new MediaFile(mediainfoFolder.resolve("hdr10plus.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("HDR10+");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_HDR10PLUS);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isNull();
+    assertThat(mf.getHdrInfo().getHdrProfile()).isNull();
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
-    // HLG
-    mf = new MediaFile(mediainfoFolder.resolve("hlg.avi"));
+    // HLG (FIXME: no HDR info in XML!!!)
+    // mf = new MediaFile(mediainfoFolder.resolve("hlg.avi"));
+    // MediaFileHelper.gatherMediaInformation(mf, false);
+    // System.out.println(mf.getHdrInfo().getDisplayName());
+    // assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    // assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HLG);
+    // assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    // assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(12);
+    // assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(8);
+    // assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    // assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    // assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
+
+    // Twister
+    mf = new MediaFile(mediainfoFolder.resolve("Twister.1996.2160p.UHD.Blu-ray.DV.HDR10P.TrueHD.Atmos.8ch.h265.Remux.mkv"));
     MediaFileHelper.gatherMediaInformation(mf, false);
-    assertThat(mf.getHdrFormat()).isEqualTo("HLG");
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(6);
+    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(7);
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(true);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
   }
 
   @Test

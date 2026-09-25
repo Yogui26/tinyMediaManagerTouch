@@ -52,6 +52,8 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.entities.HdrInfo;
+import org.tinymediamanager.core.entities.HdrInfo.HdrType;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -2737,34 +2739,10 @@ public class MediaFileHelper {
     catch (Exception e) {
       LOGGER.info("Could not parse AspectRatio from '{}' - '{}'", parString, e.getMessage());
     }
-
     mediaFile.setVideo3DFormat(parse3DFormat(mediaFile, miSnapshot));
 
-    // prefer official HDR namings (see https://de.wikipedia.org/wiki/High_Dynamic_Range_Video) over technical
-    String hdrFormat = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_String", "HDR_Format");
-    String hdrCompat = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Compatibility");
-    // detect them combined!
-    hdrFormat = detectHdrFormat(hdrFormat + " / " + hdrCompat);
-
-    if (StringUtils.isBlank(hdrFormat)) {
-      // no HDR format found? try another mediainfo field
-      hdrFormat = detectHdrFormat(getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "transfer_characteristics"));
-    }
-    if (StringUtils.isBlank(hdrFormat)) {
-      // STILL no HDR format found? check color space
-      String col = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "colour_primaries");
-      if (col.contains("2100")) {
-        hdrFormat = "HDR";
-      }
-    }
-    if (StringUtils.isBlank(hdrFormat)) {
-      // STILL no HDR format found? check known HDR transfer protocols
-      String trans = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "transfer_characteristics");
-      if (trans.contains("2100") || trans.equals("PQ") || trans.equals("HLG")) {
-        hdrFormat = "HDR";
-      }
-    }
-    mediaFile.setHdrFormat(hdrFormat);
+    // new HDR detection
+    detectHDR(mediaFile, miSnapshot);
 
     if (Settings.getInstance().isArdEnabled()) {
       TmmTask task = new MediaFileARDetectorTask(mediaFile);
@@ -2772,28 +2750,163 @@ public class MediaFileHelper {
     }
   }
 
-  // MediaInfo values: https://github.com/MediaArea/MediaInfoLib/blob/master/Source/MediaInfo/Video/File_Mpegv.cpp#L34
-  private static String detectHdrFormat(String source) {
-    source = source.toLowerCase(Locale.ROOT);
-    ArrayList<String> ret = new ArrayList<>();
+  // #region HDR detection
+  private static void detectHDR(MediaFile mediaFile, Map<MediaInfo.StreamKind, List<Map<String, String>>> miSnapshot) {
+    String hdrFormat = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format");
+    String hdrComm = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Commercial");
+    if (!(hdrFormat.isBlank() && hdrComm.isBlank())) {
+      HdrInfo info = new HdrInfo();
+      info.setHdrType(parseHdrType(hdrFormat));
 
-    if (source.contains("dolby vision")) {
-      ret.add("Dolby Vision");
+      String hdrVersion = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Version");
+      info.setHdrVersion(emptyToNull(hdrVersion));
+
+      String hdrProfile = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Profile");
+      info.setHdrProfile(parseHdrProfile(hdrProfile));
+
+      String hdrLevel = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Level");
+      info.setHdrLevel(parseInteger(hdrLevel));
+
+      String hdrCompat = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Compatibility");
+      parseCompatibility(info, hdrCompat);
+
+      if (info.getHdrType() == HdrType.HDR_TYPE_DOLBYVISION) {
+        String hdrSettings = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Settings");
+        parseDolbyVisionSettings(info, hdrSettings);
+      }
+      mediaFile.setHdrInfo(info);
     }
-    if (source.contains("hlg")) {
-      ret.add("HLG");
+  }
+
+  private static HdrType parseHdrType(String hdrFormat) {
+    if (StringUtils.isBlank(hdrFormat)) {
+      return null;
     }
-    if (source.contains("2094") || source.contains("hdr10+")) {
-      ret.add("HDR10+");
+    String normalized = hdrFormat.trim().toLowerCase(Locale.ROOT);
+    if (normalized.contains("dolby vision 2")) { // assume
+      return HdrType.HDR_TYPE_DOLBYVISION2;
     }
-    else {
-      // #2680
-      if (source.contains("2086") || source.contains("hdr10")) {
-        ret.add("HDR10");
+    if (normalized.contains("dolby vision")) {
+      return HdrType.HDR_TYPE_DOLBYVISION;
+    }
+    else if (normalized.contains("2094-40") || (normalized.contains("hdr10+") && normalized.contains("adv"))) {
+      return HdrType.HDR_TYPE_HDR10PLUSADV;
+    }
+    else if (normalized.contains("2094") || normalized.contains("hdr10+")) {
+      return HdrType.HDR_TYPE_HDR10PLUS;
+    }
+    else if (normalized.contains("2086") || normalized.contains("hdr10")) {
+      return HdrType.HDR_TYPE_HDR10;
+    }
+    if (normalized.contains("hlg")) {
+      return HdrType.HDR_TYPE_HLG;
+    }
+    return null;
+  }
+
+  private static Integer parseHdrProfile(String profile) {
+    if (StringUtils.isBlank(profile)) {
+      return null;
+    }
+    // Dolby Vision: dvhe.08, hev1.08, avc3.05
+    // Extract the numeric profile after the final dot.
+    String[] splitted = profile.split("/");
+    Matcher matcher = Pattern.compile("\\.(\\d+)$").matcher(splitted[0].trim());
+    if (matcher.find()) {
+      return Integer.valueOf(matcher.group(1));
+    }
+    // Other formats may provide a plain numeric profile.
+    if (splitted[0].trim().matches("\\d+")) {
+      return Integer.valueOf(splitted[0].trim());
+    }
+    return null;
+  }
+
+  private static void parseCompatibility(HdrInfo info, String compatibility) {
+    HdrType hdrType = info.getHdrType();
+
+    // Inherent/direct compatibility
+    if (hdrType == HdrType.HDR_TYPE_HDR10PLUSADV) {
+      info.setCompatibilityType(HdrType.HDR_TYPE_HDR10PLUS);
+      return;
+    }
+    if (hdrType == HdrType.HDR_TYPE_HDR10PLUS) {
+      info.setCompatibilityType(HdrType.HDR_TYPE_HDR10);
+      return;
+    }
+    if (hdrType == HdrType.HDR_TYPE_HDR10) {
+      // no compatibility here, as this is the base
+      return;
+    }
+    if (StringUtils.isBlank(compatibility)) {
+      return;
+    }
+
+    String normalized = compatibility.trim().toLowerCase(Locale.ROOT);
+    if (normalized.contains("hlg")) {
+      info.setCompatibilityType(HdrType.HDR_TYPE_HLG);
+      if (isDolbyVisionProfile8(info)) {
+        info.setCompatibilityId(4);
+      }
+      return;
+    }
+
+    if (normalized.contains("hdr10")) {
+      info.setCompatibilityType(HdrType.HDR_TYPE_HDR10);
+      if (isDolbyVisionProfile8(info)) {
+        info.setCompatibilityId(1);
       }
     }
-    return String.join(", ", ret);
   }
+
+  private static boolean isDolbyVisionProfile8(HdrInfo info) {
+    return info.getHdrType() == HdrType.HDR_TYPE_DOLBYVISION && Integer.valueOf(8).equals(info.getHdrProfile());
+  }
+
+  private static void parseDolbyVisionSettings(HdrInfo info, String settings) {
+    if (StringUtils.isBlank(settings)) {
+      return;
+    }
+    String value = settings.trim().toUpperCase(Locale.ROOT);
+    info.setBaseLayer(value.contains("BL"));
+    info.setEnhancementLayer(value.contains("EL"));
+    info.setRpu(value.contains("RPU"));
+  }
+
+  private static String emptyToNull(String value) {
+    if (!StringUtils.isBlank(value)) {
+      // sometimes we have splitted values, just take the first
+      String[] splitted = value.split("/");
+      return splitted[0].strip();
+    }
+    return null;
+  }
+
+  private static String firstNonBlank(String... values) {
+    for (String value : values) {
+      if (!StringUtils.isBlank(value)) {
+        // sometimes we have splitted values, just take the first
+        String[] splitted = value.split("/");
+        return splitted[0];
+      }
+    }
+
+    return null;
+  }
+
+  private static Integer parseInteger(String value) {
+    if (StringUtils.isBlank(value)) {
+      return null;
+    }
+    try {
+      String[] splitted = value.split("/");
+      return Integer.valueOf(splitted[0].trim());
+    }
+    catch (NumberFormatException e) {
+      return null;
+    }
+  }
+  // #endregion
 
   /**
    * gather image information for the given {@link MediaFile}
