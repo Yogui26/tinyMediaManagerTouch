@@ -15,9 +15,12 @@
  */
 package org.tinymediamanager.core.movie.tasks;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import org.slf4j.Logger;
@@ -29,6 +32,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieRenamer;
 import org.tinymediamanager.core.movie.MovieRenamerProfile;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -65,6 +69,12 @@ public class MovieRenameTask extends TmmThreadPool {
     try {
       LOGGER.info("Renaming '{}' movies", moviesToRename.size());
 
+      // take a snapshot of the folders before renaming, to be able to re-evaluate the MMD flag of affected movies afterwards
+      Set<Path> touchedFolders = new LinkedHashSet<>();
+      for (Movie movie : moviesToRename) {
+        touchedFolders.add(movie.getPathNIO().toAbsolutePath());
+      }
+
       initThreadPool(1, "rename");
 
       List<MediaFile> imageFiles = new ArrayList<>();
@@ -81,6 +91,12 @@ public class MovieRenameTask extends TmmThreadPool {
       if (cancel) {
         return;
       }
+
+      for (Movie movie : moviesToRename) {
+        touchedFolders.add(movie.getPathNIO().toAbsolutePath());
+      }
+      // re-check the MMD flag of all movies in the old AND new folders of the renamed movies
+      MovieModuleManager.getInstance().getMovieList().reevaluateMMDForFolders(touchedFolders);
 
       for (Movie movie : moviesToRename) {
         imageFiles.addAll(movie.getMediaFiles().stream().filter(MediaFile::isGraphic).toList());

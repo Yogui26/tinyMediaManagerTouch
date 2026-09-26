@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -810,15 +811,74 @@ public final class MovieList extends AbstractModelObject {
       return;
     }
 
-    // build up lookup maps for a faster MMD comparison
     Map<String, List<Movie>> moviePathMap = new HashMap<>();
+    Map<String, List<Movie>> subMoviePathMap = new HashMap<>();
+    buildMMDLookupMaps(moviePathMap, subMoviePathMap);
+
+    LOGGER.debug("re-evaluating MMD for {} movies...", movieList.size());
+    for (Movie movie : movieList) {
+      reevaluateMMD(movie, moviePathMap, subMoviePathMap);
+    }
+  }
+
+  /**
+   * Re-evaluate the MMD flag of movies which could have been affected by moved/renamed media files. Only movies in a touched folder itself, or in one
+   * of its parent folders, can change their MMD state (since only their "movies within my subtree" count is altered by such operations).
+   *
+   * @param touchedFolders
+   *          all folders which have been touched (source AND destination folders of renames, for example)
+   */
+  public void reevaluateMMDForFolders(Collection<Path> touchedFolders) {
+    if (ListUtils.isEmpty(movieList) || touchedFolders == null || touchedFolders.isEmpty()) {
+      return;
+    }
+
+    Map<String, List<Movie>> moviePathMap = new HashMap<>();
+    Map<String, List<Movie>> subMoviePathMap = new HashMap<>();
+    buildMMDLookupMaps(moviePathMap, subMoviePathMap);
+
+    // movies in the touched folders, or in any parent folder of them, are the only possible candidates;
+    // the same movie can be hit multiple times while walking the parent chains, so it must be de-duplicated -
+    // intentionally by object identity (not a value-based HashSet) here:
+    // - Movie#equals/hashCode are value-based (path + main video file), which is exactly what the triggering
+    // rename operation has just changed, so two distinct movies could falsely collapse into one and their stale
+    // flags would never get re-checked
+    // - all candidates come from the single canonical movieList, so identity is the precise semantics needed:
+    // "evaluate every distinct movie object exactly once"
+    // - and it avoids the cost of Movie#hashCode, which re-computes getMainVideoFile() on every call
+    Set<Movie> affectedMovies = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Path touchedFolder : touchedFolders) {
+      Path path = touchedFolder.toAbsolutePath();
+      while (path != null) {
+        List<Movie> moviesForPath = moviePathMap.get(path.toString());
+        if (moviesForPath != null) {
+          affectedMovies.addAll(moviesForPath);
+        }
+        path = path.getParent();
+      }
+    }
+
+    LOGGER.debug("re-evaluating MMD for {} affected movies ({} folders touched)...", affectedMovies.size(), touchedFolders.size());
+    for (Movie movie : affectedMovies) {
+      reevaluateMMD(movie, moviePathMap, subMoviePathMap);
+    }
+  }
+
+  /**
+   * Build up lookup maps for a faster MMD comparison
+   * 
+   * @param moviePathMap
+   *          gets filled with all movies per absolute folder path
+   * @param subMoviePathMap
+   *          gets filled with all movies per absolute folder path, including all parent paths up to the datasource
+   */
+  private void buildMMDLookupMaps(Map<String, List<Movie>> moviePathMap, Map<String, List<Movie>> subMoviePathMap) {
     for (Movie movie : movieList) {
       String path = movie.getPathNIO().toAbsolutePath().toString();
       List<Movie> moviesForPath = moviePathMap.computeIfAbsent(path, k -> new ArrayList<>());
       moviesForPath.add(movie);
     }
 
-    Map<String, List<Movie>> subMoviePathMap = new HashMap<>();
     for (Movie movie : movieList) {
       Path datasource = Paths.get(movie.getDataSource());
 
@@ -834,53 +894,55 @@ public final class MovieList extends AbstractModelObject {
         path = path.getParent();
       } while (path != null);
     }
+  }
 
-    LOGGER.debug("re-evaluating MMD for {} movies...", movieList.size());
-    for (Movie movie : movieList) {
-      boolean old = movie.isMultiMovieDir();
+  /**
+   * Re-evaluate the MMD flag of a single movie against the pre-built lookup maps
+   */
+  private void reevaluateMMD(Movie movie, Map<String, List<Movie>> moviePathMap, Map<String, List<Movie>> subMoviePathMap) {
+    boolean old = movie.isMultiMovieDir();
 
-      // imagine a structure like
-      // movies/bla/bla.mkv
-      // movies/bla/blubb/blubb.mkv
-      // both would be single (not MMD) file, although the parent MUST be a MMD!
-      // so get all sub movies within path (some levels deeper)
-      if (!movie.getPathNIO().equals(Paths.get(movie.getDataSource()))) {
-        List<Movie> subMovies = subMoviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
-        if (subMovies.size() > 1) {
-          // there are some other movies down the path - it MUST be treated as MMD
+    // imagine a structure like
+    // movies/bla/bla.mkv
+    // movies/bla/blubb/blubb.mkv
+    // both would be single (not MMD) file, although the parent MUST be a MMD!
+    // so get all sub movies within path (some levels deeper)
+    if (!movie.getPathNIO().equals(Paths.get(movie.getDataSource()))) {
+      List<Movie> subMovies = subMoviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
+      if (subMovies.size() > 1) {
+        // there are some other movies down the path - it MUST be treated as MMD
+        movie.setMultiMovieDir(true);
+      }
+      else {
+        // no sub movies, but some in exact same folder? (including myself)
+        List<Movie> samePath = moviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
+        if (samePath.size() > 1) {
           movie.setMultiMovieDir(true);
         }
         else {
-          // no sub movies, but some in exact same folder? (including myself)
-          List<Movie> samePath = moviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
-          if (samePath.size() > 1) {
+          // so just me; check another variant - see UDS L840
+          if (movie.getPathNIO().getFileName().toString().matches(MovieUpdateDatasourceTask.FOLDER_STRUCTURE)
+              || MediaGenres.containsGenre(movie.getPathNIO().getFileName().toString())) {
             movie.setMultiMovieDir(true);
           }
           else {
-            // so just me; check another variant - see UDS L840
-            if (movie.getPathNIO().getFileName().toString().matches(MovieUpdateDatasourceTask.FOLDER_STRUCTURE)
-                || MediaGenres.containsGenre(movie.getPathNIO().getFileName().toString())) {
-              movie.setMultiMovieDir(true);
-            }
-            else {
-              // - no submovie
-              // - noone in same path
-              // - no genres/decade/alphanum folder
-              // -> we can now safely assume a single movie - phew :)
-              movie.setMultiMovieDir(false);
-            }
+            // - no submovie
+            // - noone in same path
+            // - no genres/decade/alphanum folder
+            // -> we can now safely assume a single movie - phew :)
+            movie.setMultiMovieDir(false);
           }
         }
       }
-      else {
-        // DS root
-        movie.setMultiMovieDir(true);
-      }
+    }
+    else {
+      // DS root
+      movie.setMultiMovieDir(true);
+    }
 
-      if (old != movie.isMultiMovieDir()) {
-        LOGGER.debug("Movie '{}' changed MMD {} -> {}", movie.getTitle(), old, movie.isMultiMovieDir());
-        movie.saveToDb();
-      }
+    if (old != movie.isMultiMovieDir()) {
+      LOGGER.debug("Movie '{}' changed MMD {} -> {}", movie.getTitle(), old, movie.isMultiMovieDir());
+      movie.saveToDb();
     }
   }
 
