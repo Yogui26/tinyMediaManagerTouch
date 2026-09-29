@@ -75,8 +75,8 @@ import net.miginfocom.swing.MigLayout;
  */
 public class MovieInformationPanel extends InformationPanel {
   private static final Logger        LOGGER                 = LoggerFactory.getLogger(MovieInformationPanel.class);
-  private static final String        LAYOUT_ARTWORK_VISIBLE = "[n:100lp:20%, grow][300lp:300lp,grow 350]";
-  private static final String        LAYOUT_ARTWORK_HIDDEN  = "[][300lp:300lp,grow 350]";
+  private static final String        LAYOUT_ARTWORK_VISIBLE = "[0:100lp:20%, grow][0:300lp,grow 350]";
+  private static final String        LAYOUT_ARTWORK_HIDDEN  = "[][0:300lp,grow 350]";
 
   private final MovieSelectionModel  selectionModel;
 
@@ -314,7 +314,7 @@ public class MovieInformationPanel extends InformationPanel {
           .setLayout(new MigLayout("insets n 0 n n, hidemode 3", "[100lp,grow]", "[shrink 0][][shrink 0][][][][][]15lp[][grow,top][shrink 0][]"));
 
       scrollPane = new NoBorderScrollPane(panelRight);
-      scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+      scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
       scrollPane.getVerticalScrollBar().setUnitIncrement(8);
       add(scrollPane, "cell 1 1,grow, wmin 0");
 

@@ -131,10 +131,10 @@ public class TvShowTreePanel extends TmmListPanel {
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("", "[200lp:n,grow][100lp:n,fill]", "[][200lp:n,grow]0[][][]"));
+    setLayout(new MigLayout("", "[0:200lp,grow][100lp:n,fill]", "[][0:200lp,grow]0[][][]"));
 
     final TmmTreeTextFilter<TmmTreeNode> searchField = new TvShowTreeTextFilter<>();
-    add(searchField, "cell 0 0,growx");
+    add(searchField, "cell 0 0,growx,wmin 0");
 
     // register global shortcut for the search field
     getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "search");
@@ -220,8 +220,8 @@ public class TvShowTreePanel extends TmmListPanel {
     tree.addFilter(searchField);
     JScrollPane scrollPane = new JScrollPane();
     tree.configureScrollPane(scrollPane);
-    add(scrollPane, "cell 0 1 2 1,grow");
-    add(scrollPane, "cell 0 1 2 1,grow");
+    add(scrollPane, "cell 0 1 2 1,grow,wmin 0,hmin 0");
+    add(scrollPane, "cell 0 1 2 1,grow,wmin 0,hmin 0");
 
     tree.setRootVisible(false);
 
@@ -391,8 +391,8 @@ public class TvShowTreePanel extends TmmListPanel {
 
     {
       JPanel panelTotals = new JPanel();
-      add(panelTotals, "cell 0 3 2 1,grow");
-      panelTotals.setLayout(new MigLayout("insets 0", "[100lp:n,grow][100lp:n,grow,right]", "[]"));
+      add(panelTotals, "cell 0 3 2 1,grow,wmin 0");
+      panelTotals.setLayout(new MigLayout("insets 0", "[0:100lp,grow][0:100lp,grow,right]", "[]"));
 
       JLabel lblTvShowCount = new JLabel(TmmResourceBundle.getString("tmm.tvshows") + ":");
       panelTotals.add(lblTvShowCount, "flowx,cell 0 0");

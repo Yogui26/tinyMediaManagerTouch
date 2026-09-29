@@ -18,7 +18,9 @@ package org.tinymediamanager.ui.dialogs;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,13 +36,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
-import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.TmmUIHelper;
+import org.tinymediamanager.ui.TmmUIScaling;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.updater.UpdaterFactory;
+
+import com.formdev.flatlaf.util.UIScale;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -58,7 +62,7 @@ public class UpdateDialog extends TmmDialog {
     {
       JPanel panelContent = new JPanel();
       getContentPane().add(panelContent, BorderLayout.CENTER);
-      panelContent.setLayout(new MigLayout("", "[600lp,grow]", "[][10lp:n][][400lp,grow]"));
+      panelContent.setLayout(new MigLayout("", "[0:600lp,grow]", "[][10lp:n][][0:400lp,grow]"));
 
       JTextPane lblUpdateInfo = new ReadOnlyTextPane();
       lblUpdateInfo.setText(TmmResourceBundle.getString("tmm.update.message"));
@@ -68,9 +72,9 @@ public class UpdateDialog extends TmmDialog {
       panelContent.add(lblChangelog, "cell 0 2,growx");
 
       JScrollPane scrollPane = new NoBorderScrollPane();
-      panelContent.add(scrollPane, "cell 0 3,grow");
+      panelContent.add(scrollPane, "cell 0 3,grow,wmin 0,hmin 0");
       JTextPane textPane = new JTextPane();
-      textPane.setFont(new Font(Font.MONOSPACED, Font.PLAIN, Settings.getInstance().getFontSize() + 1));
+      TmmUIScaling.applyChangelogFont(textPane);
       scrollPane.setViewportView(textPane);
 
       textPane.setContentType("text/html");
@@ -125,8 +129,13 @@ public class UpdateDialog extends TmmDialog {
   @Override
   public Dimension getPreferredSize() {
     Dimension superPref = super.getPreferredSize();
-    return new Dimension((int) (700 > superPref.getWidth() ? superPref.getWidth() : 700),
-        (int) (500 > superPref.getHeight() ? superPref.getHeight() : 500));
+    Rectangle screen = getGraphicsConfiguration().getBounds();
+    Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+    // Leave room for native decorations, whose insets may be unknown until the window is shown.
+    int availableWidth = (int) ((screen.width - insets.left - insets.right) * 0.9);
+    int availableHeight = (int) ((screen.height - insets.top - insets.bottom) * 0.9);
+    return new Dimension(Math.min(Math.min(UIScale.scale(700), superPref.width), availableWidth),
+        Math.min(Math.min(UIScale.scale(500), superPref.height), availableHeight));
   }
 
   private String prepareTextAsHtml(String originalText) {

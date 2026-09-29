@@ -161,7 +161,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
 
     dataPanel = new JPanel();
     dataPanel.setLayout(new CardLayout());
-    detailPanel.add(dataPanel, "cell 0 0, grow");
+    detailPanel.add(dataPanel, "cell 0 0, grow, wmin 0, hmin 0");
 
     // panel for TV shows
     JTabbedPane tvShowDetailPanel = new MainTabbedPane() {

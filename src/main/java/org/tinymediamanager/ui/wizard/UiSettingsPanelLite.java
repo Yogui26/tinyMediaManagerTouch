@@ -38,6 +38,7 @@ import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
+import javax.swing.plaf.FontUIResource;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -48,6 +49,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
+import org.tinymediamanager.ui.TmmUIScaling;
 import org.tinymediamanager.ui.components.combobox.LocaleComboBox;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
@@ -271,6 +273,7 @@ class UiSettingsPanelLite extends JPanel {
       settings.setTheme(theme);
       try {
         TmmUIHelper.setTheme();
+        TmmUIScaling.applyFont(new FontUIResource(settings.getFontFamily(), Font.PLAIN, settings.getFontSize()));
         TmmUIHelper.updateUI();
       }
       catch (Exception e) {
@@ -294,8 +297,7 @@ class UiSettingsPanelLite extends JPanel {
 
     if (fontChanged) {
       Font font = UIManager.getFont("defaultFont");
-      Font newFont = new Font(settings.getFontFamily(), font.getStyle(), settings.getFontSize());
-      UIManager.put("defaultFont", newFont);
+      TmmUIScaling.applyFont(new FontUIResource(settings.getFontFamily(), font.getStyle(), settings.getFontSize()));
 
       TmmUIHelper.updateUI();
     }
