@@ -30,7 +30,6 @@ import java.awt.event.MouseListener;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -112,8 +111,7 @@ public class ImageLabel extends JComponent {
 
     try {
       // create the icon
-      URI uri = IconManager.class.getResource("images/svg/image.svg").toURI();
-      return new TmmSvgIcon(uri);
+      return new TmmSvgIcon(IconManager.class.getResource("images/svg/image.svg"), "image.svg");
     }
     catch (Exception e) {
       return null;

@@ -15,7 +15,6 @@
  */
 package org.tinymediamanager.ui.converter;
 
-import java.net.URI;
 import java.util.Locale;
 
 import javax.swing.Icon;
@@ -43,8 +42,8 @@ public class CertificationImageConverter extends Converter<MediaCertification, I
     }
     // try to find an image for this genre
     try {
-      URI uri = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg").toURI();
-      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      String svgName = cert.name().toLowerCase(Locale.ROOT) + ".svg";
+      TmmSvgIcon icon = new TmmSvgIcon(getClass().getResource("/org/tinymediamanager/ui/images/certification/" + svgName), svgName);
       icon.setPreferredHeight(32);
       icon.setAutosize(SVGIcon.AUTOSIZE_STRETCH);
 

@@ -18,7 +18,6 @@ package org.tinymediamanager.ui.components.combobox;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
-import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +31,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 
+import org.apache.commons.io.FilenameUtils;
 import org.tinymediamanager.core.ImageUtils;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.ui.IconManager;
@@ -43,8 +43,8 @@ import org.tinymediamanager.ui.images.TmmSvgIcon;
  * @author Manuel Laggner
  */
 public class MediaScraperComboBox extends JComboBox<MediaScraper> {
-  private Map<URI, ImageIcon> imageCache;
-  private int                 listWidth = 0;
+  private Map<String, ImageIcon> imageCache;
+  private int                    listWidth = 0;
 
   public MediaScraperComboBox() {
     super();
@@ -105,18 +105,18 @@ public class MediaScraperComboBox extends JComboBox<MediaScraper> {
     }
 
     try {
-      URI uri = url.toURI();
-      ImageIcon logo = imageCache.get(uri);
+      String key = url.toExternalForm();
+      ImageIcon logo = imageCache.get(key);
       if (logo == null) {
         if (url.getFile().endsWith("svg")) {
-          TmmSvgIcon svgIcon = new TmmSvgIcon(uri);
+          TmmSvgIcon svgIcon = new TmmSvgIcon(url, FilenameUtils.getName(url.getPath()));
           svgIcon.setPreferredHeight(calculatePreferredHeight());
           logo = svgIcon;
         }
         else {
           logo = ImageUtils.createMultiResolutionImage(IconManager.loadImageFromURL(url), calculatePreferredHeight());
         }
-        imageCache.put(uri, logo);
+        imageCache.put(key, logo);
       }
       return logo;
     }

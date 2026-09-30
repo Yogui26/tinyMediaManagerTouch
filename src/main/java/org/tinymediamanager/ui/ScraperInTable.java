@@ -18,7 +18,6 @@ package org.tinymediamanager.ui;
 
 import java.awt.Canvas;
 import java.awt.FontMetrics;
-import java.net.URI;
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -26,6 +25,7 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.ImageUtils;
@@ -59,10 +59,8 @@ public class ScraperInTable extends AbstractModelObject {
 
   protected ImageIcon getIcon(URL url) {
     try {
-      URI uri = url.toURI();
-
       if (url.getFile().endsWith("svg")) {
-        TmmSvgIcon svgIcon = new TmmSvgIcon(uri);
+        TmmSvgIcon svgIcon = new TmmSvgIcon(url, FilenameUtils.getName(url.getPath()));
         svgIcon.setPreferredHeight(calculatePreferredHeight());
         return svgIcon;
       }

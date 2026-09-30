@@ -19,7 +19,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.FontMetrics;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,6 +33,7 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.ImageUtils;
@@ -50,9 +50,9 @@ import org.tinymediamanager.ui.images.TmmSvgIcon;
 public class MediaScraperCheckComboBox extends TmmCheckComboBox<MediaScraper> {
   private static final Logger LOGGER    = LoggerFactory.getLogger(MediaScraperCheckComboBox.class);
 
-  private Map<URI, ImageIcon> imageCache;
+  private Map<String, ImageIcon> imageCache;
 
-  private int                 listWidth = 0;
+  private int                    listWidth = 0;
 
   public MediaScraperCheckComboBox(final List<MediaScraper> scrapers) {
     super(scrapers);
@@ -232,18 +232,18 @@ public class MediaScraperCheckComboBox extends TmmCheckComboBox<MediaScraper> {
       }
 
       try {
-        URI uri = url.toURI();
-        ImageIcon logo = imageCache.get(uri);
+        String key = url.toExternalForm();
+        ImageIcon logo = imageCache.get(key);
         if (logo == null) {
           if (url.getFile().endsWith("svg")) {
-            TmmSvgIcon svgIcon = new TmmSvgIcon(uri);
+            TmmSvgIcon svgIcon = new TmmSvgIcon(url, FilenameUtils.getName(url.getPath()));
             svgIcon.setPreferredHeight(calculatePreferredHeight());
             logo = svgIcon;
           }
           else {
             logo = ImageUtils.createMultiResolutionImage(IconManager.loadImageFromURL(url), calculatePreferredHeight());
           }
-          imageCache.put(uri, logo);
+          imageCache.put(key, logo);
         }
         return logo;
       }

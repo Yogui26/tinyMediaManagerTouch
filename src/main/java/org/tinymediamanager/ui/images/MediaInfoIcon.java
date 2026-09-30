@@ -19,7 +19,6 @@ import static org.tinymediamanager.ui.images.SvgIconHelper.getHexString;
 import static org.tinymediamanager.ui.images.SvgIconHelper.setFill;
 
 import java.awt.Dimension;
-import java.net.URI;
 
 import javax.swing.UIManager;
 
@@ -31,15 +30,10 @@ public class MediaInfoIcon extends TmmSvgIcon {
   private static final String BASE_PATH = "/org/tinymediamanager/ui/images/mediainfo/";
 
   public MediaInfoIcon(String relativePath) throws Exception {
-    super();
-    setSvgURI(getFileUri(relativePath));
+    super(MediaInfoIcon.class.getResource(BASE_PATH + relativePath), relativePath);
     setAutosize(AUTOSIZE_VERT);
     setPreferredSize(new Dimension(28, 28));
     setColor(UIManager.getColor("Label.foreground"), "#000000");
-  }
-
-  protected URI getFileUri(String relativePath) throws Exception {
-    return this.getClass().getResource(BASE_PATH + relativePath).toURI();
   }
 
   /**
@@ -54,9 +48,7 @@ public class MediaInfoIcon extends TmmSvgIcon {
     // get the text node from the root
     try {
       // clear cached SVG, because we want to modify the source
-      getSvgUniverse().clear();
-
-      SVGDiagram diagram = getSvgUniverse().getDiagram(getSvgURI());
+      SVGDiagram diagram = reloadDiagram();
       Text textElement = (Text) diagram.getElement("text");
       if (textElement != null) {
 
