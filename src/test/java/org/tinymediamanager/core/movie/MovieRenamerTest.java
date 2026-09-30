@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.junit.Test;
 import org.tinymediamanager.core.TmmModuleManager;
@@ -142,6 +144,143 @@ public class MovieRenamerTest extends BasicMovieTest {
     finally {
       finishTest();
     }
+  }
+
+  @Test
+  public void testMMDReevaluationAfterMergingIntoSingleMovieFolder() throws Exception {
+    try {
+      initTest();
+
+      // a NON-unique folder pattern will merge the movie into the existing folder -> MMD
+      MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile().setRenamerPathname("Single");
+      MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile().setRenamerFilename("");
+
+      MovieList movieList = MovieList.getInstance();
+      Path datasource = Paths.get(MovieModuleManager.getInstance().getSettings().getMovieDataSource().get(0));
+
+      Movie singleMovie = getMovieByMainVideo(movieList, datasource, "Single", "singlefile.avi");
+      Movie movieToMerge = getMovieByMainVideo(movieList, datasource, "MultipleVideosMMD", "multiv-movie2.avi");
+      assertThat(singleMovie).isNotNull();
+      assertThat(movieToMerge).isNotNull();
+      assertThat(singleMovie.isMultiMovieDir()).isFalse();
+
+      Set<Path> touchedFolders = new LinkedHashSet<>();
+      touchedFolders.add(movieToMerge.getPathNIO().toAbsolutePath());
+      MovieRenamer.renameMovie(movieToMerge, MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
+      touchedFolders.add(movieToMerge.getPathNIO().toAbsolutePath());
+
+      // the renamer only updates the flag of the renamed movie itself -> still stale at this point
+      assertThat(singleMovie.isMultiMovieDir()).isFalse();
+
+      // simulate the post-rename re-check done by the rename task
+      movieList.reevaluateMMDForFolders(touchedFolders);
+
+      // existing single movie now shares the folder -> must be treated as MMD
+      assertThat(singleMovie.isMultiMovieDir()).isTrue();
+    }
+    finally {
+      finishTest();
+    }
+  }
+
+  @Test
+  public void testMMDReevaluationAfterMovingMovieOutOfSharedFolder() throws Exception {
+    try {
+      initTest();
+
+      MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile().setRenamerPathname("${titleSortable} (${year})");
+      MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile().setRenamerFilename("");
+
+      MovieList movieList = MovieList.getInstance();
+      Path datasource = Paths.get(MovieModuleManager.getInstance().getSettings().getMovieDataSource().get(0));
+
+      Movie movie1 = getMovieByMainVideo(movieList, datasource, "MultipleVideosMMD", "multiv-movie1.avi");
+      Movie movie2 = getMovieByMainVideo(movieList, datasource, "MultipleVideosMMD", "multiv-movie2.avi");
+      Movie movie3 = getMovieByMainVideo(movieList, datasource, "MultipleVideosMMD", "multiv-movie3.avi");
+      assertThat(movie1).isNotNull();
+      assertThat(movie2).isNotNull();
+      assertThat(movie3).isNotNull();
+
+      Set<Path> touchedFolders = new LinkedHashSet<>();
+      touchedFolders.add(movie1.getPathNIO().toAbsolutePath());
+
+      // move 2 of the 3 movies out of the shared folder
+      touchedFolders.add(movie2.getPathNIO().toAbsolutePath());
+      MovieRenamer.renameMovie(movie2, MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
+      touchedFolders.add(movie2.getPathNIO().toAbsolutePath());
+
+      // still 2 movies left -> MMD is still correct
+      movieList.reevaluateMMDForFolders(touchedFolders);
+      assertThat(movie1.isMultiMovieDir()).isTrue();
+
+      touchedFolders.add(movie3.getPathNIO().toAbsolutePath());
+      MovieRenamer.renameMovie(movie3, MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
+      touchedFolders.add(movie3.getPathNIO().toAbsolutePath());
+
+      // only one movie left, but the stale flag is not touched by the renamer
+      assertThat(movie1.isMultiMovieDir()).isTrue();
+
+      // simulate the post-rename re-check done by the rename task
+      movieList.reevaluateMMDForFolders(touchedFolders);
+
+      // the last movie left behind can be upgraded to a single movie folder
+      assertThat(movie1.isMultiMovieDir()).isFalse();
+    }
+    finally {
+      finishTest();
+    }
+  }
+
+  @Test
+  public void testMMDReevaluationForNestedMovieFolders() throws Exception {
+    try {
+      initTest();
+
+      MovieList movieList = MovieList.getInstance();
+      String datasource = Paths.get(MovieModuleManager.getInstance().getSettings().getMovieDataSource().get(0)).toString();
+
+      // imagine a structure like
+      // ds/Nested/parent.mkv
+      // ds/Nested/child/child.mkv
+      // the parent MUST be treated as MMD, as long as the child lives below it
+      Movie parent = new Movie();
+      parent.setTitle("Nested Parent");
+      parent.setDataSource(datasource);
+      parent.setPath(Paths.get(datasource, "Nested").toString());
+      parent.setMultiMovieDir(true);
+      Movie child = new Movie();
+      child.setTitle("Nested Child");
+      child.setDataSource(datasource);
+      child.setPath(Paths.get(datasource, "Nested", "Child").toString());
+      child.setMultiMovieDir(false);
+      movieList.addMovie(parent);
+      movieList.addMovie(child);
+
+      // sanity: full sweep keeps the parent as MMD because of the nested child
+      movieList.reevaluateMMD();
+      assertThat(parent.isMultiMovieDir()).isTrue();
+      assertThat(child.isMultiMovieDir()).isFalse();
+
+      // simulate the child moving out of the nested folder; only its old folder is touched
+      Path childOldFolder = Paths.get(datasource, "Nested", "Child");
+      child.setPath(Paths.get(datasource, "Child").toString());
+      movieList.reevaluateMMDForFolders(Set.of(childOldFolder));
+
+      // no movies below the parent folder anymore -> can be downgraded to a single movie folder
+      assertThat(parent.isMultiMovieDir()).isFalse();
+    }
+    finally {
+      finishTest();
+    }
+  }
+
+  private Movie getMovieByMainVideo(MovieList movieList, Path datasource, String folder, String mainVideoFilename) {
+    for (Movie m : movieList.findByPath(datasource.resolve(folder))) {
+      if (m.getMainVideoFile() != null && m.getMainVideoFile().getFilename().equals(mainVideoFilename)) {
+        return m;
+      }
+    }
+    return null;
   }
 
   @Test
