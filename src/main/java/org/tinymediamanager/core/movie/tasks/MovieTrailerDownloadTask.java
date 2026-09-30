@@ -91,9 +91,14 @@ public class MovieTrailerDownloadTask extends TmmTask {
     catch (Exception e) {
       LOGGER.debug("No valid language chosen for trailer download - '{}'", e.getMessage());
     }
+
+    // remove all invalid and local trailers
+    List<MediaTrailer> movieTrailers = new ArrayList<>(movie.getTrailer());
+    movieTrailers.removeIf(trailer -> StringUtils.isNotBlank(trailer.getUrl()) && trailer.getUrl().startsWith("file:"));
+
     if (StringUtils.isNotBlank(language)) {
       // search for language and quality
-      for (MediaTrailer trailer : movie.getTrailer()) {
+      for (MediaTrailer trailer : movieTrailers) {
         if (language.equals(trailer.getLanguage())) {
           // language match
 
@@ -104,9 +109,22 @@ public class MovieTrailerDownloadTask extends TmmTask {
         }
       }
     }
-    else {
-      // only search for quality
-      for (MediaTrailer trailer : movie.getTrailer()) {
+
+    // none found? only search for quality and no language set
+    if (trailers.isEmpty()) {
+      for (MediaTrailer trailer : movieTrailers) {
+        if (StringUtils.isBlank(trailer.getLanguage())) {
+          // YouTube probably offers all desired qualities (at least for newer trailers)
+          if ("youtube".equalsIgnoreCase(trailer.getProvider()) || desiredQuality.containsQuality(trailer.getQuality())) {
+            trailers.add(trailer);
+          }
+        }
+      }
+    }
+
+    // still none found? only search for quality
+    if (trailers.isEmpty()) {
+      for (MediaTrailer trailer : movieTrailers) {
         // YouTube probably offers all desired qualities (at least for newer trailers)
         if ("youtube".equalsIgnoreCase(trailer.getProvider()) || desiredQuality.containsQuality(trailer.getQuality())) {
           trailers.add(trailer);
@@ -114,22 +132,13 @@ public class MovieTrailerDownloadTask extends TmmTask {
       }
     }
 
-    // remove invalid MediaTrailers
-    trailers.removeIf(trailer -> {
-      String url = trailer.getUrl();
-      if (StringUtils.isAllBlank(trailer.getUrl(), trailer.getId())) {
-        return true;
-      }
-
-      if (url.startsWith("file:")) {
-        return true;
-      }
-
-      return false;
-    });
+    // still none found? if there is only one, take it (regardless of any settings chosen)
+    if (trailers.isEmpty() && movieTrailers.size() == 1) {
+      trailers.add(movieTrailers.get(0));
+    }
 
     if (trailers.isEmpty()) {
-      LOGGER.info("No trailers available for '{}'", movie.getTitle());
+      LOGGER.warn("No suitable trailers available for '{}'", movie.getTitle());
       return;
     }
 
