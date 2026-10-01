@@ -53,7 +53,9 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieImdbMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieTmdbMetadataProvider;
+import org.tinymediamanager.scraper.interfaces.IMovieTvdbMetadataProvider;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
+import org.tinymediamanager.scraper.util.MetadataUtil;
 
 import com.google.gson.Gson;
 
@@ -94,8 +96,8 @@ public final class UniversalMovieMetadataProvider implements IMovieMetadataProvi
 
   public static void addProvider(IMovieMetadataProvider provider) {
     // called for each plugin implementing that interface
-    if (!provider.getId().equals(ID) && !COMPATIBLE_SCRAPERS.containsKey(provider.getId())
-        && (provider instanceof IMovieTmdbMetadataProvider || provider instanceof IMovieImdbMetadataProvider)) {
+    if (!provider.getId().equals(ID) && !COMPATIBLE_SCRAPERS.containsKey(provider.getId()) && (provider instanceof IMovieTmdbMetadataProvider
+        || provider instanceof IMovieImdbMetadataProvider || provider instanceof IMovieTvdbMetadataProvider)) {
       COMPATIBLE_SCRAPERS.put(provider.getId(), provider);
     }
   }
@@ -253,10 +255,11 @@ public final class UniversalMovieMetadataProvider implements IMovieMetadataProvi
 
   private Map<String, MediaMetadata> getMetadataMap(Set<IMovieMetadataProvider> metadataProviders, MovieSearchAndScrapeOptions options) {
     // check if we have all needed IDs
-    // this scraper supports scraping via TMDB id and IMDB id; but not all used providers support both
+    // this scraper supports scraping via TMDB id, IMDB id and TVDB id; but not all used providers support all of them
     // we may need to get the missing ones
     String imdbId = options.getImdbId();
     int tmdbId = options.getTmdbId();
+    int tvdbId = options.getIdAsInt(MediaMetadata.TVDB);
 
     Map<String, MediaMetadata> metadataMap = new HashMap<>();
 
@@ -269,9 +272,13 @@ public final class UniversalMovieMetadataProvider implements IMovieMetadataProvi
         // everything is good ;)
         continue;
       }
+      if (mp instanceof IMovieTvdbMetadataProvider && (tvdbId > 0 || MediaIdUtil.isValidImdbId(imdbId))) {
+        // everything is good ;) - the TVDB provider can resolve the TVDB id via IMDB id on its own
+        continue;
+      }
 
       // we've come here, so we have not the needed ID
-      // TMDB offers scraping by both and returns both (if available)
+      // TMDB offers scraping by both IMDB/TMDB id and returns all external ids (if available)
       if (tmdbId > 0 || MediaIdUtil.isValidImdbId(imdbId)) {
         // try to get the meta data via TMDB
         // anything cached?
@@ -291,22 +298,67 @@ public final class UniversalMovieMetadataProvider implements IMovieMetadataProvi
             LOGGER.debug("Could not get a result from scraper: {}", e.getMessage());
           }
         }
+        // we got a response - parse out TMDB id, IMDB id and TVDB id if needed
+        if (md != null) {
+          if (tmdbId == 0) {
+            Object id = md.getId(MediaMetadata.TMDB);
+            if (id != null) {
+              if (id instanceof Integer) {
+                // all good
+                tmdbId = (int) id;
+              }
+              else {
+                tmdbId = MetadataUtil.parseInt(id.toString(), 0);
+              }
+            }
+          }
+          if (!MediaIdUtil.isValidImdbId(imdbId) && MediaIdUtil.isValidImdbId((String) md.getId(MediaMetadata.IMDB))) {
+            imdbId = (String) md.getId(MediaMetadata.IMDB);
+          }
+          if (tvdbId == 0) {
+            Object id = md.getId(MediaMetadata.TVDB);
+            if (id != null) {
+              if (id instanceof Integer) {
+                // all good
+                tvdbId = (int) id;
+              }
+              else {
+                tvdbId = MetadataUtil.parseInt(id.toString(), 0);
+              }
+            }
+          }
+        }
+      }
+      else if (tvdbId > 0) {
+        // TMDB does not offer a lookup by TVDB id for movies - use the TVDB record instead, it carries the IMDb/TMDB remote ids (if available)
+        // anything cached?
+        MediaMetadata md = metadataMap.get(MediaMetadata.TVDB);
+        if (md == null) {
+          try {
+            IMovieMetadataProvider tvdb = COMPATIBLE_SCRAPERS.get(MediaMetadata.TVDB);
+            if (tvdb != null) {
+              md = tvdb.getMetadata(options);
+              if (md != null) {
+                // cache the result for later usage
+                metadataMap.put(MediaMetadata.TVDB, md);
+              }
+            }
+          }
+          catch (Exception e) {
+            LOGGER.debug("Could not get a result from scraper: {}", e.getMessage());
+          }
+        }
         // we got a response - parse out TMDB id and IMDB id if needed
         if (md != null) {
           if (tmdbId == 0) {
             Object id = md.getId(MediaMetadata.TMDB);
             if (id != null) {
-              try {
-                if (id instanceof Integer) {
-                  // all good
-                  tmdbId = (int) id;
-                }
-                else {
-                  tmdbId = Integer.parseInt((String) md.getId(MediaMetadata.TMDB));
-                }
+              if (id instanceof Integer) {
+                // all good
+                tmdbId = (int) id;
               }
-              catch (Exception ignored) {
-                LOGGER.trace("could not parse tmdb id: - {}", md.getId(MediaMetadata.TMDB));
+              else {
+                tmdbId = MetadataUtil.parseInt(id.toString(), 0);
               }
             }
           }
@@ -317,12 +369,15 @@ public final class UniversalMovieMetadataProvider implements IMovieMetadataProvi
       }
     }
 
-    // inject the found TMDB id and IMDB id into the search options
+    // inject the found TMDB id, IMDB id and TVDB id into the search options
     if (MediaIdUtil.isValidImdbId(imdbId)) {
       options.setImdbId(imdbId);
     }
     if (tmdbId > 0) {
       options.setTmdbId(tmdbId);
+    }
+    if (tvdbId > 0) {
+      options.setId(MediaMetadata.TVDB, String.valueOf(tvdbId));
     }
 
     // start the workers to get the metadata from the different providers

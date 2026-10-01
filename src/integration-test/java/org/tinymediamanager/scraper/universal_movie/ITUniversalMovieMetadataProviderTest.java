@@ -495,4 +495,111 @@ public class ITUniversalMovieMetadataProviderTest extends BasicITest {
       Assert.fail(e.getMessage());
     }
   }
+
+  @Test
+  public void testScrapeFromTvdbTwelveMonkeys() {
+    try {
+      scrapeFromTvdbTwelveMonkeys("tvdb", "706");
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail(e.getMessage());
+    }
+  }
+
+  @Test
+  public void testScrapeFromTvdbTwelveMonkeysWithTmdbId() {
+    try {
+      scrapeFromTvdbTwelveMonkeys("tmdb", "63");
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail(e.getMessage());
+    }
+  }
+
+  @Test
+  public void testScrapeFromTvdbTwelveMonkeysWithImdbId() {
+    try {
+      scrapeFromTvdbTwelveMonkeys("imdb", "tt0114746");
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail(e.getMessage());
+    }
+  }
+
+  @Test
+  public void testScrapeFromTmdbAndImdbWithTvdbOnlyId() {
+    // simulates a scrape which only knows the TVDB id (e.g. manually entered): the TVDB record carries the missing IMDb/TMDB ids
+    try {
+      IMovieMetadataProvider mp = new UniversalMovieMetadataProvider();
+
+      mp.getProviderInfo().getConfig().setValue("title", "tmdb");
+      mp.getProviderInfo().getConfig().setValue("originalTitle", "tmdb");
+      mp.getProviderInfo().getConfig().setValue("plot", "imdb");
+      mp.getProviderInfo().getConfig().setValue("runtime", "imdb");
+
+      MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions();
+      options.setId("tvdb", "706");
+      options.setLanguage(MediaLanguages.en);
+      options.setCertificationCountry(CountryCode.US);
+      options.setReleaseDateCountry("US");
+
+      MediaMetadata mediaMetadata = mp.getMetadata(options);
+
+      // the TVDB record carries the IMDb/TMDB remote ids, which must be resolved and injected
+      assertThat(mediaMetadata.getIds()).containsValues(706, 63, "tt0114746");
+      assertThat(mediaMetadata.getTitle()).isEqualTo("Twelve Monkeys");
+      assertThat(mediaMetadata.getOriginalTitle()).isEqualTo("Twelve Monkeys");
+      assertThat(mediaMetadata.getPlot()).isNotEmpty();
+      assertThat(mediaMetadata.getRuntime()).isGreaterThan(0);
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail(e.getMessage());
+    }
+  }
+
+  private void scrapeFromTvdbTwelveMonkeys(String providerId, String id) throws Exception {
+    IMovieMetadataProvider mp = new UniversalMovieMetadataProvider();
+    createSingleScraperConfig(mp, "tvdb");
+
+    MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions();
+    options.setId(providerId, id);
+    options.setLanguage(MediaLanguages.en);
+    options.setCertificationCountry(CountryCode.US);
+    options.setReleaseDateCountry("US");
+
+    MediaMetadata mediaMetadata = mp.getMetadata(options);
+
+    assertThat(mediaMetadata.getIds()).containsValues(706, "tt0114746");
+    assertThat(mediaMetadata.getTitle()).isEqualTo("12 Monkeys");
+    assertThat(mediaMetadata.getOriginalTitle()).isEqualTo("12 Monkeys");
+    assertThat(mediaMetadata.getYear()).isEqualTo(1995);
+    assertThat(mediaMetadata.getReleaseDate()).isNotNull();
+    assertThat(mediaMetadata.getRuntime()).isGreaterThan(0);
+    assertThat(mediaMetadata.getPlot()).isNotEmpty();
+    assertThat(mediaMetadata.getRatings()).isEmpty(); // no ratings scraped from TVDB
+    assertThat(mediaMetadata.getGenres()).isNotEmpty();
+    assertThat(mediaMetadata.getProductionCompanies()).isNotEmpty();
+    assertThat(mediaMetadata.getCastMembers()).isNotEmpty();
+    assertThat(mediaMetadata.getSpokenLanguages()).isNotEmpty();
+    assertThat(mediaMetadata.getCountries()).isNotEmpty();
+    assertThat(mediaMetadata.getCollectionName()).isEmpty(); // no collection available at TVDB
+  }
+
+  private void createSingleScraperConfig(IMovieMetadataProvider mp, String providerId) {
+    mp.getProviderInfo().getConfig().setValue("title", providerId);
+    mp.getProviderInfo().getConfig().setValue("originalTitle", providerId);
+    mp.getProviderInfo().getConfig().setValue("year", providerId);
+    mp.getProviderInfo().getConfig().setValue("releaseDate", providerId);
+    mp.getProviderInfo().getConfig().setValue("runtime", providerId);
+    mp.getProviderInfo().getConfig().setValue("plot", providerId);
+    mp.getProviderInfo().getConfig().setValue("genres", providerId);
+    mp.getProviderInfo().getConfig().setValue("productionCompanies", providerId);
+    mp.getProviderInfo().getConfig().setValue("castMembers", providerId);
+    mp.getProviderInfo().getConfig().setValue("spokenLanguages", providerId);
+    mp.getProviderInfo().getConfig().setValue("countries", providerId);
+  }
 }
