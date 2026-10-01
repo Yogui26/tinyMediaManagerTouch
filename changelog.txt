@@ -1,6 +1,7 @@
 Version 5.3.4
 =======================
 + [Movies] added TVDB to the available scrapers in the universal scraper
++ [TV shows] added filtering by IDs (IMDb, TVDB and TMDB) #3367
 ---
 x [Movies] fixed checking for multi movie folders when renaming a movie into the folder of another one #3362
 x [Movies] enhanced choosing the "best possible" trailer when automatically downloading trailers for movies #3364
