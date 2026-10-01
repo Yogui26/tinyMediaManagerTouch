@@ -40,9 +40,7 @@ public class GenericAudioCodecIcon extends MediaInfoIcon {
     // get the text node from the root
     try {
       // clear cached SVG, because we want to modify the source
-      getSvgUniverse().clear();
-
-      SVGDiagram diagram = getSvgUniverse().getDiagram(getSvgURI());
+      SVGDiagram diagram = reloadDiagram();
       Text textElement = (Text) diagram.getElement("text");
 
       textElement.addAttribute("x", AnimationElement.AT_XML, "141");

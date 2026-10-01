@@ -19,7 +19,6 @@ package org.tinymediamanager.ui.panels;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -164,8 +163,8 @@ public abstract class InformationPanel extends JPanel {
     }
     // try to find an image for this genre
     try {
-      URI uri = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg").toURI();
-      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      String svgName = cert.name().toLowerCase(Locale.ROOT) + ".svg";
+      TmmSvgIcon icon = new TmmSvgIcon(getClass().getResource("/org/tinymediamanager/ui/images/certification/" + svgName), svgName);
       icon.setPreferredHeight(32);
       icon.setAutosize(SVGIcon.AUTOSIZE_STRETCH);
 

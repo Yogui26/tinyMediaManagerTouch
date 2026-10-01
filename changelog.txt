@@ -1,3 +1,12 @@
+Version 5.3.4
+=======================
+x [Movies] fixed checking for multi movie folders when renaming a movie into the folder of another one #3362
+x [Movies] enhanced choosing the "best possible" trailer when automatically downloading trailers for movies #3364
+x [UI] improved updating of the progress bar after task completion
+x [UI] fixed loading of internal icons for installations containing special characters in the path #3363
+x [macOS] reverted the Unicode normalization to NFC for file/folder names, as it caused issues with NAS file systems #3365
+
+
 Version 5.3.3
 =======================
 + [TV shows] added more rating sources #3347

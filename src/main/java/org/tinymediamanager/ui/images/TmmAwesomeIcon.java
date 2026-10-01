@@ -16,12 +16,32 @@
 package org.tinymediamanager.ui.images;
 
 import java.awt.Color;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 
 public class TmmAwesomeIcon extends TmmSvgIcon {
 
   public TmmAwesomeIcon(URI uri, Color color) {
     super(uri);
+    setColor(color);
+    setAutosize(AUTOSIZE_BESTFIT);
+  }
+
+  /**
+   * Loads the SVG document from the given {@link URL}, see {@link TmmSvgIcon#TmmSvgIcon(URL, String)}
+   * 
+   * @param url
+   *          the {@link URL} pointing to the SVG document
+   * @param name
+   *          the name used to reference the document if it has to be loaded from the stream
+   * @param color
+   *          the {@link Color} to set
+   * @throws IOException
+   *           if the document could not be loaded
+   */
+  public TmmAwesomeIcon(URL url, String name, Color color) throws IOException {
+    super(url, name);
     setColor(color);
     setAutosize(AUTOSIZE_BESTFIT);
   }

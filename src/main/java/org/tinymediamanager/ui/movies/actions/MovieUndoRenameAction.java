@@ -16,11 +16,16 @@
 package org.tinymediamanager.ui.movies.actions;
 
 import java.awt.event.ActionEvent;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.JOptionPane;
 
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieRenamer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.ui.IconManager;
@@ -49,9 +54,22 @@ public class MovieUndoRenameAction extends TmmAction {
       return;
     }
 
+    // take a snapshot of all folders involved, to be able to re-evaluate the MMD flag of affected movies afterwards
+    Set<Path> touchedFolders = new LinkedHashSet<>();
+    for (Movie movie : selectedMovies) {
+      touchedFolders.add(movie.getPathNIO().toAbsolutePath());
+      if (movie.getRenameHistory() != null) {
+        touchedFolders.add(Paths.get(movie.getRenameHistory().getOldPath()).toAbsolutePath());
+        touchedFolders.add(Paths.get(movie.getRenameHistory().getNewPath()).toAbsolutePath());
+      }
+    }
+
     // undo rename
     for (Movie movie : selectedMovies) {
       MovieRenamer.undoRename(movie);
     }
+
+    // re-check the MMD flag of all movies in the old AND new folders of the undone movies
+    MovieModuleManager.getInstance().getMovieList().reevaluateMMDForFolders(touchedFolders);
   }
 }

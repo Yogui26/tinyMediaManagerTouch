@@ -19,7 +19,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BaseMultiResolutionImage;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +33,8 @@ import javax.swing.UIManager;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tinymediamanager.ui.components.toolbar.ToolbarMenu;
 import org.tinymediamanager.ui.images.TmmAwesomeIcon;
 import org.tinymediamanager.ui.images.TmmSvgIcon;
@@ -42,12 +43,14 @@ import org.tinymediamanager.ui.images.TmmTextIcon;
 import com.kitfox.svg.app.beans.SVGIcon;
 
 public class IconManager {
-  public static final ImageIcon              EMPTY_IMAGE                  = new ImageIcon(IconManager.class.getResource("plaf/empty.png"));
-  private static final Set<TmmSvgIconCache>  SVG_CACHE                    = new HashSet<>();
-  private static final Set<TmmTextIconCache> TEXT_ICON_CACHE              = new HashSet<>();
-  private static final Map<URI, ImageIcon>   ICON_CACHE                   = new HashMap<>();
+  private static final Logger                 LOGGER                       = LoggerFactory.getLogger(IconManager.class);
 
-  private static final Color                 RED                          = new Color(204, 2, 2);
+  public static final ImageIcon               EMPTY_IMAGE                  = new ImageIcon(IconManager.class.getResource("plaf/empty.png"));
+  private static final Set<TmmSvgIconCache>   SVG_CACHE                    = new HashSet<>();
+  private static final Set<TmmTextIconCache>  TEXT_ICON_CACHE              = new HashSet<>();
+  private static final Map<String, ImageIcon> ICON_CACHE                   = new HashMap<>();
+
+  private static final Color                  RED                          = new Color(204, 2, 2);
 
   // toolbar icons
   public static final ImageIcon              TOOLBAR_ABOUT                = createSVGIcon("icn_about.svg", new Dimension(24, 24));
@@ -295,21 +298,13 @@ public class IconManager {
    * @return the image or an empty image (1x1 px transparent) if it is not loadable
    */
   public static ImageIcon loadImageFromURL(URL url) {
-    URI uri = null;
-
     if (url == null) {
       return EMPTY_IMAGE;
     }
 
-    try {
-      uri = url.toURI();
-    }
-    catch (Exception e) {
-      return EMPTY_IMAGE;
-    }
-
     // read cache
-    ImageIcon icon = ICON_CACHE.get(uri);
+    String key = url.toExternalForm();
+    ImageIcon icon = ICON_CACHE.get(key);
 
     if (icon == null) {
       try {
@@ -322,7 +317,7 @@ public class IconManager {
         icon = EMPTY_IMAGE;
       }
 
-      ICON_CACHE.put(uri, icon);
+      ICON_CACHE.put(key, icon);
     }
 
     return icon;
@@ -382,8 +377,7 @@ public class IconManager {
   private static ImageIcon createSVGIcon(String name, Dimension size, Color color, boolean autoSize) {
     try {
       // create the icon
-      URI uri = IconManager.class.getResource("images/svg/" + name).toURI();
-      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      TmmSvgIcon icon = new TmmSvgIcon(IconManager.class.getResource("images/svg/" + name), name);
       icon.setPreferredSize(size);
 
       if (color != null) {
@@ -396,6 +390,7 @@ public class IconManager {
       return icon;
     }
     catch (Exception e) {
+      LOGGER.debug("Could not load SVG icon '{}'", name, e);
       return EMPTY_IMAGE;
     }
   }
@@ -403,8 +398,7 @@ public class IconManager {
   private static ImageIcon createSVGIcon(String name, Color color, double scaleFactor) {
     try {
       // create the icon
-      URI uri = IconManager.class.getResource("images/svg/" + name).toURI();
-      TmmAwesomeIcon icon = new TmmAwesomeIcon(uri, color);
+      TmmAwesomeIcon icon = new TmmAwesomeIcon(IconManager.class.getResource("images/svg/" + name), name, color);
 
       icon.setPreferredHeight(calculateFontIconSize(scaleFactor));
 
@@ -412,6 +406,7 @@ public class IconManager {
       return icon;
     }
     catch (Exception e) {
+      LOGGER.debug("Could not load SVG icon '{}'", name, e);
       return EMPTY_IMAGE;
     }
   }
@@ -448,7 +443,7 @@ public class IconManager {
   }
 
   private static class TmmSvgIconCache {
-    private TmmSvgIcon   icon;
+    private final TmmSvgIcon icon;
     private final double scaleFactor;
     private final String colorReference;
 
@@ -460,7 +455,7 @@ public class IconManager {
   }
 
   private static class TmmTextIconCache {
-    private TmmTextIcon  icon;
+    private final TmmTextIcon icon;
     private final double scaleFactor;
     private final String colorReference;
 
