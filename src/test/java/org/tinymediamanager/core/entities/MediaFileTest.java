@@ -444,6 +444,30 @@ public class MediaFileTest extends BasicTest {
     checkMediaFileType("Season 1/landscape.png", MediaFileType.THUMB);
   }
 
+  @Test
+  public void testSubtitleTitleList() {
+    MediaFile mf = new MediaFile(Paths.get(datasource, "movie", "test.mkv"));
+
+    // no subtitles at all -> empty list
+    assertThat(mf.getSubtitleTitleList()).isEmpty();
+
+    MediaFileSubtitle withTitle = new MediaFileSubtitle();
+    withTitle.setTitle("SDH");
+    withTitle.setLanguage("eng");
+    MediaFileSubtitle blankTitle = new MediaFileSubtitle();
+    blankTitle.setTitle("   ");
+    blankTitle.setLanguage("deu");
+    MediaFileSubtitle secondTitle = new MediaFileSubtitle();
+    secondTitle.setTitle("Director commentary");
+    secondTitle.setLanguage("fra");
+
+    mf.addSubtitle(withTitle);
+    mf.addSubtitle(blankTitle);
+    mf.addSubtitle(secondTitle);
+
+    assertThat(mf.getSubtitleTitleList()).containsExactly("SDH", "Director commentary");
+  }
+
   private void checkMediaFileType(String filename, MediaFileType mediaFileType) {
     assertThat(new MediaFile(Paths.get(datasource, "movie", filename)).getType()).isEqualTo(mediaFileType);
   }

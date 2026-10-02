@@ -125,6 +125,7 @@ public final class MovieList extends AbstractModelObject {
   private final CopyOnWriteArrayList<String>             decadesInMovies;
   private final CopyOnWriteArrayList<String>             hdrFormatInMovies;
   private final CopyOnWriteArrayList<String>             audioTitlesInMovies;
+  private final CopyOnWriteArrayList<String>             subtitleTitlesInMovies;
   private final CopyOnWriteArrayList<String>             subtitleFormatsInMovies;
 
   /**
@@ -168,6 +169,7 @@ public final class MovieList extends AbstractModelObject {
     decadesInMovies = new CopyOnWriteArrayList<>();
     hdrFormatInMovies = new CopyOnWriteArrayList<>();
     audioTitlesInMovies = new CopyOnWriteArrayList<>();
+    subtitleTitlesInMovies = new CopyOnWriteArrayList<>();
     subtitleFormatsInMovies = new CopyOnWriteArrayList<>();
 
     EventBus.registerListener(EventBus.TOPIC_MOVIES, event -> {
@@ -1397,6 +1399,7 @@ public final class MovieList extends AbstractModelObject {
     Set<String> hdrFormat = new HashSet<>();
     Set<String> audioTitles = new HashSet<>();
     Set<String> subtitleFormats = new HashSet<>();
+    Set<String> subtitleTitles = new HashSet<>();
 
     for (Movie movie : movies) {
 
@@ -1417,6 +1420,11 @@ public final class MovieList extends AbstractModelObject {
           if (!subtitle.getCodec().isEmpty()) {
             subtitleFormats.add(subtitle.getCodec());
           }
+        }
+
+        // subtitle titles
+        if (!mf.getSubtitleTitleList().isEmpty()) {
+          subtitleTitles.addAll(mf.getSubtitleTitleList());
         }
 
         if (mf.getType() == MediaFileType.VIDEO) {
@@ -1541,6 +1549,11 @@ public final class MovieList extends AbstractModelObject {
     if (ListUtils.addToCopyOnWriteArrayListIfAbsent(audioTitlesInMovies, audioTitles)) {
       EventBus.publishEvent(TOPIC_MOVIES_UI, Event.createUpdateEvent(instance));
     }
+
+    // subtitle titles
+    if (ListUtils.addToCopyOnWriteArrayListIfAbsent(subtitleTitlesInMovies, subtitleTitles)) {
+      EventBus.publishEvent(TOPIC_MOVIES_UI, Event.createUpdateEvent(instance));
+    }
   }
 
   /**
@@ -1634,6 +1647,10 @@ public final class MovieList extends AbstractModelObject {
 
   public List<String> getAudioTitlesInMovies() {
     return Collections.unmodifiableList(audioTitlesInMovies);
+  }
+
+  public List<String> getSubtitleTitlesInMovies() {
+    return Collections.unmodifiableList(subtitleTitlesInMovies);
   }
 
   /**

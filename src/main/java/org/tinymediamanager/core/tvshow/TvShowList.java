@@ -110,6 +110,7 @@ public final class TvShowList extends AbstractModelObject {
   private final CopyOnWriteArrayList<Integer>            subtitlesInEpisodes;
   private final CopyOnWriteArrayList<String>             subtitleLanguagesInEpisodes;
   private final CopyOnWriteArrayList<String>             subtitleFormatsInEpisodes;
+  private final CopyOnWriteArrayList<String>             subtitleTitlesInEpisodes;
 
   private final CopyOnWriteArrayList<String>             hdrFormatInEpisodes;
   private final CopyOnWriteArrayList<String>             audioTitlesInEpisodes;
@@ -138,6 +139,7 @@ public final class TvShowList extends AbstractModelObject {
     hdrFormatInEpisodes = new CopyOnWriteArrayList<>();
     audioTitlesInEpisodes = new CopyOnWriteArrayList<>();
     subtitleFormatsInEpisodes = new CopyOnWriteArrayList<>();
+    subtitleTitlesInEpisodes = new CopyOnWriteArrayList<>();
 
     // eventbus listener - just forward TV show changes to the TV show list listener to collect changes/avoid unnecessary multiple updates
     EventBus.registerListener(EventBus.TOPIC_TV_SHOWS, event -> {
@@ -1216,6 +1218,7 @@ public final class TvShowList extends AbstractModelObject {
     Set<String> hdrFormat = new HashSet<>();
     Set<String> audioTitles = new HashSet<>();
     Set<String> subtitleFormats = new HashSet<>();
+    Set<String> subtitleTitles = new HashSet<>();
 
     for (TvShow tvShow : tvShows) {
       for (TvShowEpisode episode : tvShow.getEpisodes()) {
@@ -1231,11 +1234,17 @@ public final class TvShowList extends AbstractModelObject {
           if (!mf.getSubtitleLanguages().isEmpty()) {
             subtitleLanguages.addAll(mf.getSubtitleLanguages());
           }
+
           // subtitle formats
           for (MediaFileSubtitle subtitle : mf.getSubtitles()) {
             if (!subtitle.getCodec().isEmpty()) {
               subtitleFormats.add(subtitle.getCodec());
             }
+          }
+
+          // subtitle titles
+          if (!mf.getSubtitleTitleList().isEmpty()) {
+            subtitleTitles.addAll(mf.getSubtitleTitleList());
           }
 
           if (mf.getType() == MediaFileType.VIDEO) {
@@ -1361,6 +1370,11 @@ public final class TvShowList extends AbstractModelObject {
     if (ListUtils.addToCopyOnWriteArrayListIfAbsent(audioTitlesInEpisodes, audioTitles)) {
       EventBus.publishEvent(TOPIC_TV_SHOWS_UI, Event.createUpdateEvent(instance));
     }
+
+    // subtitle titles
+    if (ListUtils.addToCopyOnWriteArrayListIfAbsent(subtitleTitlesInEpisodes, subtitleTitles)) {
+      EventBus.publishEvent(TOPIC_TV_SHOWS_UI, Event.createUpdateEvent(instance));
+    }
   }
 
   public List<String> getVideoCodecsInEpisodes() {
@@ -1405,6 +1419,10 @@ public final class TvShowList extends AbstractModelObject {
 
   public List<String> getSubtitleFormatsInEpisodes() {
     return Collections.unmodifiableList(subtitleFormatsInEpisodes);
+  }
+
+  public List<String> getSubtitleTitlesInEpisodes() {
+    return Collections.unmodifiableList(subtitleTitlesInEpisodes);
   }
 
   public List<String> getHdrFormatInEpisodes() {

@@ -829,4 +829,28 @@ public class MediaInfoTest extends BasicTest {
     assertThat(sub1.isForced()).isTrue();
     assertThat(sub1.isSdh()).isFalse();
   }
+
+  @Test
+  public void testSdhTitleInference() throws Exception {
+    copyResourceFolderToWorkFolder("mediainfo");
+    Path mediainfoFolder = getWorkFolder().resolve("mediainfo");
+
+    // subtitle tracks without any service kind - the hearing impaired flag must be inferred from the title
+    MediaFile mf = new MediaFile(mediainfoFolder.resolve("sdh-inference.mkv"));
+    MediaFileHelper.gatherMediaInformation(mf, false);
+
+    assertThat(mf.getSubtitles().size()).isEqualTo(3);
+
+    MediaFileSubtitle sub1 = mf.getSubtitles().get(0);
+    assertThat(sub1.getTitle()).isEqualTo("English CC");
+    assertThat(sub1.isSdh()).isTrue();
+
+    MediaFileSubtitle sub2 = mf.getSubtitles().get(1);
+    assertThat(sub2.getTitle()).isEqualTo("Hearing Impaired");
+    assertThat(sub2.isSdh()).isTrue();
+
+    MediaFileSubtitle sub3 = mf.getSubtitles().get(2);
+    assertThat(sub3.getTitle()).isEqualTo("Commentary track");
+    assertThat(sub3.isSdh()).isFalse();
+  }
 }

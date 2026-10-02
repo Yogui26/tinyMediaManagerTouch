@@ -101,6 +101,7 @@ import org.tinymediamanager.ui.movies.filters.MovieReleaseDateFilter;
 import org.tinymediamanager.ui.movies.filters.MovieRuntimeFilter;
 import org.tinymediamanager.ui.movies.filters.MovieSubtitleFormatFilter;
 import org.tinymediamanager.ui.movies.filters.MovieSubtitleLanguageFilter;
+import org.tinymediamanager.ui.movies.filters.MovieSubtitleTitleFilter;
 import org.tinymediamanager.ui.movies.filters.MovieSubtitleTypeFilter;
 import org.tinymediamanager.ui.movies.filters.MovieTagFilter;
 import org.tinymediamanager.ui.movies.filters.MovieThumbSizeFilter;
@@ -270,6 +271,7 @@ public class MovieFilterDialog extends TmmDialog {
         addFilter(new MovieSubtitleLanguageFilter(), panelOther);
         addFilter(new MovieSubtitleFormatFilter(), panelOther);
         addFilter(new MovieSubtitleTypeFilter(), panelOther);
+        addFilter(new MovieSubtitleTitleFilter(), panelOther);
         addFilter(new MovieVideoExtrasFilter(), panelOther);
         addFilter(new MovieTrailerFormatFilter(), panelOther);
         addFilter(new MovieRuntimeFilter(), panelOther);
