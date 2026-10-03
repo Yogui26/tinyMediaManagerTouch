@@ -48,6 +48,7 @@ import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieTrailerProvider;
+import org.tinymediamanager.scraper.interfaces.IMovieTvdbMetadataProvider;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.BaseResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.BaseResponseList;
@@ -73,7 +74,8 @@ import retrofit2.Response;
  *
  * @author Manuel Laggner
  */
-public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implements IMovieMetadataProvider, IMovieTrailerProvider {
+public final class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider
+    implements IMovieMetadataProvider, IMovieTvdbMetadataProvider, IMovieTrailerProvider {
   private static final Logger LOGGER = LoggerFactory.getLogger(TheTvDbMovieMetadataProvider.class);
 
   @Override

@@ -100,6 +100,8 @@ public class MediaFileHelper {
   // for structure detection
   public static final List<String> BLURAY_FOLDERS     = List.of("BDMV", "PLAYLIST", "CLIPINF", "STREAM");
   public static final Pattern      BIF_PATTERN        = Pattern.compile("(-\\d+-\\d+)\\.bif$", Pattern.CASE_INSENSITIVE);                         // xxx-320-10.bif
+  // well known markers for subtitles for the hearing impaired in stream titles (similar to mkvtoolnix)
+  private static final Pattern     SDH_TITLE_PATTERN  = Pattern.compile("(?i)\\b(sdh|cc|hearing[-\\s]?impaired)\\b");
 
   public static final List<String> SUPPORTED_ARTWORK_FILETYPES;
   public static final List<String> DEFAULT_VIDEO_FILETYPES;
@@ -2104,6 +2106,11 @@ public class MediaFileHelper {
     String title = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Text, i, "Title");
     if (StringUtils.isNotBlank(title)) {
       stream.setTitle(title);
+
+      // like mkvtoolnix: infer the hearing impaired flag from well known markers in the title
+      if (!stream.isSdh() && SDH_TITLE_PATTERN.matcher(title).find()) {
+        stream.setSdh(true);
+      }
     }
 
     // "default" subtitle stream?

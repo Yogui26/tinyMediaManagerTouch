@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaInfo
+        xmlns="https://mediaarea.net/mediainfo"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://mediaarea.net/mediainfo https://mediaarea.net/mediainfo/mediainfo_2_0.xsd"
+        version="2.0">
+    <creatingLibrary version="21.03" url="https://mediaarea.net/MediaInfo">MediaInfoLib</creatingLibrary>
+    <media ref="sdh-inference.mkv">
+        <track type="General">
+            <VideoCount>1</VideoCount>
+            <AudioCount>1</AudioCount>
+            <TextCount>3</TextCount>
+            <FileExtension>mkv</FileExtension>
+            <Format>Matroska</Format>
+            <Format_Version>4</Format_Version>
+            <FileSize>820035176</FileSize>
+            <Duration>3508.906</Duration>
+            <OverallBitRate>1869609</OverallBitRate>
+            <FrameRate>50.000</FrameRate>
+        </track>
+        <track type="Video">
+            <StreamOrder>0</StreamOrder>
+            <ID>1</ID>
+            <Format>HEVC</Format>
+            <CodecID>V_MPEGH/ISO/HEVC</CodecID>
+            <Duration>3508.800000000</Duration>
+            <BitRate>1413531</BitRate>
+            <Width>1280</Width>
+            <Height>720</Height>
+            <FrameRate>50.000</FrameRate>
+            <ColorSpace>YUV</ColorSpace>
+            <BitDepth>10</BitDepth>
+            <StreamSize>619975103</StreamSize>
+            <Default>Yes</Default>
+            <Forced>No</Forced>
+        </track>
+        <track type="Audio">
+            <StreamOrder>1</StreamOrder>
+            <ID>2</ID>
+            <Format>AC-3</Format>
+            <CodecID>A_AC3</CodecID>
+            <Duration>3508.800000000</Duration>
+            <BitRate>448000</BitRate>
+            <Channels>2</Channels>
+            <ChannelLayout>L R</ChannelLayout>
+            <SamplingRate>48000</SamplingRate>
+            <StreamSize>196492800</StreamSize>
+            <Language>de</Language>
+            <Default>Yes</Default>
+            <Forced>No</Forced>
+        </track>
+        <track type="Text" typeorder="1">
+            <StreamOrder>2</StreamOrder>
+            <ID>3</ID>
+            <Format>UTF-8</Format>
+            <CodecID>S_TEXT/UTF8</CodecID>
+            <Duration>3492.800000000</Duration>
+            <StreamSize>23907</StreamSize>
+            <Title>English CC</Title>
+            <Language>en</Language>
+            <Default>No</Default>
+            <Forced>No</Forced>
+        </track>
+        <track type="Text" typeorder="2">
+            <StreamOrder>3</StreamOrder>
+            <ID>4</ID>
+            <Format>UTF-8</Format>
+            <CodecID>S_TEXT/UTF8</CodecID>
+            <Duration>3492.800000000</Duration>
+            <StreamSize>23907</StreamSize>
+            <Title>Hearing Impaired</Title>
+            <Language>en</Language>
+            <Default>No</Default>
+            <Forced>No</Forced>
+        </track>
+        <track type="Text" typeorder="3">
+            <StreamOrder>4</StreamOrder>
+            <ID>5</ID>
+            <Format>UTF-8</Format>
+            <CodecID>S_TEXT/UTF8</CodecID>
+            <Duration>3492.800000000</Duration>
+            <StreamSize>23907</StreamSize>
+            <Title>Commentary track</Title>
+            <Language>en</Language>
+            <Default>No</Default>
+            <Forced>No</Forced>
+        </track>
+    </media>
+</MediaInfo>

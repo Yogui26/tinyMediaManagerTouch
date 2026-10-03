@@ -917,6 +917,23 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   }
 
   /**
+   * gets the subtitle titles from all subtitle streams of the mediafile
+   *
+   * @return the subtitle titles
+   */
+  public List<String> getSubtitleTitleList() {
+    List<String> subtitleTitleList = new ArrayList<>();
+
+    for (MediaFileSubtitle stream : ListUtils.nullSafe(subtitles)) {
+      if (StringUtils.isNotBlank(stream.getTitle())) {
+        subtitleTitleList.add(stream.getTitle());
+      }
+    }
+
+    return subtitleTitleList;
+  }
+
+  /**
    * gets the audio codecs from all streams as List<br>
    * (w/o punctuation; eg AC-3 => AC3).
    *
