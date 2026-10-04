@@ -185,12 +185,24 @@ public class MovieSetExporter extends MediaEntityExporter {
 
   private static String getFilename(MediaEntity entity) {
     if (entity instanceof MovieSet movieSet) {
-      return movieSet.getTitle();
+      return getMovieSetFilename(movieSet);
     }
     if (entity instanceof Movie movie) {
       return getMovieFilename(movie);
     }
     return "";
+  }
+
+  private static String getMovieSetFilename(MovieSet movieSet) {
+    // the set title is used as the export folder name - strip illegal filesystem characters (e.g. ':')
+    String filename = MovieRenamer.replaceInvalidCharacters(movieSet.getTitle(),
+        MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
+    if (StringUtils.isNotBlank(filename)) {
+      return filename;
+    }
+
+    // fallback (should not happen, but could)
+    return movieSet.getDbId().toString();
   }
 
   private static String getMovieFilename(Movie movie) {
