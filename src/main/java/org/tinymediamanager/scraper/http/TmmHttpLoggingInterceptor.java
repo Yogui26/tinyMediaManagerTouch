@@ -56,7 +56,8 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
   private static final int     HTTP_CONTINUE        = 100;
   private static final int     MAX_TEXT_BODY_LENGTH = 1000;
   private static final int     MIN_TEXT_BODY_LENGTH = 100;
-  private static final Pattern CONTENT_PATTERN      = Pattern.compile("(password|api-key|apikey)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CONTENT_PATTERN      = Pattern.compile("(password|api-key|apikey|secret|token|device_code|code_verifier)",
+      Pattern.CASE_INSENSITIVE);
 
   @NotNull
   @Override
@@ -145,6 +146,10 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
       if (!hasBody(response) || bodyHasUnknownEncoding(response.headers())) {
         LOGGER.trace("<-- END HTTP");
       }
+      else if (isAuthEndpoint(response.request().url().encodedPath())) {
+        // the OAuth endpoints answer with access/refresh tokens - never write them to the log
+        LOGGER.trace("<-- END HTTP ({}-byte body omitted)", contentLength);
+      }
       else if (isTextResponse(response)) {
         BufferedSource source = responseBody.source();
         source.request(Long.MAX_VALUE); // Buffer the entire body.
@@ -197,6 +202,13 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
     }
 
     return response;
+  }
+
+  /**
+   * Is this the path of an OAuth endpoint, which answers with credentials that must not end up in the log?
+   */
+  private static boolean isAuthEndpoint(String path) {
+    return StringUtils.containsIgnoreCase(path, "/oauth");
   }
 
   private static boolean bodyHasUnknownEncoding(Headers headers) {

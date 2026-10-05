@@ -16,13 +16,15 @@
 package org.tinymediamanager.thirdparty.simkl.model;
 
 /**
- * The response of the <code>/oauth/pin</code> endpoint.
+ * The RFC 6749 section 5.2 error envelope of the Simkl AUTH V2 <code>/oauth2/*</code> endpoints. Branch on {@link #error} only,
+ * {@link #error_description} is human-readable and may change.
  *
  * @author Manuel Laggner
  */
-public class SimklPinCodeResponse {
-  public String user_code;
-  public String verification_uri;
-  public String expires_in;
-  public String interval;
+public class SimklOAuth2Error {
+  /** The machine-readable error code, e.g. <code>authorization_pending</code>, <code>slow_down</code> or <code>expired_token</code> */
+  public String error;
+
+  /** The human-readable description - for logging and display, never for branching */
+  public String error_description;
 }

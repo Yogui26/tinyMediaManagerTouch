@@ -15,17 +15,18 @@
  */
 package org.tinymediamanager.thirdparty.simkl;
 
-import org.tinymediamanager.thirdparty.simkl.model.SimklAccessTokenResponse;
 import org.tinymediamanager.thirdparty.simkl.model.SimklActivities;
 import org.tinymediamanager.thirdparty.simkl.model.SimklAllItemsResponse;
+import org.tinymediamanager.thirdparty.simkl.model.SimklDeviceCodeResponse;
 import org.tinymediamanager.thirdparty.simkl.model.SimklMoviesResponse;
-import org.tinymediamanager.thirdparty.simkl.model.SimklPinCodeResponse;
+import org.tinymediamanager.thirdparty.simkl.model.SimklTokenResponse;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.Field;
+import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
-import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 /**
@@ -35,11 +36,31 @@ import retrofit2.http.Query;
  */
 interface SimklApi {
 
-  @GET("oauth/pin")
-  Call<SimklPinCodeResponse> getPinCode();
+  // ---------------------------------------------------------------------------------------------
+  // AUTH V2 endpoints (OAuth 2.0)
+  // ---------------------------------------------------------------------------------------------
 
-  @GET("oauth/pin/{userCode}")
-  Call<SimklAccessTokenResponse> pollForToken(@Path("userCode") String userCode);
+  @FormUrlEncoded
+  @POST("oauth2/device")
+  Call<SimklDeviceCodeResponse> getDeviceCode(@Field("client_id") String clientId, @Field("scope") String scope);
+
+  @FormUrlEncoded
+  @POST("oauth2/token")
+  Call<SimklTokenResponse> exchangeDeviceCode(@Field("grant_type") String grantType, @Field("client_id") String clientId,
+      @Field("device_code") String deviceCode);
+
+  @FormUrlEncoded
+  @POST("oauth2/token")
+  Call<SimklTokenResponse> refreshV2AccessToken(@Field("grant_type") String grantType, @Field("client_id") String clientId,
+      @Field("refresh_token") String refreshToken);
+
+  @FormUrlEncoded
+  @POST("oauth2/revoke")
+  Call<Void> revokeToken(@Field("client_id") String clientId, @Field("token") String token);
+
+  // ---------------------------------------------------------------------------------------------
+  // data endpoints
+  // ---------------------------------------------------------------------------------------------
 
   @GET("sync/activities")
   Call<SimklActivities> getActivities();
