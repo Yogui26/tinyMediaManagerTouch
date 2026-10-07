@@ -595,6 +595,11 @@ public class ImageCache {
       return null;
     }
 
+    // is the original file available? if not, we cannot cache it
+    if (!Files.exists(path)) {
+      return null;
+    }
+
     try {
       return cacheImage(mediaFile);
     }
