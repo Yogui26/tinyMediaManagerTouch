@@ -57,6 +57,8 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.security.CodeSource;
 import java.text.CharacterIterator;
 import java.text.DateFormat;
+import java.text.Normalizer;
+import java.text.Normalizer.Form;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.text.StringCharacterIterator;
@@ -117,6 +119,9 @@ import org.tinymediamanager.scraper.util.UrlUtil;
  */
 public class Utils {
   private static final Logger       LOGGER                      = LoggerFactory.getLogger(Utils.class);
+
+  /** the file store type macOS reports for its native local volumes */
+  private static final String       APFS_FILE_STORE_TYPE        = "apfs";
 
   /**
    * datasources whose trash folder has already been created/verified in this session; saves repeated (network) metadata round trips while deleting
@@ -1003,6 +1008,40 @@ public class Utils {
     catch (FileAlreadyExistsException e) {
       // the directory is already there - all good
     }
+  }
+
+  /**
+   * Returns the path in the form the local file system needs for an imminent Java NIO access.<br>
+   * On macOS, non-APFS volumes (e.g. SMB/NFS mounts or exFAT drives) match file names byte-accurate while the OS exposes their file trees in NFD -
+   * those paths are converted to their absolute NFD form. APFS volumes resolve normalization-insensitive and are returned unchanged, as are all paths
+   * on other platforms. If the file store cannot be determined (e.g. an unreachable mount), the NFD form is used as safe fallback.
+   * <p>
+   * The returned path must only be used for the imminent file API call - all business logic, entities and database entries keep their original form.
+   *
+   * @param path
+   *          the internal path to adapt for file system access
+   * @return the adapted path on foreign macOS volumes, the unmodified path in every other case
+   */
+  public static Path adaptForNativeAccess(Path path) {
+    if (!SystemUtils.IS_OS_MAC || path == null) {
+      return path;
+    }
+
+    Path absolutePath = path.toAbsolutePath();
+    try {
+      if (APFS_FILE_STORE_TYPE.equalsIgnoreCase(Files.getFileStore(absolutePath).type())) {
+        return path;
+      }
+    }
+    catch (Exception e) {
+      LOGGER.debug("could not determine file store of '{}' - assuming foreign volume [{}]", absolutePath, e.toString());
+    }
+
+    Path nativePath = Paths.get(Normalizer.normalize(absolutePath.toString(), Form.NFD));
+    if (!nativePath.equals(absolutePath)) {
+      LOGGER.trace("adapting path for native file access: {} -> {}", absolutePath, nativePath);
+    }
+    return nativePath;
   }
 
   /**
