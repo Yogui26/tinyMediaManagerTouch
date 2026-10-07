@@ -19,7 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -107,7 +107,7 @@ public final class TvShowModuleManager implements ITmmModule {
   private TvShowModuleManager() {
     enabled = false;
     startupMessages = new ArrayList<>();
-    pendingChanges = new HashMap<>();
+    pendingChanges = new IdentityHashMap<>();
     lock = new ReentrantReadWriteLock();
 
     // check if a custom autocommit buffer size has been set via jvm args
