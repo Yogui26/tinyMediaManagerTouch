@@ -18,40 +18,43 @@ package org.tinymediamanager.ui.plaf;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
+import java.awt.Rectangle;
 
 import javax.swing.JComponent;
 import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.UIManager;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.ViewportUI;
 import javax.swing.table.TableColumn;
 
+import com.formdev.flatlaf.ui.FlatUIUtils;
 import com.formdev.flatlaf.ui.FlatViewportUI;
 
+/**
+ * The class TmmViewportUI paints the table grid lines over the whole viewport, so that the empty areas outside the table view (below the last row and
+ * right of the last column) show a continued grid.
+ *
+ * @author Manuel Laggner
+ */
 public class TmmViewportUI extends FlatViewportUI {
-  // Shared UI object
-  private static ViewportUI viewportUI;
 
-  private boolean           paintTmmGrid;
-  private Color             gridColor;
-  private Color             gridColor2;
+  private boolean paintTmmGrid;
+  private Color   gridColor;
+  private Color   gridColor2;
 
   public static ComponentUI createUI(JComponent c) {
-    if (viewportUI == null) {
-      viewportUI = new TmmViewportUI();
-    }
-    return viewportUI;
+    return FlatUIUtils.createSharedUI(TmmViewportUI.class, TmmViewportUI::new);
   }
 
   @Override
   public void installUI(JComponent c) {
     super.installUI(c);
 
-    paintTmmGrid = UIManager.getBoolean("Table.paintTmmGrid");
+    paintTmmGrid = Boolean.TRUE.equals(UIManager.getBoolean("Table.paintTmmGrid"));
     if (paintTmmGrid) {
       gridColor = UIManager.getColor("Table.gridColor");
       gridColor2 = UIManager.getColor("Table.gridColor2");
+      paintTmmGrid = gridColor != null && gridColor2 != null;
     }
   }
 
@@ -61,75 +64,100 @@ public class TmmViewportUI extends FlatViewportUI {
 
     if (paintTmmGrid) {
       JViewport viewport = (JViewport) c;
-      JTable table = null;
 
-      // paint vertical grid lines for all tables except the TmmTable
       if (viewport.getView() instanceof JTable) {
-        table = (JTable) ((JViewport) c).getView();
-      }
-
-      if (table != null) {
-        paintVerticalGridLines(g, c, table);
-        paintHorizontalGridLines(g, c, table);
+        JTable table = (JTable) viewport.getView();
+        paintVerticalGridLines(g, viewport, table);
+        paintHorizontalGridLines(g, viewport, table);
       }
     }
   }
 
-  private void paintVerticalGridLines(Graphics g, JComponent c, JTable fTable) {
-    JViewport viewport = (JViewport) c;
-    int offset = viewport.getViewPosition().x;
-    int x = -offset;
+  private void paintVerticalGridLines(Graphics g, JViewport viewport, JTable table) {
+    // the viewport x coordinate of the border after the first column, adjusted by the current horizontal scroll offset
+    int x = -viewport.getViewPosition().x;
 
-    for (int i = 0; i < fTable.getColumnCount() - 1; i++) {
-      TableColumn column = fTable.getColumnModel().getColumn(i);
-      // increase the x position by the width of the current column.
+    // the trailing line after the last column is not painted, consistent with FlatLaf hiding the trailing vertical line
+    for (int i = 0; i < table.getColumnCount() - 1; i++) {
+      TableColumn column = table.getColumnModel().getColumn(i);
+      // increase the x position by the width of the current column
       x += column.getWidth();
 
-      if (x >= 0) {
+      if (x > 0) {
+        // the grid line replaces the last pixel of the column margin, hence the -1 (same as BasicTableUI does)
         g.setColor(gridColor);
-        // draw the grid line (not sure what the -1 is for, but BasicTableUI also does it.
-        g.drawLine(x - 1, 0, x - 1, viewport.getHeight());
+        g.drawLine(x - 1, 0, x - 1, viewport.getHeight() - 1);
       }
     }
   }
 
-  private void paintHorizontalGridLines(Graphics g, JComponent c, JTable fTable) {
-    JViewport viewport = (JViewport) c;
-
-    // get position
+  private void paintHorizontalGridLines(Graphics g, JViewport viewport, JTable table) {
+    // switch into the coordinate space of the table (the view of the viewport)
     Point viewPosition = viewport.getViewPosition();
     g.translate(0, -viewPosition.y);
 
-    // get the row index at the top of the clip bounds (the first row to paint).
-    int rowAtPoint = fTable.rowAtPoint(g.getClipBounds().getLocation());
-    // get the y coordinate of the first row to paint. if there are no
-    // rows in the table, start painting at the top of the supplied clipping bounds.
-    int topY = rowAtPoint < 0 ? g.getClipBounds().y : fTable.getCellRect(rowAtPoint, 0, true).y;
+    // if the delegate is painted outside a regular paint cycle, the clip may be unset, so fall back to the full
+    // viewport bounds
+    Rectangle clip = g.getClipBounds();
+    if (clip == null) {
+      clip = new Rectangle(0, viewPosition.y, viewport.getWidth(), viewport.getHeight());
+    }
 
-    // create a counter variable to hold the current row. if there are no
-    // rows in the table, start the counter at 0.
-    int currentRow = Math.max(rowAtPoint, 0);
+    // get the row index at the top of the clip bounds (the first row to paint). rowAtPoint returns -1 if the clip
+    // starts below the last row (e.g. on partial repaints over the empty rows) or if the table has no rows at all
+    int rowAtPoint = table.rowAtPoint(clip.getLocation());
+    int rowCount = table.getRowCount();
+
+    // anchor the grid always at the row geometry (independent of the clip bounds), so that partial and full repaints
+    // paint the exact same lines. rows below the last table row continue with the default row height
+    int topY;
+    int currentRow;
+    if (rowAtPoint >= 0) {
+      topY = table.getCellRect(rowAtPoint, 0, true).y;
+      currentRow = rowAtPoint;
+    }
+    else {
+      currentRow = rowCount;
+      if (rowCount == 0) {
+        topY = 0;
+      }
+      else {
+        Rectangle lastRow = table.getCellRect(rowCount - 1, 0, true);
+        topY = lastRow.y + lastRow.height;
+      }
+    }
+
     int viewPortWidth = viewport.getWidth();
-    int defaultRowHeight = fTable.getRowHeight();
 
-    while (topY < g.getClipBounds().y + g.getClipBounds().height) {
-      int rowHeight = fTable.getRowHeight(currentRow);
+    // the boundary line pair at the top of the first row to paint belongs to the row above it. paint it as well, so
+    // that a partial repaint (whose clip can start exactly on such a boundary) results in the same pixels as a full
+    // repaint. pixels outside the clip are discarded by the graphics context anyway
+    if (currentRow > 0) {
+      paintGridLinePair(g, topY, viewPortWidth);
+    }
 
+    int defaultRowHeight = table.getRowHeight();
+    while (topY < clip.y + clip.height) {
+      int rowHeight = table.getRowHeight(currentRow);
       if (rowHeight <= 0) {
         rowHeight = defaultRowHeight;
       }
 
       int bottomY = topY + rowHeight;
+      paintGridLinePair(g, bottomY, viewPortWidth);
 
-      // System.out.println("topY: " + topY + " bottomY: " + bottomY + " currentRow: " + currentRow + " viewPortWidth: " + viewPortWidth);
-      g.setColor(gridColor);
-      g.drawLine(5, bottomY - 1, viewPortWidth, bottomY - 1);
-      g.setColor(gridColor2);
-      g.drawLine(5, bottomY, viewPortWidth, bottomY);
       topY = bottomY;
       currentRow++;
     }
 
     g.translate(0, viewPosition.y);
+  }
+
+  private void paintGridLinePair(Graphics g, int bottomY, int viewPortWidth) {
+    // the first line replaces the last pixel of the row margin, the second line is the highlight below it
+    g.setColor(gridColor);
+    g.drawLine(0, bottomY - 1, viewPortWidth - 1, bottomY - 1);
+    g.setColor(gridColor2);
+    g.drawLine(0, bottomY, viewPortWidth - 1, bottomY);
   }
 }
