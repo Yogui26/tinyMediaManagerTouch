@@ -5,11 +5,11 @@ public class HdrInfo {
   // https://github.com/xbmc/xbmc/blob/8aaab7f03065971ba46cc31adac110181f98d0dc/xbmc/utils/StreamDetails.cpp#L850
   public enum HdrType {
     HDR_TYPE_DOLBYVISION("dolbyvision"),
-    HDR_TYPE_DOLBYVISION2("dolbyvision2"), // as of 2026 - name=assumption
+    HDR_TYPE_DOLBYVISION2("dolbyvision2"), // TODO: as of 2026 - name=assumption
     HDR_TYPE_HLG("hlg"),
     HDR_TYPE_HDR10("hdr10"),
     HDR_TYPE_HDR10PLUS("hdr10plus"),
-    HDR_TYPE_HDR10PLUSADV("hdr10plusadv"); // as of 2026 - name=assumption
+    HDR_TYPE_HDR10PLUSADV("hdr10plusadv"); // TODO: as of 2026 - name=assumption
 
     public String nfoName = "";
 
@@ -26,10 +26,12 @@ public class HdrInfo {
   private Integer hdrProfile;
   private Integer hdrLevel;
   private String  hdrVersion;
+  // Although there could be multiple HDR layers, we forcefully do not keep a list
+  // 95% of all medias have a single one, and for the rest, the "compatibility" type is enough.
   private Integer compatibilityId;
   private HdrType compatibilityType;
-  private boolean baseLayer;
-  private boolean enhancementLayer;
+  private boolean baseLayer;        // BL
+  private boolean enhancementLayer; // FEL/MEL https://github.com/MediaArea/MediaInfoLib/issues/2447
   private boolean rpu;
 
   public String getDisplayName() {

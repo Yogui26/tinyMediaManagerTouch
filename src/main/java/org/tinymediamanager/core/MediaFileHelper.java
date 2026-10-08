@@ -2783,23 +2783,23 @@ public class MediaFileHelper {
       return null;
     }
     String normalized = hdrFormat.trim().toLowerCase(Locale.ROOT);
-    if (normalized.contains("dolby vision 2")) { // assume
-      return HdrType.HDR_TYPE_DOLBYVISION2;
-    }
     if (normalized.contains("dolby vision")) {
+      if (normalized.contains("dolby vision 2") || normalized.contains("version 2")) { // TODO: assumed
+        return HdrType.HDR_TYPE_DOLBYVISION2;
+      }
       return HdrType.HDR_TYPE_DOLBYVISION;
     }
-    else if (normalized.contains("2094-40") || (normalized.contains("hdr10+") && normalized.contains("adv"))) {
-      return HdrType.HDR_TYPE_HDR10PLUSADV;
-    }
     else if (normalized.contains("2094") || normalized.contains("hdr10+")) {
+      if (normalized.contains("adv")) { // TODO: assumed
+        return HdrType.HDR_TYPE_HDR10PLUSADV;
+      }
       return HdrType.HDR_TYPE_HDR10PLUS;
     }
-    else if (normalized.contains("2086") || normalized.contains("hdr10")) {
-      return HdrType.HDR_TYPE_HDR10;
-    }
-    if (normalized.contains("hlg")) {
+    else if (normalized.contains("hlg") || normalized.contains("hybrid log-gamma")) {
       return HdrType.HDR_TYPE_HLG;
+    }
+    if (normalized.contains("2086") || normalized.contains("hdr10")) {
+      return HdrType.HDR_TYPE_HDR10;
     }
     return null;
   }
@@ -2860,7 +2860,7 @@ public class MediaFileHelper {
   }
 
   private static boolean isDolbyVisionProfile8(HdrInfo info) {
-    return info.getHdrType() == HdrType.HDR_TYPE_DOLBYVISION && Integer.valueOf(8).equals(info.getHdrProfile());
+    return info.getHdrType() != null && info.getHdrType() == HdrType.HDR_TYPE_DOLBYVISION && Integer.valueOf(8).equals(info.getHdrProfile());
   }
 
   private static void parseDolbyVisionSettings(HdrInfo info, String settings) {
@@ -2869,7 +2869,7 @@ public class MediaFileHelper {
     }
     String value = settings.trim().toUpperCase(Locale.ROOT);
     info.setBaseLayer(value.contains("BL"));
-    info.setEnhancementLayer(value.contains("EL"));
+    info.setEnhancementLayer(value.contains("EL")); // TODO: FEL/MEL
     info.setRpu(value.contains("RPU"));
   }
 
@@ -2879,18 +2879,6 @@ public class MediaFileHelper {
       String[] splitted = value.split("/");
       return splitted[0].strip();
     }
-    return null;
-  }
-
-  private static String firstNonBlank(String... values) {
-    for (String value : values) {
-      if (!StringUtils.isBlank(value)) {
-        // sometimes we have splitted values, just take the first
-        String[] splitted = value.split("/");
-        return splitted[0];
-      }
-    }
-
     return null;
   }
 

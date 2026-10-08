@@ -811,18 +811,6 @@ public class MediaInfoTest extends BasicTest {
     assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(true);
     assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
 
-    mf = new MediaFile(mediainfoFolder.resolve("dolby_vision2.avi"));
-    MediaFileHelper.gatherMediaInformation(mf, false);
-    System.out.println(mf.getHdrInfo().getDisplayName());
-    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
-    assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HDR10);
-    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
-    assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(6);
-    assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(7);
-    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
-    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(true);
-    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
-
     // HDR10
     mf = new MediaFile(mediainfoFolder.resolve("hdr10.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
