@@ -1794,14 +1794,8 @@ public final class MovieList extends AbstractModelObject {
         Utils.deleteFileSafely(mf.getFileAsPath());
       }
 
-      // remove artwork
+      // remove artwork (and also any empty movie set data folder)
       MovieSetArtworkHelper.removeMovieSetArtwork(movieSet);
-
-      // remove any empty movie set data folder
-      if (StringUtils.isNotBlank(MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder())) {
-        String movieSetName = MovieSetArtworkHelper.getMovieSetTitleForStorage(movieSet);
-        Utils.deleteEmptyDirectoryRecursive(Paths.get(MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder(), movieSetName));
-      }
 
       movieSet.removeAllMovies();
 
@@ -1812,7 +1806,10 @@ public final class MovieList extends AbstractModelObject {
       EventBus.publishEvent(TOPIC_MOVIE_SETS, Event.createRemoveEvent(movieSet));
     }
     catch (Exception e) {
-      LOGGER.error("Error removing movie set '{}' from DB - '{}'", movieSet.getTitle(), e.getMessage());
+      LOGGER.error("Error removing movie set '{}' - '{}'", movieSet.getTitle(), e.getMessage());
+      // the movie set is still there - restore its listener and do not announce its removal
+      movieSet.addPropertyChangeListener(movieSetListener);
+      return;
     }
 
     firePropertyChange(Constants.REMOVED_MOVIE_SET, null, movieSet);

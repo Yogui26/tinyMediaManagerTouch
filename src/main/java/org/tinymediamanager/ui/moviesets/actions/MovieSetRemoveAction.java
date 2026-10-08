@@ -17,7 +17,6 @@ package org.tinymediamanager.ui.moviesets.actions;
 
 import static org.tinymediamanager.ui.TmmFontHelper.L1;
 
-import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.util.List;
 
@@ -27,6 +26,7 @@ import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.MovieSet;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
@@ -81,10 +81,10 @@ public class MovieSetRemoveAction extends TmmAction {
   }
 
   private void executeRemove(List<MovieSet> selectedMovieSets) {
-    MainWindow.getInstance().setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-    for (MovieSet movieSet : selectedMovieSets) {
-      MovieModuleManager.getInstance().getMovieList().removeMovieSet(movieSet);
-    }
-    MainWindow.getInstance().setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    TmmTaskManager.getInstance().addUnnamedTask(() -> {
+      for (MovieSet movieSet : selectedMovieSets) {
+        MovieModuleManager.getInstance().getMovieList().removeMovieSet(movieSet);
+      }
+    });
   }
 }
