@@ -476,6 +476,7 @@ public class MovieNfoParser {
   private Void parseSet() {
     supportedElements.add("sets");
     supportedElements.add("set");
+    supportedElements.add("collectionnumber");
 
     // old mp style:
     // <sets> <set order="1">set name</set> </sets>
@@ -532,6 +533,14 @@ public class MovieNfoParser {
           sets.add(set);
         }
       }
+    }
+
+    // Jellyfin style: <collectionnumber>123</collectionnumber>
+    element = getSingleElement(root, "collectionnumber");
+    if (element != null) {
+      Set set = new Set();
+      set.tmdbId = MetadataUtil.parseInt(element.ownText(), 0);
+      sets.add(set);
     }
 
     return null;

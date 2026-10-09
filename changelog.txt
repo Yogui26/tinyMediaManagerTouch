@@ -9,6 +9,7 @@ x [Movies, TV shows] every data source which gets skipped during "update data so
 x [Movie Sets] fixed an application freeze when deleting movie sets #3378
 x [UI] fixed some drawing issues in partially empty tables
 x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling libmediainfo #3376
+x [Jellyfin] fixed duplication of collection numbers in NFO files #3379
 
 
 Version 5.3.4
