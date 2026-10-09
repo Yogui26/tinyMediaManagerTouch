@@ -34,15 +34,17 @@ import org.tinymediamanager.ui.IconManager;
  * The Class {@link MemoryUsagePanel} provides a compact, theme-aware visualization of the current JVM memory usage in the status bar.
  * <p>
  * It periodically samples heap statistics (used, free, and max) and paints a horizontal usage bar. To better capture sustained pressure rather than
- * short spikes, it maintains a rolling average of the last 10 timer ticks. When the average memory usage exceeds the configured threshold (default:
- * 85%), the bar is rendered using a warning color that adapts to the current Look and Feel. If an OutOfMemoryError has been detected, the panel
- * highlights the condition using the error color and a red warning icon.
+ * short spikes, it maintains a rolling average of the last 10 timer ticks. When the average memory usage exceeds an Xmx-dependent threshold, the bar
+ * is rendered using a warning color that adapts to the current Look and Feel. The threshold scales with the maximum heap size (85% used on a 512 MiB
+ * heap, easing up by 2.5 percentage points per doubling of Xmx, capped at 98%) so that large heaps - where a small percentage of free memory is still
+ * plenty of headroom - are not falsely reported as low memory. If an OutOfMemoryError has been detected, the panel highlights the condition using the
+ * error color and a red warning icon.
  * </p>
  *
  * <ul>
  * <li>Sampling interval: 1 second</li>
  * <li>Rolling average window: 10 samples</li>
- * <li>High usage threshold: 85% (average across the last samples)</li>
+ * <li>High usage threshold: derived from Xmx (85% at 512 MiB, 95% at 8 GiB, clamped to [80%, 98%])</li>
  * <li>Colors: derived from UI defaults (Component.warning.*, Component.errorColor, Panel.tmmAlternateBackground)</li>
  * </ul>
  *
@@ -55,20 +57,41 @@ class MemoryUsagePanel extends JPanel {
   /**
    * One mebibyte (MiB) in bytes.
    */
-  private static final int MB                   = 1048576;
+  private static final int    MB                    = 1048576;
   /**
    * Number of samples to consider for high-usage rolling average.
    */
-  private static final int HISTORY_SIZE         = 10;
+  private static final int    HISTORY_SIZE          = 10;
   /**
-   * Threshold (in percent) for considering memory usage as high.
+   * The maximum heap size (Xmx, in MiB) the high-usage threshold is anchored to.
    */
-  private static final int HIGH_USAGE_THRESHOLD = 85;
+  private static final int    ANCHOR_XMX_MIB        = 512;
+  /**
+   * The used-memory percentage considered high at the {@link #ANCHOR_XMX_MIB} heap size.
+   */
+  private static final double ANCHOR_HIGH_USAGE     = 85;
+  /**
+   * Percentage points added to the high-usage threshold for every doubling of Xmx.
+   */
+  private static final double HIGH_USAGE_PER_OCTAVE = 2.5;
+  /**
+   * Lower bound of the computed high-usage threshold (in percent).
+   */
+  private static final double MIN_HIGH_USAGE        = 80;
+  /**
+   * Upper bound of the computed high-usage threshold (in percent).
+   */
+  private static final double MAX_HIGH_USAGE        = 98;
+  /**
+   * The Xmx-dependent threshold (in percent) above which the rolling average memory usage is considered high. Computed once from the maximum heap
+   * size in the constructor via {@link #calculateHighUsageThreshold(long)}.
+   */
+  private static double       highUsageThreshold;
   /**
    * Flag indicating whether an OutOfMemoryError has been detected during the application's lifetime. When set, the panel permanently shows an error
    * indication until the application is restarted.
    */
-  private static boolean   oomDetected          = false;
+  private static boolean      oomDetected           = false;
 
   /**
    * Periodic sampler that refreshes memory statistics and triggers repaints.
@@ -108,7 +131,7 @@ class MemoryUsagePanel extends JPanel {
    */
   private int              usageIndex           = 0;
   /**
-   * Whether the rolling average exceeds the {@link #HIGH_USAGE_THRESHOLD}.
+   * Whether the rolling average exceeds the {@link #highUsageThreshold}.
    */
   private boolean          highUsage            = false;
 
@@ -126,6 +149,7 @@ class MemoryUsagePanel extends JPanel {
     setFocusable(false);
 
     getMemory();
+    highUsageThreshold = calculateHighUsageThreshold(maxMem);
 
     lblMemory = new JLabel();
     lblMemory.setHorizontalTextPosition(SwingConstants.LEFT);
@@ -246,7 +270,7 @@ class MemoryUsagePanel extends JPanel {
 
   /**
    * Update the rolling memory usage history and compute the average percentage to set the {@link #highUsage} flag. The current usage percentage is
-   * calculated as usedMem / maxMem, clamped to [0,100].
+   * calculated as usedMem / maxMem, clamped to [0,100]. The average is compared against the Xmx-dependent {@link #highUsageThreshold}.
    */
   private void updateUsageHistoryAndAverage() {
     // avoid division by zero
@@ -272,8 +296,33 @@ class MemoryUsagePanel extends JPanel {
     for (int i = 0; i < usageCount; i++) {
       sum += usageHistory[i];
     }
-    int avg = usageCount > 0 ? (sum / usageCount) : 0;
-    highUsage = avg >= HIGH_USAGE_THRESHOLD;
+    double avg = usageCount > 0 ? (sum / (double) usageCount) : 0;
+    highUsage = avg >= highUsageThreshold;
+  }
+
+  /**
+   * Calculates the Xmx-dependent threshold (in percent of the maximum heap) above which memory usage is considered high.
+   * <p>
+   * The threshold is anchored at {@link #ANCHOR_HIGH_USAGE} percent on a {@link #ANCHOR_XMX_MIB} MiB heap and rises by {@link #HIGH_USAGE_PER_OCTAVE}
+   * percentage points for every doubling of the maximum heap size, so that large heaps - where a small percentage of free memory is still a generous
+   * absolute amount that the garbage collector can reclaim - are not flagged prematurely. The result is clamped to [{@link #MIN_HIGH_USAGE},
+   * {@link #MAX_HIGH_USAGE}].
+   * </p>
+   *
+   * @param maxMem
+   *          the maximum heap size (Xmx) in bytes
+   * @return the high-usage threshold in percent (of the maximum heap)
+   */
+  static double calculateHighUsageThreshold(long maxMem) {
+    if (maxMem <= 0) {
+      // unknown/unbounded max heap: keep the historical anchor value
+      return ANCHOR_HIGH_USAGE;
+    }
+
+    double octaves = Math.log(maxMem / (ANCHOR_XMX_MIB * (double) MB)) / Math.log(2.0);
+    double threshold = ANCHOR_HIGH_USAGE + HIGH_USAGE_PER_OCTAVE * octaves;
+
+    return Math.max(MIN_HIGH_USAGE, Math.min(MAX_HIGH_USAGE, threshold));
   }
 
   /**
