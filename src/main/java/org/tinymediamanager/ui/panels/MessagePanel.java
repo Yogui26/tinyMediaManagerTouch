@@ -17,7 +17,6 @@
 package org.tinymediamanager.ui.panels;
 
 import java.awt.Font;
-import java.text.DateFormat;
 import java.util.ResourceBundle;
 
 import javax.swing.JLabel;
@@ -44,13 +43,14 @@ public class MessagePanel extends JPanel {
   private JTextPane                   taMessage;
   private JLabel                      lblIcon;
   private JLabel                      lblDate;
+  private JLabel                      lblTime;
 
   public MessagePanel(Message message) {
     setOpaque(false);
     initComponents();
     // init data
-    DateFormat dateFormat = TmmDateFormat.getDateFormat();
-    lblDate.setText(dateFormat.format(message.getMessageDate()));
+    lblDate.setText(TmmDateFormat.getDateFormat().format(message.getMessageDate()));
+    lblTime.setText(TmmDateFormat.getTimeMediumFormat().format(message.getMessageDate()));
 
     String text = "";
     if (message.getMessageSender() instanceof MediaEntity mediaEntity) {
@@ -102,14 +102,17 @@ public class MessagePanel extends JPanel {
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("", "[150lp:200lp,grow][]", "[][shrink 0]"));
+    setLayout(new MigLayout("insets 0 n 0 n", "[150lp:200lp,grow][]", "[][shrink 0]"));
 
     lblDate = new JLabel("");
-    add(lblDate, "cell 1 0");
+    add(lblDate, "cell 1 0, split 2, flowy");
+
+    lblTime = new JLabel("");
+    add(lblTime, "cell 1 0");
 
     JPanel innerPanel = new JPanel();
     add(innerPanel, "cell 0 0,growx");
-    innerPanel.setLayout(new MigLayout("", "[1px][][150lp:200lp,grow]", "[][]"));
+    innerPanel.setLayout(new MigLayout("insets n 0 n 0", "[1px][][150lp:200lp,grow]", "[][]"));
 
     lblIcon = new JLabel("");
     lblIcon.setHorizontalAlignment(SwingConstants.CENTER);
