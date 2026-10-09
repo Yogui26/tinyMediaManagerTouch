@@ -1,9 +1,11 @@
 Version 5.3.5
 =======================
++ [UI] the notification button shows a counter of the new messages
 + [Simkl] switched the Simkl.com sign-in to the new OAuth 2.0 device flow (AUTH V2) - your browser opens the Simkl.com approval page, you only have to click allow
   Existing connections keep working, but Simkl retires the old sign-in around April 2027 - please connect to Simkl.com once again in the settings
 ---
 x [Core] do not abort image cache upgrade tasks on URL parse error #3373
+x [Movies, TV shows] every data source which gets skipped during "update data sources" now shows up as a notification #3377
 x [Movie Sets] fixed an application freeze when deleting movie sets #3378
 x [UI] fixed some drawing issues in partially empty tables
 x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling libmediainfo #3376

@@ -46,6 +46,7 @@ import org.tinymediamanager.ui.actions.CheckForUpdateAction;
 import org.tinymediamanager.ui.actions.UnlockAction;
 import org.tinymediamanager.ui.dialogs.MessageHistoryDialog;
 import org.tinymediamanager.ui.dialogs.WhatsNewDialog;
+import org.tinymediamanager.ui.images.BadgeIcon;
 import org.tinymediamanager.updater.UpdateCheck;
 
 import net.miginfocom.swing.MigLayout;
@@ -113,7 +114,8 @@ public class ToolbarPanel extends JPanel {
     btnUpdateFound.setToolTipText(TmmResourceBundle.getString("tmm.update.message.toolbar"));
     panelCenter.add(btnUpdateFound, "cell 13 0 1 2, center, gap 10lp");
 
-    JButton btnNotifications = new ToolbarButton(IconManager.TOOLBAR_ALERT);
+    BadgeIcon btnNotificationBadge = new BadgeIcon(IconManager.TOOLBAR_ALERT);
+    JButton btnNotifications = new ToolbarButton(btnNotificationBadge);
     panelCenter.add(btnNotifications, "cell 14 0 1 2, center, gap 10lp");
 
     btnNotifications.addActionListener(e -> {
@@ -136,14 +138,9 @@ public class ToolbarPanel extends JPanel {
     // listener for messages change
     TmmUIMessageCollector.instance.addPropertyChangeListener(evt -> {
       if (Constants.MESSAGES.equals(evt.getPropertyName())) {
-        if (TmmUIMessageCollector.instance.getNewMessagesCount() > 0) {
-          btnNotifications.setIcon(IconManager.TOOLBAR_ALERT_RED);
-          btnNotifications.setToolTipText(TmmResourceBundle.getString("notifications.new"));
-        }
-        else {
-          btnNotifications.setIcon(IconManager.TOOLBAR_ALERT);
-          btnNotifications.setToolTipText(null);
-        }
+        int newMessages = TmmUIMessageCollector.instance.getNewMessagesCount();
+        btnNotificationBadge.update(newMessages > 0 ? IconManager.TOOLBAR_ALERT_RED : IconManager.TOOLBAR_ALERT, newMessages);
+        btnNotifications.setToolTipText(newMessages > 0 ? TmmResourceBundle.getString("notifications.new") : null);
         btnNotifications.repaint();
       }
     });

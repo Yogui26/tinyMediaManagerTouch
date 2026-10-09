@@ -262,6 +262,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     for (Path ds : nestedToSkip) {
       LOGGER.warn("Data source '{}' is nested inside another data source - skipping to avoid duplicate TV shows", ds);
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.WARN, "update.datasource", "update.datasource.nested.skipped", new String[] { ds.toString() }));
       dataSources.remove(ds);
       nestedDataSources.add(ds);
     }
@@ -302,7 +304,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         for (Path dsAsPath : dataSources) {
           // check the special case, that the data source is also an ignore folder
           if (isInSkipFolder(dsAsPath)) {
-            LOGGER.debug("datasource '{}' is also a skipfolder - skipping", dsAsPath);
+            LOGGER.warn("Datasource '{}' is also a skip folder - skipping", dsAsPath);
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(MessageLevel.WARN, "update.datasource", "update.datasource.skipfolder", new String[] { dsAsPath.toString() }));
             continue;
           }
 
@@ -343,6 +348,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             if (isEmpty) {
               // error - continue with next datasource
+              LOGGER.warn("Data source '{}' is not available - skipping", dsAsPath);
               MessageManager.getInstance()
                   .pushMessage(
                       new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { dsAsPath.toString() }));
@@ -491,6 +497,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             if (isEmpty) {
               // error - continue with next datasource
+              LOGGER.warn("Data source '{}' is not available - skipping", dsAsPath);
               MessageManager.getInstance()
                   .pushMessage(
                       new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { dsAsPath.toString() }));
