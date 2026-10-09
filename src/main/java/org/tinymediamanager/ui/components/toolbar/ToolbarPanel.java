@@ -139,7 +139,7 @@ public class ToolbarPanel extends JPanel {
     TmmUIMessageCollector.instance.addPropertyChangeListener(evt -> {
       if (Constants.MESSAGES.equals(evt.getPropertyName())) {
         int newMessages = TmmUIMessageCollector.instance.getNewMessagesCount();
-        btnNotificationBadge.update(newMessages > 0 ? IconManager.TOOLBAR_ALERT_RED : IconManager.TOOLBAR_ALERT, newMessages);
+        btnNotificationBadge.update(IconManager.TOOLBAR_ALERT, newMessages);
         btnNotifications.setToolTipText(newMessages > 0 ? TmmResourceBundle.getString("notifications.new") : null);
         btnNotifications.repaint();
       }

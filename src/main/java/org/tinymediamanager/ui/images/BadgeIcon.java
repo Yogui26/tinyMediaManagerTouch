@@ -17,78 +17,66 @@ package org.tinymediamanager.ui.images;
 
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 
 import javax.swing.Icon;
 import javax.swing.JComponent;
 
 /**
- * The class {@link BadgeIcon} decorates a base {@link Icon} with a counter badge (a small pill with a number) painted at its top right corner - the
- * place where macOS and Android put their notification badges.
+ * The class {@link BadgeIcon} decorates a base {@link Icon} with a red notification dot at its top right corner - the way the IDEs announce that
+ * something is waiting for you.
  * <p>
- * The badge is painted as an overlay, so the icon always reports the dimensions of the base icon: swapping the count never changes the layout of the
- * component using it. The size of the badge is capped to the decorated icon, so that small icons stay readable: the counter falls back to
- * {@code 99+}, then to {@code 9+} and finally to a plain dot if the number would still cover too much of the icon. A wider counter grows to the left,
- * so the badge always stays in the corner. The badge is only drawn for two or more messages - a single one is already announced by the decorated icon
- * itself.
+ * The dot never counts: one message or a hundred look exactly the same, because the number was always too small to read on a toolbar icon. What
+ * matters is that the dot is impossible to overlook, so it is sized to a good half of the decorated icon - but never bigger than the icon can take. A
+ * ring in the background color of the surrounding component separates it from the artwork.
+ * <p>
+ * The dot is painted as an overlay, so the icon always reports the dimensions of the decorated icon and nothing shifts around when it appears. It
+ * does reach a little past that corner to sit on the visual corner of the artwork - the component showing the icon has room for that, the decorated
+ * icon itself never moves.
  *
  * @author Manuel Laggner
  */
 public class BadgeIcon implements Icon {
-  /** the lowest count which gets a badge; a single message is already announced by the decorated icon itself */
-  private static final int    MIN_COUNT          = 2;
-
-  /** the highest number shown as plain digits; anything above gets rendered as {@code 99+} */
-  private static final int    MAX_COUNT          = 99;
-
-  /** the coarser counter used when even {@code 99+} would cover too much of the icon */
-  private static final int    SMALL_MAX_COUNT    = 9;
-
-  /** the font size of the badge relative to the font of the painted component */
-  private static final double FONT_SCALE         = 0.66;
-
-  /** the horizontal padding around the counter text inside the badge */
-  private static final int    HORIZONTAL_PADDING = 2;
-
-  /** the width of the ring which separates the badge from the decorated icon */
-  private static final int    RING_WIDTH         = 1;
-
-  /** the distance of the badge from the corner of the icon (to leave room for its ring) */
-  private static final int    BADGE_INSET        = RING_WIDTH;
-
-  /** the smallest width/height of the badge so that the counter stays readable */
-  private static final int    MIN_BADGE_SIZE     = 8;
-
-  /** the smallest font size to shrink the counter down to */
-  private static final float  MIN_FONT_SIZE      = 6.0f;
-
-  /** the smallest diameter of the plain dot which replaces the counter */
-  private static final int    MIN_DOT_SIZE       = 5;
-
-  /** the part of the icon height the badge must not exceed, so that small icons stay readable */
-  private static final double MAX_HEIGHT_FACTOR  = 0.5;
-
-  /** the part of the icon width the badge must not exceed, so that small icons stay readable */
-  private static final double MAX_WIDTH_FACTOR   = 0.65;
-
-  /** the part of the icon height the plain dot gets (used as counter fallback) */
-  private static final double DOT_HEIGHT_FACTOR  = 0.35;
-
-  /** the background of the badge */
-  private static final Color  BADGE_BACKGROUND   = Color.RED;
-
-  /** the color of the counter */
-  private static final Color  BADGE_FOREGROUND   = Color.WHITE;
-
-  private Icon                baseIcon;
-  private int                 count;
+  /**
+   * the inset the dot keeps from the corner of the icon - at the same time the width of the separating ring around it
+   */
+  private static final int    INSET           = 1;
 
   /**
-   * Creates a new {@link BadgeIcon} without a visible counter.
+   * the pixels the dot reaches past the corner of the icon: icons leave some dead space around their artwork, so a dot which stays inside the box
+   * never sits on the visual corner - the surrounding component has enough room for this
+   */
+  private static final int    CORNER_OVERHANG = 2;
+
+  /**
+   * the fraction of the decorated icon the dot is sized to
+   */
+  private static final double DOT_FACTOR      = 0.3;
+
+  /**
+   * the smallest dot we paint - anything below is barely noticeable
+   */
+  private static final int    MIN_DOT_SIZE    = 7;
+
+  /**
+   * the biggest dot we paint - a bigger one would swallow the whole icon
+   */
+  private static final int    MAX_DOT_SIZE    = 9;
+
+  private static final Color  DOT_COLOR       = Color.RED;
+
+  private volatile Icon       baseIcon;
+
+  /**
+   * the number of waiting messages - the dot appears as soon as this is greater than zero
+   */
+  private volatile int        count;
+
+  /**
+   * Creates a new {@link BadgeIcon} without a visible dot.
    *
    * @param baseIcon
    *          the icon to decorate
@@ -98,12 +86,12 @@ public class BadgeIcon implements Icon {
   }
 
   /**
-   * Creates a new {@link BadgeIcon} showing the given counter.
+   * Creates a new {@link BadgeIcon} showing the dot for the given number of waiting messages.
    *
    * @param baseIcon
    *          the icon to decorate
    * @param count
-   *          the counter to display; fewer than two messages hide the badge
+   *          the number of waiting messages; zero hides the dot
    */
   public BadgeIcon(Icon baseIcon, int count) {
     this.baseIcon = baseIcon;
@@ -111,12 +99,12 @@ public class BadgeIcon implements Icon {
   }
 
   /**
-   * Update base icon and counter at once.
+   * Update base icon and number of waiting messages at once.
    *
    * @param newBaseIcon
    *          the icon to decorate; ignored when {@code null}
    * @param newCount
-   *          the counter to display; fewer than two messages hide the badge
+   *          the number of waiting messages; zero hides the dot
    */
   public void update(Icon newBaseIcon, int newCount) {
     if (newBaseIcon != null) {
@@ -126,19 +114,19 @@ public class BadgeIcon implements Icon {
   }
 
   /**
-   * Update only the counter, keeping the base icon.
+   * Update only the number of waiting messages, keeping the base icon.
    *
    * @param newCount
-   *          the counter to display; fewer than two messages hide the badge
+   *          the number of waiting messages; zero hides the dot
    */
   public void setCount(int newCount) {
     count = newCount;
   }
 
   /**
-   * Get the currently displayed counter.
+   * Get the currently displayed number of waiting messages.
    *
-   * @return the counter
+   * @return the number of waiting messages
    */
   public int getCount() {
     return count;
@@ -150,56 +138,23 @@ public class BadgeIcon implements Icon {
       baseIcon.paintIcon(c, g, x, y);
     }
 
-    if (count < MIN_COUNT) {
+    if (count <= 0 || getIconWidth() <= 0 || getIconHeight() <= 0) {
+      // nothing decorated, nothing to announce
       return;
     }
 
     Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-      Font font = g2.getFont().deriveFont(Font.BOLD, (float) (g2.getFont().getSize2D() * FONT_SCALE));
-      FontMetrics fm = g2.getFontMetrics(font);
+      Rectangle dot = dotRect(getIconWidth());
 
-      int maxBadgeHeight = cappedSize(getIconHeight(), MAX_HEIGHT_FACTOR, MIN_BADGE_SIZE);
-      int maxBadgeWidth = cappedSize(getIconWidth(), MAX_WIDTH_FACTOR, MIN_BADGE_SIZE);
-
-      // shrink the counter until it fits the height cap, so that small icons stay readable
-      while (fm.getHeight() > maxBadgeHeight && font.getSize2D() > MIN_FONT_SIZE) {
-        font = font.deriveFont((float) Math.max(MIN_FONT_SIZE, font.getSize2D() * maxBadgeHeight / fm.getHeight()));
-        fm = g2.getFontMetrics(font);
-      }
-
-      String label = pickCounterLabel(fm, maxBadgeWidth);
-      int badgeWidth;
-      int badgeHeight;
-
-      if (label.isEmpty()) {
-        // not even a coarse counter fits - go for a plain dot
-        badgeHeight = cappedSize(getIconHeight(), DOT_HEIGHT_FACTOR, MIN_DOT_SIZE);
-        badgeWidth = Math.min(maxBadgeWidth, badgeHeight);
-      }
-      else {
-        badgeHeight = Math.min(maxBadgeHeight, fm.getHeight());
-        badgeWidth = Math.min(maxBadgeWidth, Math.max(badgeHeight, fm.stringWidth(label) + 2 * HORIZONTAL_PADDING));
-      }
-
-      // anchor the badge at the top right corner; a wider counter grows to the left
-      int badgeX = x + getIconWidth() - badgeWidth - BADGE_INSET;
-      int badgeY = y + BADGE_INSET;
-
+      // the dot is placed relative to the icon, so it has to follow the position the icon was painted at
       g2.setColor(ringColor(c, g2));
-      g2.fillRoundRect(badgeX - RING_WIDTH, badgeY - RING_WIDTH, badgeWidth + 2 * RING_WIDTH, badgeHeight + 2 * RING_WIDTH, badgeHeight, badgeHeight);
+      g2.fillRect(x + dot.x - INSET, y + dot.y - INSET, dot.width + 2 * INSET, dot.height + 2 * INSET);
 
-      g2.setColor(BADGE_BACKGROUND);
-      g2.fillRoundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight, badgeHeight);
-
-      if (!label.isEmpty()) {
-        g2.setFont(font);
-        g2.setColor(BADGE_FOREGROUND);
-        g2.drawString(label, badgeX + (badgeWidth - fm.stringWidth(label)) / 2, badgeY + (badgeHeight + fm.getAscent() - fm.getDescent()) / 2);
-      }
+      g2.setColor(DOT_COLOR);
+      g2.fillOval(x + dot.x, y + dot.y, dot.width, dot.height);
     }
     finally {
       g2.dispose();
@@ -217,40 +172,33 @@ public class BadgeIcon implements Icon {
   }
 
   /**
-   * The counter to show: the exact number, clamped at {@link #MAX_COUNT} - or the coarser clamp at {@link #SMALL_MAX_COUNT} - or nothing at all when
-   * even that would cover more than the given width.
+   * The dot as it is painted for an icon of the given width - package private for testing.
    *
-   * @param fm
-   *          the font metrics of the counter
-   * @param maxWidth
-   *          the widest the badge may become
-   * @return the label to render, empty when the counter does not fit at all
+   * @param iconWidth
+   *          the width of the decorated icon
+   * @return position and size of the dot, relative to the top left corner of the icon
    */
-  private String pickCounterLabel(FontMetrics fm, int maxWidth) {
-    String label = clampedLabel(count, MAX_COUNT);
-    if (badgeWidth(label, fm) <= maxWidth) {
-      return label;
-    }
-
-    label = clampedLabel(count, SMALL_MAX_COUNT);
-    return badgeWidth(label, fm) <= maxWidth ? label : "";
-  }
-
-  private String clampedLabel(int value, int max) {
-    return value > max ? max + "+" : String.valueOf(value);
-  }
-
-  private int badgeWidth(String label, FontMetrics fm) {
-    return Math.max(MIN_BADGE_SIZE, fm.stringWidth(label) + 2 * HORIZONTAL_PADDING);
-  }
-
-  private int cappedSize(int size, double factor, int minSize) {
-    return Math.max(minSize, (int) Math.round(size * factor));
+  static Rectangle dotRect(int iconWidth) {
+    int side = dotSize(iconWidth);
+    // anchored at the top right corner, reaching a little past it to sit on the visual corner of the artwork
+    return new Rectangle(Math.max(INSET, iconWidth - side + CORNER_OVERHANG), INSET, side, side);
   }
 
   /**
-   * The color of the ring which separates the badge from the icon: the background of the first opaque ancestor, so the badge looks like it floats
-   * above the icon.
+   * The edge length of the dot for an icon of the given width - package private for testing.
+   *
+   * @param iconWidth
+   *          the width of the decorated icon
+   * @return the edge length of the dot
+   */
+  static int dotSize(int iconWidth) {
+    int side = (int) Math.round(Math.max(iconWidth, 1) * DOT_FACTOR);
+    return Math.min(MAX_DOT_SIZE, Math.max(MIN_DOT_SIZE, side));
+  }
+
+  /**
+   * The color of the ring which separates the dot from the icon: the background of the first opaque ancestor, so the dot looks like it floats above
+   * the icon.
    *
    * @param c
    *          the component the icon is painted on (may be {@code null})
