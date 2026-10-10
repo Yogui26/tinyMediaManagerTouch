@@ -718,6 +718,14 @@ public class MovieSet extends MediaEntity {
     return dummyMovies;
   }
 
+  /**
+   * completely remove all dummy movies from this movie set
+   */
+  public void removeAllDummyMovies() {
+    setDummyMovies(Collections.emptyList());
+    saveToDb();
+  }
+
   @Override
   public Date getReleaseDate() {
     Date firstReleaseDate = null;
