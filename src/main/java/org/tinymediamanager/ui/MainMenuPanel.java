@@ -54,6 +54,7 @@ import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.ui.actions.AboutAction;
 import org.tinymediamanager.ui.actions.BugReportAction;
 import org.tinymediamanager.ui.actions.CheckForUpdateAction;
+import org.tinymediamanager.ui.actions.CleanupAbandonedEntriesAction;
 import org.tinymediamanager.ui.actions.CleanupImageCacheAction;
 import org.tinymediamanager.ui.actions.ClearDatabaseAction;
 import org.tinymediamanager.ui.actions.ClearHttpCacheAction;
@@ -339,6 +340,8 @@ public class MainMenuPanel extends JPanel {
     menu.addSeparator();
     // housekeeping
     JMenu menuHousekeeping = new JMenu(TmmResourceBundle.getString("tmm.housekeeping"));
+    menuHousekeeping.add(new CleanupAbandonedEntriesAction());
+    menuHousekeeping.addSeparator();
     menuHousekeeping.add(new CleanupImageCacheAction());
     menuHousekeeping.add(new ClearImageCacheAction());
     menuHousekeeping.add(new RebuildImageCacheAction());

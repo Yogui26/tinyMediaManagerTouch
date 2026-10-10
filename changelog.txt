@@ -1,5 +1,6 @@
 Version 5.3.5
 =======================
++ [Core] added a housekeeping action to remove abandoned entries from the database
 + [UI] the notification button shows a red dot as soon as there are new messages
 + [Simkl] switched the Simkl.com sign-in to the new OAuth 2.0 device flow (AUTH V2) - your browser opens the Simkl.com approval page, you only have to click allow
   Existing connections keep working, but Simkl retires the old sign-in around April 2027 - please connect to Simkl.com once again in the settings
