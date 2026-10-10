@@ -97,20 +97,27 @@ public class ApiDocsHandlerTest {
     assertThat(paths.has("/api/movie")).isTrue();
     assertThat(paths.has("/api/tvshow")).isTrue();
     assertThat(paths.has("/api/movieset")).isTrue();
+    assertThat(paths.has("/api/system")).isTrue();
     assertThat(paths.has("/api/docs")).isTrue();
 
     assertThat(paths.path("/api/movie").path("post").isObject()).isTrue();
     assertThat(paths.path("/api/tvshow").path("post").isObject()).isTrue();
     assertThat(paths.path("/api/movieset").path("post").isObject()).isTrue();
+    assertThat(paths.path("/api/system").path("post").isObject()).isTrue();
+    assertThat(paths.path("/api/system").path("get").isObject()).isTrue();
     assertThat(paths.path("/api/docs").path("get").isObject()).isTrue();
 
-    // every command endpoint needs a request body and the queue/forbidden responses
+    // every command endpoint needs a request body and the queue/forbidden/shutting-down responses
     for (String endpoint : new String[] { "/api/movie", "/api/tvshow", "/api/movieset" }) {
       JsonNode post = paths.path(endpoint).path("post");
       assertThat(post.path("requestBody").path("required").asBoolean()).as(endpoint + " requires a body").isTrue();
       assertThat(post.path("responses").has("200")).as(endpoint + " documents 200").isTrue();
       assertThat(post.path("responses").has("403")).as(endpoint + " documents 403").isTrue();
+      assertThat(post.path("responses").has("503")).as(endpoint + " documents 503").isTrue();
     }
+
+    // the dead /api/command stub has been replaced by the system endpoint
+    assertThat(paths.has("/api/command")).isFalse();
   }
 
   /**
