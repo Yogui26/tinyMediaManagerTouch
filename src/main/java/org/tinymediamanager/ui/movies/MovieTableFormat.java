@@ -35,11 +35,13 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.movie.MovieComparator;
+import org.tinymediamanager.core.movie.MovieCustomColumn;
 import org.tinymediamanager.core.movie.MovieEdition;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.jmte.MovieCustomColumnEvaluator;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.util.DateUtils;
@@ -58,7 +60,19 @@ import org.tinymediamanager.ui.renderer.RuntimeTableCellRenderer;
  */
 public class MovieTableFormat extends TmmTableFormat<Movie> {
 
-  private final MovieList movieList;
+  private final MovieList                  movieList;
+
+  /** the evaluator for the freely configurable columns */
+  private final MovieCustomColumnEvaluator customColumnEvaluator  = new MovieCustomColumnEvaluator();
+
+  /** the model index of the first custom column */
+  private int                              customColumnBaseIndex;
+
+  /** the custom columns which are currently mounted into this table, in the very same order as the table columns */
+  private final List<MovieCustomColumn>    mountedCustomColumns   = new ArrayList<>();
+
+  /** the comparator used by all custom columns */
+  private final Comparator<String>         customColumnComparator = new StringComparator();
 
   public MovieTableFormat() {
 
@@ -546,6 +560,13 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     addColumn(col);
 
     /*
+     * the freely configurable columns - their content is evaluated lazily by the MovieCustomColumnEvaluator and they are placed right before the
+     * completeness columns
+     */
+    customColumnBaseIndex = columns.size();
+    addCustomColumns();
+
+    /*
      * new indicator
      */
     col = new Column(TmmResourceBundle.getString("movieextendedsearch.newmovies"), "new", movie -> getNewIcon(movie.isNewlyAdded()), ImageIcon.class);
@@ -675,6 +696,74 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     col.setColumnResizeable(false);
     col.setDefaultHidden(true);
     addColumn(col);
+  }
+
+  /**
+   * Mounts all currently configured custom columns right before the completeness columns. They are hidden per default, so an unconfigured or unused
+   * column costs nothing at all.
+   */
+  private void addCustomColumns() {
+    // copy the settings, so that an already mounted column can never be swapped against another one by a tinkered around settings list
+    mountedCustomColumns.clear();
+    mountedCustomColumns.addAll(MovieModuleManager.getInstance().getSettings().getCustomColumns());
+
+    for (int i = 0; i < mountedCustomColumns.size(); i++) {
+      final int position = i + 1;
+      final MovieCustomColumn customColumn = mountedCustomColumns.get(i);
+
+      Column col = new Column(customColumn.getTitleOrPlaceholder(position), customColumn.getColumnIdentifier(),
+          movie -> customColumnEvaluator.evaluate(movie, customColumn), String.class);
+      col.setColumnComparator(customColumnComparator);
+      col.setCellTooltip(showTooltip(movie -> StringUtils.defaultString(customColumn.getPattern())));
+      col.setDefaultHidden(true);
+      insertColumn(customColumnBaseIndex + i, col);
+    }
+  }
+
+  /**
+   * Remounts the freely configurable columns according to the current settings. Needed when columns have been added, removed or reordered.
+   */
+  public void rebuildCustomColumns() {
+    for (int i = 0; i < mountedCustomColumns.size(); i++) {
+      columns.remove(customColumnBaseIndex);
+    }
+
+    addCustomColumns();
+  }
+
+  @Override
+  public String getColumnName(int i) {
+    MovieCustomColumn customColumn = getCustomColumn(i);
+    if (customColumn != null) {
+      // the title is read live from the mounted bean, so no table rebuild is needed when the user only renames a column
+      return customColumn.getTitleOrPlaceholder(i - customColumnBaseIndex + 1);
+    }
+    return super.getColumnName(i);
+  }
+
+  @Override
+  public boolean isColumnEnabled(int i) {
+    MovieCustomColumn customColumn = getCustomColumn(i);
+    if (customColumn != null) {
+      return customColumn.isConfigured();
+    }
+    return true;
+  }
+
+  /**
+   * Gets the custom column which is mounted at the given model index. The mounted columns are the ones the user currently sees, they can well be out
+   * of sync with the settings until the table has been rebuilt.
+   *
+   * @param i
+   *          the model index of the column
+   * @return the {@link MovieCustomColumn} at this index, or null when the column is no custom column
+   */
+  private MovieCustomColumn getCustomColumn(int i) {
+    int position = i - customColumnBaseIndex;
+    if (position < 0 || position >= mountedCustomColumns.size()) {
+      return null;
+    }
+    return mountedCustomColumns.get(position);
   }
 
   private Float getRating(MediaRating rating) {

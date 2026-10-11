@@ -2,6 +2,8 @@ Version 5.3.5
 =======================
 + [Core] added a housekeeping action to remove abandoned entries from the database
 + [TV shows, Movie Sets] added an action to remove the missing episodes/movies from the selected TV shows/movie sets
++ [UI] added freely configurable columns to the movie/movie set/TV show table, which get their content from your own JMTE patterns
+  You can add, rename and arrange these columns in settings, then enable them in the table
 + [UI] the notification button shows a red dot as soon as there are new messages
 + [API] added a system endpoint (/api/system) to query the current status and to shut tinyMediaManager down automatically after the last task has finished
 + [Simkl] switched the Simkl.com sign-in to the new OAuth 2.0 device flow (AUTH V2) - your browser opens the Simkl.com approval page, you only have to click allow

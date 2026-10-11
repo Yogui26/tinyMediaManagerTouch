@@ -107,4 +107,20 @@ public class TmmTableModel<E> extends DefaultEventTableModel<E> {
 
     return tooltip;
   }
+
+  /**
+   * Tells whether the given column can be chosen by the user in the column selection popup.
+   *
+   * @param column
+   *          the index of the column
+   * @return true when the column can be shown/hidden by the user
+   */
+  public boolean isColumnEnabled(int column) {
+    try {
+      return tmmTableFormat.isColumnEnabled(column);
+    }
+    catch (Exception e) {
+      return true;
+    }
+  }
 }

@@ -49,7 +49,9 @@ public class TmmTreeTableComparatorChooser {
   private final HeaderClickHandler           headerClickHandler;
 
   public static void install(TmmTreeTable treeTable) {
-    new TmmTreeTableComparatorChooser(treeTable);
+    final TmmTreeTableComparatorChooser comparatorChooser = new TmmTreeTableComparatorChooser(treeTable);
+    // the table keeps it, since a freshly created column set needs the header decoration of this very chooser again
+    treeTable.setComparatorChooser(comparatorChooser);
   }
 
   private TmmTreeTableComparatorChooser(TmmTreeTable treeTable) {
@@ -66,6 +68,15 @@ public class TmmTreeTableComparatorChooser {
 
     // install the sorting strategy to interpret clicks
     headerClickHandler = new HeaderClickHandler(treeTable);
+  }
+
+  /**
+   * Wraps the header renderers of all columns again, which is needed after the table has recreated its columns from the table format. Both wrappings
+   * skip whatever is wrapped already, so this can be called as often as you like.
+   */
+  void refreshColumnHeaderRenderers() {
+    wrapDefaultTableHeaderRenderer();
+    wrapColumnHeaderRenderer();
   }
 
   /**

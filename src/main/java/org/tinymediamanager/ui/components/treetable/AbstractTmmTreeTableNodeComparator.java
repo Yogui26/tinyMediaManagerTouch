@@ -47,6 +47,11 @@ public abstract class AbstractTmmTreeTableNodeComparator implements Comparator<T
   }
 
   @Override
+  public int getSortColumn() {
+    return sortColumn;
+  }
+
+  @Override
   public void fromString(String stringEncoded) {
     // skip empty strings
     if (StringUtils.isBlank(stringEncoded)) {

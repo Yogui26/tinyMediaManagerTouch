@@ -23,11 +23,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jdesktop.observablecollections.ObservableCollections;
@@ -72,6 +75,7 @@ import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.rating.RatingProvider;
+import org.tinymediamanager.scraper.util.ListUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -90,18 +94,25 @@ public final class TvShowSettings extends AbstractSettings {
   public static final String                     DEFAULT_RENAMER_SEASON_PATTERN = "Season ${seasonNr}";
   public static final String                     DEFAULT_RENAMER_FILE_PATTERN   = "${showTitle} - S${seasonNr2}E${episodeNr2} - ${title}";
 
+  /**
+   * event names of the freely configurable table columns
+   */
+  public static final String                     CUSTOM_COLUMNS                 = "customColumns";
+  public static final String                     CUSTOM_COLUMN_CONTENT          = "customColumnContent";
+
   private static volatile TvShowSettings         instance;
 
   /**
    * Constants mainly for events
    */
+  public static final String                     RENAMER_PROFILES               = "renamerProfiles";
+
   static final String                            TV_SHOW_DATA_SOURCE            = "tvShowDataSource";
   static final String                            ARTWORK_SCRAPERS               = "artworkScrapers";
   static final String                            TRAILER_SCRAPERS               = "trailerScrapers";
   static final String                            TRAILER_FILENAME               = "trailerFilename";
 
   static final String                            CERTIFICATION_COUNTRY          = "certificationCountry";
-  static final String                            RENAMER_PROFILES               = "renamerProfiles";
   static final String                            BAD_WORD                       = "badWord";
   static final String                            SKIP_FOLDER                    = "skipFolder";
   static final String                            SUBTITLE_SCRAPERS              = "subtitleScrapers";
@@ -274,11 +285,23 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        englishTitle;
   final List<String>                             ratingSources                  = ObservableCollections.observableList(new ArrayList<>());
 
+  /** the freely configurable columns of the TV show table */
+  final List<TvShowCustomColumn>                 customColumns                  = new ArrayList<>();
+
   final PropertyChangeListener                   propertyChangeListener;
+
+  /** forwards the title/pattern changes of a single custom column as one announcement for all of them */
+  final PropertyChangeListener                   customColumnContentListener;
 
   public TvShowSettings() {
     super();
     propertyChangeListener = evt -> setDirty();
+    customColumnContentListener = evt -> {
+      if ("title".equals(evt.getPropertyName()) || "showPattern".equals(evt.getPropertyName()) || "seasonPattern".equals(evt.getPropertyName())
+          || "episodePattern".equals(evt.getPropertyName())) {
+        firePropertyChange(CUSTOM_COLUMN_CONTENT, evt.getOldValue(), evt.getNewValue());
+      }
+    };
 
     // set default values - they will be overwritten by jackson later
     setDefaultValues();
@@ -372,6 +395,7 @@ public final class TvShowSettings extends AbstractSettings {
     setSeasonArtworkFallback(false);
     setStoreUiFilters(false);
     setResetNewFlagOnUds(true);
+    setCustomColumns(Collections.emptyList());
 
     setTvShowDisplayAllMissingMetadata(false);
     setTvShowDisplayAllMissingArtwork(false);
@@ -572,6 +596,9 @@ public final class TvShowSettings extends AbstractSettings {
 
   @Override
   protected void afterLoading() {
+    // make sure that every column which came in from the settings file is unambiguously identifiable
+    attachCustomColumns();
+
     // warn about data sources which are dangerous system folders (added by older versions or hand-edited settings)
     for (String ds : tvShowDataSources) {
       try {
@@ -2240,5 +2267,116 @@ public final class TvShowSettings extends AbstractSettings {
     ratingSources.set(pos1, ratingSources.get(pos2));
     ratingSources.set(pos2, tmp);
     firePropertyChange("ratingSources", null, ratingSources);
+  }
+
+  /**
+   * Gets all freely configurable TV show table columns. The list is live and can be empty - in that case the TV show table has no custom column at
+   * all.
+   *
+   * @return the custom columns in table order
+   */
+  public List<TvShowCustomColumn> getCustomColumns() {
+    return customColumns;
+  }
+
+  /**
+   * Sets the freely configurable TV show table columns. This is a structural change.
+   *
+   * @param newValues
+   *          the custom columns to set
+   */
+  public void setCustomColumns(List<TvShowCustomColumn> newValues) {
+    // copy first, the caller might pass in the very same list which has been granted by our getter
+    List<TvShowCustomColumn> columns = new ArrayList<>(newValues);
+
+    customColumns.forEach(this::detachCustomColumn);
+    customColumns.clear();
+    customColumns.addAll(columns);
+    customColumns.forEach(this::attachCustomColumn);
+    firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+  }
+
+  /**
+   * Adds a freely configurable TV show table column at the end of the list. This is a structural change.
+   *
+   * @param customColumn
+   *          the custom column to add
+   */
+  public void addCustomColumn(TvShowCustomColumn customColumn) {
+    customColumns.add(customColumn);
+    attachCustomColumn(customColumn);
+    firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+  }
+
+  /**
+   * Removes a freely configurable TV show table column. This is a structural change.
+   *
+   * @param customColumn
+   *          the custom column to remove
+   */
+  public void removeCustomColumn(TvShowCustomColumn customColumn) {
+    if (customColumns.remove(customColumn)) {
+      detachCustomColumn(customColumn);
+      firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+    }
+  }
+
+  /**
+   * Swaps two freely configurable TV show table columns to reorder them within the TV show table. This is a structural change.
+   *
+   * @param index1
+   *          the 0-based index of the first column
+   * @param index2
+   *          the 0-based index of the second column
+   */
+  public void swapCustomColumns(int index1, int index2) {
+    if (index1 < 0 || index2 < 0 || index1 >= customColumns.size() || index2 >= customColumns.size() || index1 == index2) {
+      return;
+    }
+
+    ListUtils.swap(customColumns, index1, index2);
+    firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+  }
+
+  /**
+   * Makes all custom columns which came from the settings file usable: their ids get healed when the config file left them out or even duplicated
+   * them, and their change listeners get attached. Attaching is idempotent, so it does not matter whether the deserialization went over
+   * {@link #setCustomColumns} or filled the list itself.
+   */
+  private void attachCustomColumns() {
+    Set<String> ids = new HashSet<>();
+
+    for (TvShowCustomColumn customColumn : customColumns) {
+      String id = customColumn.getId();
+      if (!ids.add(id)) {
+        // an outdated or hand-tuned config could give two columns the same id, which would make them impossible to tell apart
+        LOGGER.warn("The id '{}' of a custom table column is already in use - using a fresh one instead", id);
+        customColumn.setId(UUID.randomUUID().toString());
+        ids.add(customColumn.getId());
+      }
+
+      attachCustomColumn(customColumn);
+    }
+  }
+
+  /**
+   * Lets one custom column announce its changes. Detaching first makes this idempotent, since a column can be attached by the settings loader as well
+   * as by {@link #setCustomColumns}.
+   *
+   * @param customColumn
+   *          the custom column to observe
+   */
+  private void attachCustomColumn(TvShowCustomColumn customColumn) {
+    detachCustomColumn(customColumn);
+
+    // mark these settings dirty whenever one single column changes
+    customColumn.addPropertyChangeListener(propertyChangeListener);
+    // and announce content changes to everyone waiting for a new title or pattern
+    customColumn.addPropertyChangeListener(customColumnContentListener);
+  }
+
+  private void detachCustomColumn(TvShowCustomColumn customColumn) {
+    customColumn.removePropertyChangeListener(propertyChangeListener);
+    customColumn.removePropertyChangeListener(customColumnContentListener);
   }
 }

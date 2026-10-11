@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 
 import org.junit.Test;
 import org.tinymediamanager.core.Utils;
@@ -218,5 +219,68 @@ public class TvShowSettingsTest extends BasicTvShowTest {
     assertThat(profile.isUnicodeReplacement()).isTrue();
     assertThat(profile.isSpecialSeason()).isTrue();
     assertThat(profile.isCreateMissingSeasonItems()).isFalse();
+  }
+
+  @Test
+  public void testCustomColumnCRUD() {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    settings.setCustomColumns(new ArrayList<>());
+
+    TvShowCustomColumn first = new TvShowCustomColumn("first", "${tvShow.title}");
+    first.setSeasonPattern("${season.title}");
+    first.setEpisodePattern("${episode.title}");
+    settings.addCustomColumn(first);
+    assertThat(settings.getCustomColumns()).containsExactly(first);
+    assertThat(first.isConfigured()).isTrue();
+
+    TvShowCustomColumn second = new TvShowCustomColumn("second", "${tvShow.title}");
+    settings.addCustomColumn(second);
+    assertThat(settings.getCustomColumns()).containsExactly(first, second);
+
+    settings.swapCustomColumns(0, 1);
+    assertThat(settings.getCustomColumns()).containsExactly(second, first);
+
+    settings.removeCustomColumn(second);
+    assertThat(settings.getCustomColumns()).containsExactly(first);
+  }
+
+  @Test
+  public void testCustomColumnIsConfiguredForAnyLevel() {
+    TvShowCustomColumn column = new TvShowCustomColumn();
+    assertThat(column.isConfigured()).isFalse();
+
+    column.setSeasonPattern("${season.title}");
+    assertThat(column.isConfigured()).isTrue();
+
+    column.setSeasonPattern("");
+    column.setEpisodePattern("${episode.title}");
+    assertThat(column.isConfigured()).isTrue();
+  }
+
+  @Test
+  public void testCustomColumnIdHealsItself() {
+    TvShowCustomColumn column = new TvShowCustomColumn();
+    column.setId(null);
+    column.setShowPattern("${tvShow.title}");
+
+    assertThat(column.getId()).isNotBlank();
+    assertThat(column.getColumnIdentifier()).isEqualTo(TvShowCustomColumn.COLUMN_IDENTIFIER_PREFIX + column.getId());
+  }
+
+  @Test
+  public void testCustomColumnsGetPersisted() throws Exception {
+    TvShowSettings settings = TvShowSettings.getInstance();
+    TvShowCustomColumn customColumn = new TvShowCustomColumn("Note", "${tvShow.note}");
+    customColumn.setEpisodePattern("${episode.title}");
+    settings.addCustomColumn(customColumn);
+
+    Thread.sleep(500); // let the async dirty listener fire
+    settings.saveSettings();
+
+    String config = Utils.readFileToString(getSettingsFolder().resolve(settings.getConfigFilename()));
+    assertThat(config).contains("\"title\" : \"Note\"");
+    assertThat(config).contains("\"showPattern\" : \"${tvShow.note}\"");
+    assertThat(config).contains("\"episodePattern\" : \"${episode.title}\"");
+    assertThat(config).contains("\"id\" : \"" + customColumn.getId() + "\"");
   }
 }

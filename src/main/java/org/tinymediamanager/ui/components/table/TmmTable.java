@@ -41,6 +41,7 @@ import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
@@ -58,6 +59,7 @@ import org.jetbrains.annotations.NotNull;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.FlatButton;
+import org.tinymediamanager.ui.components.treetable.TmmTreeTableModel;
 
 import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.impl.gui.SortingStrategy;
@@ -111,39 +113,44 @@ public class TmmTable extends JTable {
     getTableHeader().setReorderingAllowed(false);
     setOpaque(false);
 
-    getColumnModel().addColumnModelListener(new TableColumnModelListener() {
-      @Override
-      public void columnAdded(TableColumnModelEvent e) {
-        // do not adjust column widths when loading the table model
-        if (!columnsAdjusting) {
-          adjustColumnPreferredWidths(3);
-        }
-      }
-
-      @Override
-      public void columnRemoved(TableColumnModelEvent e) {
-        // do not adjust column widths when loading the table model
-        if (!columnsAdjusting) {
-          adjustColumnPreferredWidths(3);
-        }
-      }
-
-      @Override
-      public void columnMoved(TableColumnModelEvent e) {
-        // nothing to do
-      }
-
-      @Override
-      public void columnMarginChanged(ChangeEvent e) {
-        // nothing to do
-      }
-
-      @Override
-      public void columnSelectionChanged(ListSelectionEvent e) {
-        // nothing to do
-      }
-    });
+    getColumnModel().addColumnModelListener(columnModelListener);
   }
+
+  /**
+   * Keeps the column widths in sync with the table content. Made a field to be able to re-register it on a fresh column model.
+   */
+  private final TableColumnModelListener columnModelListener = new TableColumnModelListener() {
+    @Override
+    public void columnAdded(TableColumnModelEvent e) {
+      // do not adjust column widths when loading the table model
+      if (!columnsAdjusting) {
+        adjustColumnPreferredWidths(3);
+      }
+    }
+
+    @Override
+    public void columnRemoved(TableColumnModelEvent e) {
+      // do not adjust column widths when loading the table model
+      if (!columnsAdjusting) {
+        adjustColumnPreferredWidths(3);
+      }
+    }
+
+    @Override
+    public void columnMoved(TableColumnModelEvent e) {
+      // nothing to do
+    }
+
+    @Override
+    public void columnMarginChanged(ChangeEvent e) {
+      // nothing to do
+    }
+
+    @Override
+    public void columnSelectionChanged(ListSelectionEvent e) {
+      // nothing to do
+    }
+  };
 
   public void installComparatorChooser(SortedList<?> sortedList) {
     installComparatorChooser(sortedList, new MouseKeyboardSortingStrategy());
@@ -195,6 +202,68 @@ public class TmmTable extends JTable {
      */
     public int getWidth() {
       return width;
+    }
+  }
+
+  /**
+   * Rebuilds the columns of this table from its (probably changed) table format. Needed when columns have been added or removed, since
+   * {@code setModel()} does nothing when the very same model instance gets set again.
+   * <p>
+   * A completely new column model gets installed on purpose: the old one would keep its hidden columns (and their positions), which are not part of
+   * the new structure anymore.
+   */
+  public void rebuildColumnsFromModel() {
+    // drops all cached column state, especially the hidden columns of the previous structure
+    int columnMargin = getColumnModel().getColumnMargin();
+    TableColumnModel columnModel = createDefaultColumnModel();
+    columnModel.addColumnModelListener(columnModelListener);
+    // a fresh column model falls back to the default margin, which would lay out every cell beside the separator line the viewport paints
+    columnModel.setColumnMargin(columnMargin);
+    setColumnModel(columnModel);
+
+    // let everyone know that the structure changed - the table recreates its columns and the comparator chooser resets its sorting
+    if (getModel() instanceof TmmTableModel<?> tableModel) {
+      tableModel.fireTableStructureChanged();
+    }
+    else if (getModel() instanceof TmmTreeTableModel treeTableModel) {
+      treeTableModel.fireTableStructureChanged();
+    }
+
+    configureEnclosingScrollPane();
+
+    // the viewport paints the grid lines of the empty rows, but it listens to the columns it knew - which were thrown away above
+    if (SwingUtilities.getAncestorOfClass(JScrollPane.class, this) instanceof JScrollPane scrollPane
+        && scrollPane.getViewport() instanceof TmmViewport tmmViewport) {
+      tmmViewport.updateColumns();
+    }
+  }
+
+  /**
+   * Pushes the current column names of the table format back into the header of the table and repaints it. Needed when the title of a column changes
+   * without changing the column structure itself, e.g. the freely configurable columns.
+   */
+  public void refreshColumnHeaders() {
+    if (getModel() instanceof TmmTableModel<?> || getModel() instanceof TmmTreeTableModel) {
+      if (getColumnModel() instanceof TmmTableColumnModel tmmTableColumnModel) {
+        // all columns, including the hidden ones, to not leave a stale title behind
+        for (TableColumn column : tmmTableColumnModel.getAllColumns()) {
+          refreshColumnHeader(getModel(), column);
+        }
+      }
+      else {
+        for (int i = 0; i < getColumnModel().getColumnCount(); i++) {
+          refreshColumnHeader(getModel(), getColumnModel().getColumn(i));
+        }
+      }
+
+      getTableHeader().repaint();
+    }
+  }
+
+  private void refreshColumnHeader(TableModel tableModel, TableColumn column) {
+    // columns with an icon as header are not affected by a title change
+    if (column.getHeaderValue() == null || column.getHeaderValue() instanceof String) {
+      column.setHeaderValue(tableModel.getColumnName(column.getModelIndex()));
     }
   }
 

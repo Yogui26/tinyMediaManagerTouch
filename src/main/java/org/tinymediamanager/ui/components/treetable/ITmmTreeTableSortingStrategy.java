@@ -10,5 +10,12 @@ public interface ITmmTreeTableSortingStrategy {
 
   SortDirection getSortDirection(int column);
 
+  /**
+   * Gets the index of the column which is currently sorted. Needed to find this column again after the table structure has changed.
+   *
+   * @return the 0-based index of the sorted column
+   */
+  int getSortColumn();
+
   void fromString(String stringEncoded);
 }

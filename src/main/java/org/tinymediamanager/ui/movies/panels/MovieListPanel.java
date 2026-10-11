@@ -22,7 +22,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 import javax.swing.AbstractAction;
@@ -52,8 +54,10 @@ import org.jdesktop.beansbinding.Bindings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.movie.MovieComparator;
+import org.tinymediamanager.core.movie.MovieCustomColumn;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.ui.HintManager;
 import org.tinymediamanager.ui.IconManager;
@@ -66,6 +70,7 @@ import org.tinymediamanager.ui.components.button.SplitButton;
 import org.tinymediamanager.ui.components.panel.TmmListPanel;
 import org.tinymediamanager.ui.components.table.MouseKeyboardSortingStrategy;
 import org.tinymediamanager.ui.components.table.TmmTable;
+import org.tinymediamanager.ui.components.table.TmmTableComparatorChooser;
 import org.tinymediamanager.ui.components.table.TmmTableModel;
 import org.tinymediamanager.ui.components.textfield.EnhancedTextField;
 import org.tinymediamanager.ui.movies.MovieMatcherEditor;
@@ -100,13 +105,17 @@ public class MovieListPanel extends TmmListPanel {
 
   private JPopupMenu  popupMenu;
 
+  /** the list behind the table and its format, needed to rebuild the columns of the freely configurable ones */
+  private SortedList<Movie> sortedMovies;
+  private MovieTableFormat  movieTableFormat;
+
   public MovieListPanel() {
     initComponents();
   }
 
   private void initComponents() {
     movieList = MovieModuleManager.getInstance().getMovieList();
-    SortedList<Movie> sortedMovies = new SortedList<>(GlazedListsSwing.swingThreadProxyList((ObservableElementList<Movie>) movieList.getMovies()),
+    sortedMovies = new SortedList<>(GlazedListsSwing.swingThreadProxyList((ObservableElementList<Movie>) movieList.getMovies()),
         new MovieComparator());
     sortedMovies.setMode(SortedList.AVOID_MOVING_ELEMENTS);
 
@@ -124,7 +133,8 @@ public class MovieListPanel extends TmmListPanel {
     FilterList<Movie> extendedFilteredMovies = new FilterList<>(sortedMovies, movieMatcherEditor);
     FilterList<Movie> textFilteredMovies = new FilterList<>(extendedFilteredMovies, textMatcherEditor);
     selectionModel = new MovieSelectionModel(textFilteredMovies, movieMatcherEditor);
-    final TmmTableModel<Movie> movieTableModel = new TmmTableModel<>(textFilteredMovies, new MovieTableFormat());
+    movieTableFormat = new MovieTableFormat();
+    final TmmTableModel<Movie> movieTableModel = new TmmTableModel<>(textFilteredMovies, movieTableFormat);
     // movieTableModel.setManyToOneTableModelEventAdapter();
 
     // build the table
@@ -142,6 +152,19 @@ public class MovieListPanel extends TmmListPanel {
       ListSelectionModel selectionModel1 = movieTable.getSelectionModel();
       if (selectionModel1.isSelectionEmpty() && movieTableModel.getRowCount() > 0) {
         selectionModel1.setSelectionInterval(0, 0);
+      }
+    });
+
+    // a new title or pattern is cheap, but a new amount of columns needs the table structure to be rebuilt
+    MovieModuleManager.getInstance().getSettings().addPropertyChangeListener(event -> {
+      if (MovieSettings.CUSTOM_COLUMN_CONTENT.equals(event.getPropertyName())) {
+        SwingUtilities.invokeLater(() -> {
+          movieTable.refreshColumnHeaders();
+          movieTable.repaint();
+        });
+      }
+      else if (MovieSettings.CUSTOM_COLUMNS.equals(event.getPropertyName())) {
+        SwingUtilities.invokeLater(this::rebuildCustomColumns);
       }
     });
 
@@ -428,6 +451,68 @@ public class MovieListPanel extends TmmListPanel {
     AutoBinding<MovieList, Integer, JLabel, String> autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, movieList, movieListBeanProperty,
         lblMovieCountTotal, jLabelBeanProperty);
     autoBinding.bind();
+  }
+
+  /**
+   * Remounts the freely configurable columns and restores everything such a structural change would otherwise throw away: the visible columns with
+   * their widths, the sorting and the selected movie.
+   */
+  private void rebuildCustomColumns() {
+    // disposing the chooser can let the list fall back to its natural order, so remember the movie to find its row again afterwards
+    Movie selectedMovie = movieTable.getSelectedRow() >= 0 ? (Movie) movieTable.getValueAt(movieTable.getSelectedRow(), 0) : null;
+
+    // the sorting is persisted by model indexes, which shift when columns get added or removed - so remember the identifiers instead
+    TmmTableComparatorChooser<?> comparatorChooser = movieTable.getTableComparatorChooser();
+    List<String> sortedColumnIdentifiers = new ArrayList<>();
+    List<Integer> sortedComparatorIndexes = new ArrayList<>();
+    List<Boolean> sortedColumnAscendants = new ArrayList<>();
+    for (Integer modelIndex : comparatorChooser.getSortingColumns()) {
+      sortedColumnIdentifiers.add(movieTableFormat.getColumnIdentifier(modelIndex));
+      sortedComparatorIndexes.add(comparatorChooser.getColumnComparatorIndex(modelIndex));
+      sortedColumnAscendants.add(comparatorChooser.isColumnReverse(modelIndex));
+    }
+
+    List<TmmTable.ColumnState> visibleColumns = new ArrayList<>(movieTable.getVisibleColumnsWithWidths());
+
+    movieTableFormat.rebuildCustomColumns();
+
+    // the old chooser would keep the sorting of a structure which does not exist anymore
+    comparatorChooser.dispose();
+    movieTable.rebuildColumnsFromModel();
+    movieTable.installComparatorChooser(sortedMovies, new MovieTableSortingStrategy());
+
+    // a freshly added column has no stored state yet - show it right away, that is what the user expected from clicking the add button
+    for (MovieCustomColumn customColumn : MovieModuleManager.getInstance().getSettings().getCustomColumns()) {
+      if (!customColumn.isConfigured()) {
+        continue;
+      }
+
+      String identifier = customColumn.getColumnIdentifier();
+      if (visibleColumns.stream().noneMatch(columnState -> columnState.getIdentifier().equals(identifier))) {
+        visibleColumns.add(new TmmTable.ColumnState(identifier, 0));
+      }
+    }
+    movieTable.setVisibleColumnsWithWidths(visibleColumns);
+
+    // put the sorting back onto the columns of the new structure
+    comparatorChooser = movieTable.getTableComparatorChooser();
+    for (int i = 0; i < sortedColumnIdentifiers.size(); i++) {
+      int modelIndex = movieTableFormat.getColumnIndex(sortedColumnIdentifiers.get(i));
+      if (modelIndex >= 0) {
+        comparatorChooser.appendComparator(modelIndex, sortedComparatorIndexes.get(i), sortedColumnAscendants.get(i));
+      }
+    }
+
+    if (selectedMovie != null) {
+      for (int row = 0; row < movieTable.getRowCount(); row++) {
+        if (movieTable.getValueAt(row, 0) == selectedMovie) {
+          movieTable.getSelectionModel().setSelectionInterval(row, row);
+          movieTable.scrollRectToVisible(movieTable.getCellRect(row, 0, true));
+          break;
+        }
+      }
+    }
+    movieTable.repaint();
   }
 
   private static class MovieTableSortingStrategy extends MouseKeyboardSortingStrategy {

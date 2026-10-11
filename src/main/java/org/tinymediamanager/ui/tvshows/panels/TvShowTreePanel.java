@@ -59,8 +59,10 @@ import org.tinymediamanager.core.AbstractSettings;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.tvshow.TvShowCustomColumn;
 import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
@@ -73,13 +75,14 @@ import org.tinymediamanager.ui.actions.FilterPresetAction;
 import org.tinymediamanager.ui.actions.RequestFocusAction;
 import org.tinymediamanager.ui.components.button.SplitButton;
 import org.tinymediamanager.ui.components.panel.TmmListPanel;
+import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.tree.ITmmTreeFilter;
 import org.tinymediamanager.ui.components.tree.TmmTreeModel;
 import org.tinymediamanager.ui.components.tree.TmmTreeNode;
 import org.tinymediamanager.ui.components.tree.TmmTreeTextFilter;
+import org.tinymediamanager.ui.components.treetable.ITmmTreeTableSortingStrategy;
 import org.tinymediamanager.ui.components.treetable.TmmTreeTable;
 import org.tinymediamanager.ui.components.treetable.TmmTreeTableComparatorChooser;
-import org.tinymediamanager.ui.components.treetable.TmmTreeTableFormat;
 import org.tinymediamanager.ui.tvshows.TvShowSelectionModel;
 import org.tinymediamanager.ui.tvshows.TvShowTableFormat;
 import org.tinymediamanager.ui.tvshows.TvShowTreeCellRenderer;
@@ -98,6 +101,9 @@ import net.miginfocom.swing.MigLayout;
 public class TvShowTreePanel extends TmmListPanel {
   private final TvShowList           tvShowList            = TvShowModuleManager.getInstance().getTvShowList();
   private final TvShowSelectionModel selectionModel;
+
+  /** the format of the tree table, needed to remount the freely configurable columns */
+  private TvShowTableFormat          tvShowTableFormat;
 
   private TmmTreeTable               tree;
   private JLabel                     lblEpisodeCountFiltered;
@@ -126,8 +132,98 @@ public class TvShowTreePanel extends TmmListPanel {
         case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork",
             "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork", "showNewTvShowIcon" ->
           tree.invalidate();
+
+        case TvShowSettings.CUSTOM_COLUMNS ->
+          // a different amount of columns needs the table structure to be rebuilt
+          SwingUtilities.invokeLater(this::rebuildCustomColumns);
+
+        case TvShowSettings.CUSTOM_COLUMN_CONTENT ->
+          // a new title or pattern is cheap, the columns stay the very same
+          SwingUtilities.invokeLater(() -> {
+            tree.refreshColumnHeaders();
+            tree.repaint();
+          });
       }
     });
+  }
+
+  /**
+   * Gives the tree column the renderer it needs. A freshly created column model has no renderer of its own yet, so this has to be done after every
+   * structural change of the table.
+   */
+  private void installTreeCellRenderer() {
+    tree.getColumnModel().getColumn(0).setCellRenderer(new TvShowTreeCellRenderer());
+  }
+
+  /**
+   * Remounts the freely configurable columns and restores everything such a structural change would otherwise throw away: the visible columns with
+   * their widths, the sorting and the selected row.
+   */
+  private void rebuildCustomColumns() {
+    // the sorting is persisted as a model index, which shifts when columns get added or removed - so remember its identifier instead
+    ITmmTreeTableSortingStrategy sortingStrategy = tree.getSortStrategy();
+    String sortedColumnIdentifier = null;
+    boolean sortedDescending = false;
+
+    if (sortingStrategy != null) {
+      int sortColumn = sortingStrategy.getSortColumn();
+      sortedDescending = sortingStrategy.getSortDirection(sortColumn) == ITmmTreeTableSortingStrategy.SortDirection.DESCENDING;
+
+      if (sortColumn > 0) {
+        // the very first column of a tree table is the tree itself, the table format starts with the second one
+        sortedColumnIdentifier = tvShowTableFormat.getColumnIdentifier(sortColumn - 1);
+      }
+    }
+
+    // sorting the rows anew could move the selection around, so remember which entity is selected
+    int selectedRow = tree.getSelectedRow();
+    DefaultMutableTreeNode selectedNode = selectedRow >= 0 ? tree.getTreeNode(selectedRow) : null;
+    Object selectedEntity = selectedNode == null ? null : selectedNode.getUserObject();
+
+    List<TmmTable.ColumnState> visibleColumns = new ArrayList<>(tree.getVisibleColumnsWithWidths());
+
+    tvShowTableFormat.rebuildCustomColumns();
+    tree.rebuildColumnsFromModel();
+
+    installTreeCellRenderer();
+
+    // a freshly added column has no stored state yet - show it right away, that is what the user expected from clicking the add button
+    for (TvShowCustomColumn customColumn : TvShowModuleManager.getInstance().getSettings().getCustomColumns()) {
+      if (!customColumn.isConfigured()) {
+        continue;
+      }
+
+      String identifier = customColumn.getColumnIdentifier();
+      if (visibleColumns.stream().noneMatch(columnState -> columnState.getIdentifier().equals(identifier))) {
+        visibleColumns.add(new TmmTable.ColumnState(identifier, 0));
+      }
+    }
+    tree.setVisibleColumnsWithWidths(visibleColumns);
+
+    // put the sorting back onto the columns of the new structure
+    if (sortingStrategy != null) {
+      int sortColumn = 0;
+      if (sortedColumnIdentifier != null) {
+        int modelIndex = tvShowTableFormat.getColumnIndex(sortedColumnIdentifier);
+        if (modelIndex >= 0) {
+          sortColumn = modelIndex + 1;
+        }
+      }
+      tree.setSortStrategy("column " + sortColumn + (sortedDescending ? " reversed" : ""));
+    }
+
+    if (selectedEntity != null) {
+      for (int row = 0; row < tree.getRowCount(); row++) {
+        DefaultMutableTreeNode node = tree.getTreeNode(row);
+        if (node != null && node.getUserObject() == selectedEntity) {
+          tree.getSelectionModel().setSelectionInterval(row, row);
+          tree.scrollRectToVisible(tree.getCellRect(row, 0, true));
+          break;
+        }
+      }
+    }
+
+    tree.repaint();
   }
 
   private void initComponents() {
@@ -187,8 +283,8 @@ public class TvShowTreePanel extends TmmListPanel {
 
     add(btnFilter, "cell 1 0");
 
-    TmmTreeTableFormat<TmmTreeNode> tableFormat = new TvShowTableFormat();
-    tree = new TmmTreeTable(new TvShowTreeDataProvider(tableFormat), tableFormat) {
+    tvShowTableFormat = new TvShowTableFormat();
+    tree = new TmmTreeTable(new TvShowTreeDataProvider(tvShowTableFormat), tvShowTableFormat) {
       @Override
       public void storeFilters() {
         if (TvShowModuleManager.getInstance().getSettings().isStoreUiFilters()) {
@@ -211,7 +307,7 @@ public class TvShowTreePanel extends TmmListPanel {
         }
       }
     };
-    tree.getColumnModel().getColumn(0).setCellRenderer(new TvShowTreeCellRenderer());
+    installTreeCellRenderer();
     tree.addPropertyChangeListener("filterChanged", evt -> updateFilterIndicator());
     tree.setName("tvshows.tvshowTree");
     TmmTreeTableComparatorChooser.install(tree);

@@ -31,6 +31,11 @@ import javax.swing.JViewport;
 class TmmViewport extends JViewport {
   private final JTable fTable;
 
+  /**
+   * a listener to cause the whole table to repaint when a column is resized, because the extended grid lines may need to be repainted
+   */
+  private final PropertyChangeListener columnWidthListener;
+
   TmmViewport(JTable table, int[] cols) {
     fTable = table;
     List<Integer> colsWoRightGrid = new ArrayList<>(cols.length);
@@ -39,22 +44,23 @@ class TmmViewport extends JViewport {
     }
     fTable.putClientProperty("borderNotToDraw", colsWoRightGrid);
     setOpaque(false);
+    columnWidthListener = evt -> repaint();
     initListeners();
   }
 
   private void initListeners() {
-    // install a listener to cause the whole table to repaint when
-    // a column is resized. we do this because the extended grid
-    // lines may need to be repainted. this could be cleaned up,
-    // but for now, it works fine.
-    PropertyChangeListener listener = createTableColumnWidthListener();
     for (int i = 0; i < fTable.getColumnModel().getColumnCount(); i++) {
-      fTable.getColumnModel().getColumn(i).addPropertyChangeListener(listener);
+      fTable.getColumnModel().getColumn(i).addPropertyChangeListener(columnWidthListener);
     }
   }
 
-  private PropertyChangeListener createTableColumnWidthListener() {
-    return evt -> repaint();
+  /**
+   * Takes over the columns the table currently has. Needed after the table rebuilt its columns from scratch: those are brand new objects which know
+   * nothing about the listener above, and without it the grid lines would stay painted at the positions of the structure before the rebuild.
+   */
+  void updateColumns() {
+    initListeners();
+    repaint();
   }
 
   @Override

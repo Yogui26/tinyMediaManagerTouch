@@ -29,22 +29,27 @@ import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Window;
 import java.awt.event.ItemListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jdesktop.beansbinding.AutoBinding;
@@ -58,6 +63,7 @@ import org.tinymediamanager.core.AbstractSettings;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.tvshow.TvShowCustomColumn;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
@@ -72,7 +78,19 @@ import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
 import org.tinymediamanager.ui.components.label.JHintLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
+import org.tinymediamanager.ui.components.table.CustomColumnEditorPanel;
+import org.tinymediamanager.ui.components.table.CustomColumnLevel;
+import org.tinymediamanager.ui.components.table.CustomColumnTable;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
+import org.tinymediamanager.ui.panels.IModalPopupPanelProvider;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
+import org.tinymediamanager.ui.panels.ScrollablePanel;
+import org.tinymediamanager.ui.tvshows.dialogs.TvShowJmteExplorerDialog;
 
+import ca.odell.glazedlists.BasicEventList;
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.GlazedLists;
+import ca.odell.glazedlists.ObservableElementList;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -80,8 +98,20 @@ import net.miginfocom.swing.MigLayout;
  * 
  * @author Manuel Laggner
  */
-class TvShowUiSettingsPanel extends JPanel {
+class TvShowUiSettingsPanel extends ScrollablePanel {
   private static final int                                         COL_COUNT = 7;
+
+  /** the hierarchy levels a TV show table custom column carries a JMTE pattern for */
+  private static final List<CustomColumnLevel<TvShowCustomColumn>> CUSTOM_COLUMN_LEVELS  = List.of(
+      new CustomColumnLevel<>("Settings.tvshow.customcolumns.showpattern", "Settings.tvshow.customcolumns.showpattern.hint",
+          TvShowCustomColumn::getShowPattern, TvShowCustomColumn::setShowPattern),
+      new CustomColumnLevel<>("Settings.tvshow.customcolumns.seasonpattern", "Settings.tvshow.customcolumns.seasonpattern.hint",
+          TvShowCustomColumn::getSeasonPattern, TvShowCustomColumn::setSeasonPattern),
+      new CustomColumnLevel<>("Settings.tvshow.customcolumns.episodepattern", "Settings.tvshow.customcolumns.episodepattern.hint",
+          TvShowCustomColumn::getEpisodePattern, TvShowCustomColumn::setEpisodePattern));
+
+  /** the JMTE explorer of a custom column, without the renamer profile import/export */
+  private static final Function<Window, JDialog>                   JMTE_EXPLORER_FACTORY = window -> new TvShowJmteExplorerDialog(window, true);
 
   private final TvShowSettings                                     settings  = TvShowModuleManager.getInstance().getSettings();
   private final ItemListener                                       checkBoxListener;
@@ -138,9 +168,26 @@ class TvShowUiSettingsPanel extends JPanel {
   private JCheckBox                                                chckbxIncludeNotAired;
   private JCheckBox                                                chckbxNewIndicator;
 
+  /** the view onto the freely configurable TV show table columns */
+  private final EventList<TvShowCustomColumn>                      customColumnEventList;
+  private CustomColumnTable<TvShowCustomColumn>                    tableCustomColumns;
+  private JButton                                                  btnAddCustomColumn;
+  private JButton                                                  btnRemoveCustomColumn;
+  private JButton                                                  btnMoveCustomColumnUp;
+  private JButton                                                  btnMoveCustomColumnDown;
+
   /**
    * Instantiates a new tv show settings panel.
    */
+  /**
+   * Fills the viewport while there is room for the whole content, but keeps our preferred width once the dialog gets too narrow. Otherwise the outer
+   * scroll pane could never show a horizontal scroll bar and the content would be clipped.
+   */
+  @Override
+  public boolean getScrollableTracksViewportWidth() {
+    return getParent() != null && getParent().getWidth() >= getPreferredSize().width;
+  }
+
   TvShowUiSettingsPanel() {
     tvShowMetadataCheckBoxes = new LinkedHashMap<>();
     episodeMetadataCheckBoxes = new LinkedHashMap<>();
@@ -149,9 +196,15 @@ class TvShowUiSettingsPanel extends JPanel {
     episodeArtworkCheckBoxes = new LinkedHashMap<>();
     checkBoxListener = e -> checkChanges();
 
+    customColumnEventList = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()),
+        GlazedLists.beanConnector(TvShowCustomColumn.class));
+
     // UI initializations
     initComponents();
     initDataBindings();
+
+    // custom columns
+    buildCustomColumns();
 
     // logic initializations
     btnAddRating.addActionListener(arg0 -> {
@@ -536,7 +589,7 @@ class TvShowUiSettingsPanel extends JPanel {
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("", "[grow]", "[][15lp!][]"));
+    setLayout(new MigLayout("", "[grow]", "[][15lp!][][15lp!][]"));
     {
       JPanel panelUiSettings = new JPanel();
       // 16lp ~ width of the checkbox
@@ -929,6 +982,120 @@ class TvShowUiSettingsPanel extends JPanel {
       add(collapsiblePanel, "cell 0 2,growx,wmin 0");
     }
 
+    addCustomColumnPanel();
+  }
+
+  private void addCustomColumnPanel() {
+    JPanel panelCustomColumns = new JPanel();
+    panelCustomColumns.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][450lp,grow]10lp[50lp,grow]", "[][]"));
+
+    JLabel lblCustomColumns = new TmmLabel(TmmResourceBundle.getString("Settings.tvshow.customcolumns"), H3);
+    CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelCustomColumns, lblCustomColumns, true);
+    collapsiblePanel.addExtraTitleComponent(new DocsButton("/tvshows/settings#ui-settings"));
+    add(collapsiblePanel, "cell 0 4,growx,wmin 0");
+
+    JTextArea lblHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.tvshow.customcolumns.hint"), true);
+    panelCustomColumns.add(lblHint, "cell 1 0 2 1,growx,wmin 0");
+
+    {
+      tableCustomColumns = new CustomColumnTable<>(customColumnEventList, CUSTOM_COLUMN_LEVELS) {
+        @Override
+        protected void editButtonClicked(int row) {
+          // the row is already a model row, the editor popup must not be opened for a stale index
+          if (row >= 0 && row < customColumnEventList.size()) {
+            showCustomColumnEditor(customColumnEventList.get(row), TvShowUiSettingsPanel.this::adjustCustomColumnWidths);
+          }
+        }
+      };
+      // no scroll pane here: the table shows all its rows and the settings panel itself does the scrolling
+      panelCustomColumns.add(tableCustomColumns.createComponent(), "cell 1 1,grow");
+    }
+    {
+      btnAddCustomColumn = new SquareIconButton(IconManager.ADD_INV);
+      btnAddCustomColumn.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.customcolumns.add"));
+      panelCustomColumns.add(btnAddCustomColumn, "flowy,cell 2 1,aligny top");
+
+      btnRemoveCustomColumn = new SquareIconButton(IconManager.REMOVE_INV);
+      btnRemoveCustomColumn.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.customcolumns.remove"));
+      panelCustomColumns.add(btnRemoveCustomColumn, "cell 2 1");
+
+      btnMoveCustomColumnUp = new SquareIconButton(IconManager.ARROW_UP_INV);
+      btnMoveCustomColumnUp.setToolTipText(TmmResourceBundle.getString("Button.moveup"));
+      panelCustomColumns.add(btnMoveCustomColumnUp, "cell 2 1");
+
+      btnMoveCustomColumnDown = new SquareIconButton(IconManager.ARROW_DOWN_INV);
+      btnMoveCustomColumnDown.setToolTipText(TmmResourceBundle.getString("Button.movedown"));
+      panelCustomColumns.add(btnMoveCustomColumnDown, "cell 2 1");
+    }
+  }
+
+  /**
+   * Wires the buttons of the freely configurable TV show table columns. Every change goes through the settings, so the TV show table always sees the
+   * very same data the user sees here.
+   */
+  private void buildCustomColumns() {
+    refreshCustomColumnEventList();
+
+    // a change somewhere else (or a structural change done by these very buttons) always comes back here
+    settings.addPropertyChangeListener(event -> {
+      if (TvShowSettings.CUSTOM_COLUMNS.equals(event.getPropertyName())) {
+        SwingUtilities.invokeLater(() -> {
+          refreshCustomColumnEventList();
+          tableCustomColumns.repaint();
+        });
+      }
+    });
+
+    btnAddCustomColumn.addActionListener(e -> {
+      TvShowCustomColumn customColumn = new TvShowCustomColumn();
+      showCustomColumnEditor(customColumn, () -> settings.addCustomColumn(customColumn));
+    });
+
+    btnRemoveCustomColumn.addActionListener(e -> {
+      int row = tableCustomColumns.convertRowIndexToModel(tableCustomColumns.getSelectedRow());
+      if (row >= 0 && row < customColumnEventList.size()) {
+        settings.removeCustomColumn(customColumnEventList.get(row));
+      }
+    });
+
+    btnMoveCustomColumnUp.addActionListener(e -> {
+      int row = tableCustomColumns.convertRowIndexToModel(tableCustomColumns.getSelectedRow());
+      if (row > 0) {
+        settings.swapCustomColumns(row, row - 1);
+        tableCustomColumns.getSelectionModel().setSelectionInterval(row - 1, row - 1);
+      }
+    });
+
+    btnMoveCustomColumnDown.addActionListener(e -> {
+      int row = tableCustomColumns.convertRowIndexToModel(tableCustomColumns.getSelectedRow());
+      if (row >= 0 && row < customColumnEventList.size() - 1) {
+        settings.swapCustomColumns(row, row + 1);
+        tableCustomColumns.getSelectionModel().setSelectionInterval(row + 1, row + 1);
+      }
+    });
+  }
+
+  private void refreshCustomColumnEventList() {
+    customColumnEventList.clear();
+    customColumnEventList.addAll(settings.getCustomColumns());
+    adjustCustomColumnWidths();
+  }
+
+  private void adjustCustomColumnWidths() {
+    tableCustomColumns.adjustColumnPreferredWidths(3);
+  }
+
+  private void showCustomColumnEditor(TvShowCustomColumn customColumn, Runnable onSaved) {
+    IModalPopupPanelProvider modalPopupPanelProvider = IModalPopupPanelProvider.findModalProvider(this);
+    if (modalPopupPanelProvider == null) {
+      return;
+    }
+    ModalPopupPanel popupPanel = modalPopupPanelProvider.createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("Settings.tvshow.customcolumns"));
+    popupPanel.setOnCloseHandler(onSaved);
+    popupPanel.setContent(
+        new CustomColumnEditorPanel<>(customColumn, "Settings.tvshow.customcolumns.title.hint", CUSTOM_COLUMN_LEVELS, JMTE_EXPLORER_FACTORY));
+    modalPopupPanelProvider.showModalPopupPanel(popupPanel);
   }
 
   private <E extends ScraperMetadataConfig> void addMetadataCheckbox(JPanel panel, E config, Map<E, JCheckBox> map, GridBagConstraints gbc) {

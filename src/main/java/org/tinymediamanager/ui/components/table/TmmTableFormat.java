@@ -74,6 +74,18 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
     columns.add(column);
   }
 
+  /**
+   * Adds the given column at the given index, so it can be placed between the already existing columns.
+   *
+   * @param index
+   *          the index to insert the column at
+   * @param column
+   *          the column to insert
+   */
+  protected void insertColumn(int index, Column column) {
+    columns.add(index, column);
+  }
+
   @Override
   public Class<?> getColumnClass(int i) {
     return columns.get(i).columnClass;
@@ -119,6 +131,23 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
     return columns.get(i).columnIdentifier;
   }
 
+  /**
+   * Gets the index of the column with the given identifier. Needed to find a column again after its index has been shifted by a structural change of
+   * the table.
+   *
+   * @param columnIdentifier
+   *          the identifier of the column to look for
+   * @return the index of the column, or -1 when no column has this identifier
+   */
+  public int getColumnIndex(String columnIdentifier) {
+    for (int i = 0; i < columns.size(); i++) {
+      if (columns.get(i).columnIdentifier.equals(columnIdentifier)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   public TableCellRenderer getCellRenderer(int i) {
     return columns.get(i).cellRenderer;
   }
@@ -141,6 +170,18 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
 
   public boolean isColumnDefaultHidden(int i) {
     return columns.get(i).defaultHidden;
+  }
+
+  /**
+   * Tells whether the column can be chosen by the user in the column selection popup. Defaults to true, columns which need a proper configuration
+   * first (e.g. the freely configurable ones) can be greyed out until they are usable.
+   *
+   * @param i
+   *          the index of the column
+   * @return true when the column can be shown/hidden by the user
+   */
+  public boolean isColumnEnabled(int i) {
+    return true;
   }
 
   protected class Column {

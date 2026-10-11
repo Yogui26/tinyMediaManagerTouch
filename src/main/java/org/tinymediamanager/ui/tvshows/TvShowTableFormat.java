@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import javax.swing.ImageIcon;
 
@@ -36,6 +37,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaSource;
+import org.tinymediamanager.core.tvshow.TvShowCustomColumn;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
@@ -44,6 +46,7 @@ import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
+import org.tinymediamanager.core.tvshow.jmte.TvShowCustomColumnEvaluator;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.util.DateUtils;
@@ -65,6 +68,15 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   private final TvShowList     tvShowList;
   private final TvShowSettings settings;
   private final Calendar       calendar = Calendar.getInstance();
+
+  /** the evaluator for the freely configurable columns */
+  private final TvShowCustomColumnEvaluator customColumnEvaluator  = new TvShowCustomColumnEvaluator();
+  /** the model index of the first custom column */
+  private int                               customColumnBaseIndex;
+  /** the custom columns which are currently mounted into this table, in the very same order as the table columns */
+  private final List<TvShowCustomColumn>    mountedCustomColumns   = new ArrayList<>();
+  /** the comparator used by all custom columns */
+  private final Comparator<String>          customColumnComparator = new StringComparator();
 
   public TvShowTableFormat() {
     tvShowList = TvShowModuleManager.getInstance().getTvShowList();
@@ -468,6 +480,13 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
 
     /*
+     * the freely configurable columns - their content is evaluated lazily by the TvShowCustomColumnEvaluator and they are placed right before the
+     * icon columns
+     */
+    customColumnBaseIndex = columns.size();
+    addCustomColumns();
+
+    /*
      * new indicator
      */
     col = new Column(TmmResourceBundle.getString("movieextendedsearch.newepisodes"), "new", this::getNewIcon, ImageIcon.class);
@@ -551,9 +570,99 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     if (i == NODE_COLUMN) {
       return TmmResourceBundle.getString("metatag.title");
     }
-    else {
-      return super.getColumnName(i);
+
+    TvShowCustomColumn customColumn = getCustomColumn(i);
+    if (customColumn != null) {
+      // the title is read live from the mounted bean, so no table rebuild is needed when the user only renames a column
+      return customColumn.getTitleOrPlaceholder(i - customColumnBaseIndex + 1);
     }
+    return super.getColumnName(i);
+  }
+
+  @Override
+  public boolean isColumnEnabled(int i) {
+    TvShowCustomColumn customColumn = getCustomColumn(i);
+    if (customColumn != null) {
+      return customColumn.isConfigured();
+    }
+    return true;
+  }
+
+  /**
+   * Remounts the freely configurable columns of this table from the settings, keeping their order.
+   */
+  public void rebuildCustomColumns() {
+    for (int i = 0; i < mountedCustomColumns.size(); i++) {
+      columns.remove(customColumnBaseIndex);
+    }
+    addCustomColumns();
+  }
+
+  private void addCustomColumns() {
+    // copy the settings, so that an already mounted column can never be swapped against another one by a tinkered around settings list
+    mountedCustomColumns.clear();
+    mountedCustomColumns.addAll(settings.getCustomColumns());
+
+    for (int i = 0; i < mountedCustomColumns.size(); i++) {
+      final int position = i + 1;
+      final TvShowCustomColumn customColumn = mountedCustomColumns.get(i);
+
+      Column col = new Column(customColumn.getTitleOrPlaceholder(position), customColumn.getColumnIdentifier(),
+          node -> getCustomColumnValue(node, customColumn), String.class);
+      col.setColumnComparator(customColumnComparator);
+      col.setCellTooltip(showTooltip(node -> StringUtils.defaultString(getCustomColumnPattern(node, customColumn))));
+      col.setDefaultHidden(true);
+      insertColumn(customColumnBaseIndex + i, col);
+    }
+  }
+
+  private String getCustomColumnValue(TmmTreeNode node, TvShowCustomColumn customColumn) {
+    Object userObject = node.getUserObject();
+
+    if (userObject instanceof TvShow tvShow) {
+      return customColumnEvaluator.evaluate(tvShow, customColumn);
+    }
+    if (userObject instanceof TvShowSeason season) {
+      return customColumnEvaluator.evaluate(season, customColumn);
+    }
+    if (userObject instanceof TvShowEpisode episode) {
+      return customColumnEvaluator.evaluate(episode, customColumn);
+    }
+    return "";
+  }
+
+  private String getCustomColumnPattern(TmmTreeNode node, TvShowCustomColumn customColumn) {
+    Object userObject = node.getUserObject();
+
+    if (userObject instanceof TvShow) {
+      return customColumn.getShowPattern();
+    }
+    if (userObject instanceof TvShowSeason) {
+      return customColumn.getSeasonPattern();
+    }
+    if (userObject instanceof TvShowEpisode) {
+      return customColumn.getEpisodePattern();
+    }
+    return null;
+  }
+
+  private TvShowCustomColumn getCustomColumn(int i) {
+    int position = i - customColumnBaseIndex;
+    if (position < 0 || position >= mountedCustomColumns.size()) {
+      return null;
+    }
+    return mountedCustomColumns.get(position);
+  }
+
+  private <E> Function<E, String> showTooltip(Function<E, String> tooltipFunction) {
+    return element -> {
+      if (settings.isShowTvShowTableTooltips()) {
+        return tooltipFunction.apply(element);
+      }
+      else {
+        return null;
+      }
+    };
   }
 
   private Integer getYear(TmmTreeNode node) {
