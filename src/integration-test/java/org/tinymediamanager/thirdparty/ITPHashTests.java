@@ -6,7 +6,7 @@ import java.nio.file.Path;
 import org.junit.Test;
 import org.tinymediamanager.scraper.util.VideoPHash;
 
-public class PHashTests {
+public class ITPHashTests {
 
   @Test
   public void getPHash() throws IOException, InterruptedException {
