@@ -62,7 +62,7 @@ public class MediaInfoTest extends BasicTest {
     mf = new MediaFile(samplesFolder.resolve("DTS-X.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("DTS-X");
-    assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannels()).containsAnyOf("8ch", "12ch"); // 8ch up to mediainfo 26.05; 12ch from 26.10
     assertThat(mf.getAudioLanguage()).isEqualTo("eng");
 
     mf = new MediaFile(samplesFolder.resolve("DTS-ES_Discrete.ts"));
