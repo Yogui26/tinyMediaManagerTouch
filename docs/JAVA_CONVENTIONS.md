@@ -29,8 +29,7 @@ Every class, interface, method, and public field must have JavaDoc.
 /**
  * The Class {@link ClassName} provides functionality for [purpose].
  *
- * @author Manuel Laggner
- * @since [version]
+ * @author [Author Name]
  */
 ```
 
