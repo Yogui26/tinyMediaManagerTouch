@@ -16,6 +16,7 @@
 package org.tinymediamanager.ui.movies;
 
 import java.awt.FontMetrics;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -30,6 +31,9 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.bus.IEventListener;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -77,6 +81,32 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
   public MovieTableFormat() {
 
     movieList = MovieModuleManager.getInstance().getMovieList();
+
+    // cache the column values per movie, they are recomputed lazily and dropped as soon as the movie changes
+    enableValueCaching();
+
+    // drops the cached column values of a movie as soon as it changes
+    IEventListener movieListener = event -> {
+      if (event.sender() instanceof Movie movie) {
+        switch (event.eventType()) {
+          case Event.TYPE_SAVE, Event.TYPE_ADD, Event.TYPE_REMOVE:
+            invalidateCache(movie.getDbId());
+            break;
+
+          default:
+            break;
+        }
+      }
+    };
+    EventBus.registerListener(EventBus.TOPIC_MOVIES, movieListener);
+
+    PropertyChangeListener settingsListener = evt -> {
+      // always clear the cache, because the value of a column can depend on multiple settings (e.g. the rating column depends on the rating source
+      // and the rating scale). And going this way avoids new properties to be forgotten to be added to this listener. So just clear the cache on any
+      // change.
+      clearCache();
+    };
+    MovieModuleManager.getInstance().getSettings().addPropertyChangeListener(settingsListener);
 
     Comparator<Movie> movieComparator = new MovieComparator();
     Comparator<Movie> originalTitleComparator = new MovieComparator() {
@@ -716,6 +746,8 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
       col.setColumnComparator(customColumnComparator);
       col.setCellTooltip(showTooltip(movie -> StringUtils.defaultString(customColumn.getPattern())));
       col.setDefaultHidden(true);
+      // the evaluator caches these values already, so do not cache them a second time here
+      col.setCacheEnabled(false);
       insertColumn(customColumnBaseIndex + i, col);
     }
   }
@@ -764,6 +796,11 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
       return null;
     }
     return mountedCustomColumns.get(position);
+  }
+
+  @Override
+  protected Object getCacheKey(Movie movie) {
+    return movie.getDbId();
   }
 
   private Float getRating(MediaRating rating) {

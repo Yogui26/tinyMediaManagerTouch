@@ -20,12 +20,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.Callable;
 
 import org.junit.Test;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.movie.BasicMovieTest;
 import org.tinymediamanager.core.movie.MovieCustomColumn;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
+import org.tinymediamanager.core.movie.entities.Movie;
 
 public class MovieTableFormatTest extends BasicMovieTest {
 
@@ -78,5 +82,36 @@ public class MovieTableFormatTest extends BasicMovieTest {
     tableFormat.rebuildCustomColumns();
     assertThat(tableFormat.getColumnIndex(second.getColumnIdentifier())).isEqualTo(-1);
     assertThat(tableFormat.getColumnName(tableFormat.getColumnIndex(first.getColumnIdentifier()))).isEqualTo("first");
+  }
+
+  @Test
+  public void testColumnValuesAreCachedAndDroppedOnChange() throws Exception {
+    Movie movie = new Movie();
+    movie.setTitle("Aladdin");
+    movie.setYear(1992);
+
+    MovieTableFormat tableFormat = new MovieTableFormat();
+    int yearIndex = tableFormat.getColumnIndex("year");
+
+    assertThat(tableFormat.getColumnValue(movie, yearIndex)).isEqualTo(1992);
+
+    // without a change notification the cached value is used
+    movie.setYear(2000);
+    assertThat(tableFormat.getColumnValue(movie, yearIndex)).isEqualTo(1992);
+
+    // a change event on the event bus drops the cached value
+    EventBus.publishEvent(EventBus.TOPIC_MOVIES, Event.createSaveEvent(movie));
+    awaitValue(() -> tableFormat.getColumnValue(movie, yearIndex), 2000);
+  }
+
+  private void awaitValue(Callable<Object> callable, Object expected) throws Exception {
+    long deadline = System.currentTimeMillis() + 10000;
+    while (System.currentTimeMillis() < deadline) {
+      if (expected.equals(callable.call())) {
+        return;
+      }
+      Thread.sleep(50);
+    }
+    assertThat(callable.call()).isEqualTo(expected);
   }
 }

@@ -16,6 +16,7 @@
 package org.tinymediamanager.ui.moviesets;
 
 import java.awt.FontMetrics;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -31,6 +32,9 @@ import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.bus.IEventListener;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaRating;
@@ -77,6 +81,54 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   public MovieSetTableFormat() {
 
     movieList = MovieModuleManager.getInstance().getMovieList();
+
+    // cache the column values per entity, they are recomputed lazily and dropped as soon as the entity changes
+    enableValueCaching();
+
+    // drops the cached column values of a movie and its movie set as soon as it changes - the set aggregates the values of its movies
+    IEventListener movieListener = event -> {
+      if (event.sender() instanceof Movie movie) {
+        switch (event.eventType()) {
+          case Event.TYPE_SAVE, Event.TYPE_ADD, Event.TYPE_REMOVE:
+            invalidateCache(movie.getDbId());
+            if (movie.getMovieSet() != null) {
+              invalidateCache(movie.getMovieSet().getDbId());
+            }
+            break;
+
+          default:
+            break;
+        }
+      }
+    };
+    EventBus.registerListener(EventBus.TOPIC_MOVIES, movieListener);
+
+    // drops the cached column values of a movie set and its movies as soon as it changes
+    IEventListener movieSetListener = event -> {
+      if (event.sender() instanceof MovieSet movieSet) {
+        switch (event.eventType()) {
+          case Event.TYPE_SAVE, Event.TYPE_ADD, Event.TYPE_REMOVE:
+            invalidateCache(movieSet.getDbId());
+            for (Movie movie : movieSet.getMoviesForDisplay()) {
+              invalidateCache(movie.getDbId());
+            }
+            break;
+
+          default:
+            break;
+        }
+      }
+    };
+    EventBus.registerListener(EventBus.TOPIC_MOVIE_SETS, movieSetListener);
+
+    // drops all cached column values as soon as a setting they depend on changes
+    PropertyChangeListener settingsListener = evt -> {
+      // always clear the cache, because the value of a column can depend on multiple settings (e.g. the rating column depends on the rating source
+      // and the rating scale). And going this way avoids new properties to be forgotten to be added to this listener. So just clear the cache on any
+      // change.
+      clearCache();
+    };
+    MovieModuleManager.getInstance().getSettings().addPropertyChangeListener(settingsListener);
 
     FontMetrics fontMetrics = getFontMetrics();
 
@@ -350,6 +402,8 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
       col.setColumnComparator(customColumnComparator);
       col.setCellTooltip(showTooltip(node -> StringUtils.defaultString(getCustomColumnPattern(node, customColumn))));
       col.setDefaultHidden(true);
+      // the evaluator caches these values already, so do not cache them a second time here
+      col.setCacheEnabled(false);
       insertColumn(customColumnBaseIndex + i, col);
     }
   }
@@ -448,6 +502,12 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
       return null;
     }
     return mountedCustomColumns.get(position);
+  }
+
+  @Override
+  protected Object getCacheKey(TmmTreeNode node) {
+    // the value of a row is cached by the entity behind the node, not by the node itself (which gets recreated on structure changes)
+    return node.getUserObject() instanceof MediaEntity entity ? entity.getDbId() : null;
   }
 
   private static <E> Function<E, String> showTooltip(Function<E, String> tooltipFunction) {

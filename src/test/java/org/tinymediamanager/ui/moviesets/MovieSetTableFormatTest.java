@@ -20,11 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.Callable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.movie.BasicMovieTest;
 import org.tinymediamanager.core.movie.MovieCustomColumn;
 import org.tinymediamanager.core.movie.MovieModuleManager;
@@ -145,5 +149,45 @@ public class MovieSetTableFormatTest extends BasicMovieTest {
 
     // the tree column of the table itself is never touched, it keeps its index independent title
     assertThat(tableFormat.getColumnName(-1)).isEqualTo(TmmResourceBundle.getString("metatag.title"));
+  }
+
+  @Test
+  public void testMovieChangeInvalidatesTheMovieSetRow() throws Exception {
+    MovieSet movieSet = new MovieSet("Pirates of the Caribbean");
+
+    Movie first = new Movie();
+    first.setTitle("The Curse of the Black Pearl");
+    first.setPath(getWorkFolder().resolve("movies/first").toString());
+    first.setMovieSet(movieSet);
+    movieSet.insertMovie(first);
+
+    MovieSetTableFormat tableFormat = new MovieSetTableFormat();
+    int movieCountIndex = tableFormat.getColumnIndex("moviecount");
+    TmmTreeNode setNode = new TmmTreeNode(movieSet, null);
+
+    assertThat(tableFormat.getColumnValue(setNode, movieCountIndex)).isEqualTo(1);
+
+    // a second movie joins the set without any event
+    Movie second = new Movie();
+    second.setTitle("Dead Man's Chest");
+    second.setPath(getWorkFolder().resolve("movies/second").toString());
+    second.setMovieSet(movieSet);
+    movieSet.insertMovie(second);
+    assertThat(tableFormat.getColumnValue(setNode, movieCountIndex)).isEqualTo(1);
+
+    // a change of a movie drops the cached values of its movie set too
+    EventBus.publishEvent(EventBus.TOPIC_MOVIES, Event.createSaveEvent(second));
+    awaitValue(() -> tableFormat.getColumnValue(setNode, movieCountIndex), 2);
+  }
+
+  private void awaitValue(Callable<Object> callable, Object expected) throws Exception {
+    long deadline = System.currentTimeMillis() + 10000;
+    while (System.currentTimeMillis() < deadline) {
+      if (Objects.equals(expected, callable.call())) {
+        return;
+      }
+      Thread.sleep(50);
+    }
+    assertThat(callable.call()).isEqualTo(expected);
   }
 }

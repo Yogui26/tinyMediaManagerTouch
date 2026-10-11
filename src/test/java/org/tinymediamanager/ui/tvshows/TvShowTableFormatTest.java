@@ -20,11 +20,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.Callable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.BasicTvShowTest;
 import org.tinymediamanager.core.tvshow.TvShowCustomColumn;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
@@ -152,5 +157,63 @@ public class TvShowTableFormatTest extends BasicTvShowTest {
 
     // the tree column of the table itself is never touched, it keeps its index independent title
     assertThat(tableFormat.getColumnName(-1)).isEqualTo(TmmResourceBundle.getString("metatag.title"));
+  }
+
+  @Test
+  public void testEpisodeMoveInvalidatesTheOldSeason() throws Exception {
+    // a real (non-dummy) episode lives in a season
+    TvShow show = new TvShow();
+    show.setTitle("Aladdin");
+    TvShowEpisode moved = new TvShowEpisode();
+    moved.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 3));
+    moved.setTitle("Don't Pet the Teacher");
+    moved.addToMediaFiles(new MediaFile(getWorkFolder().resolve("show/Season 01/s01e03.avi")));
+    moved.setTvShow(show);
+    show.addEpisode(moved);
+    TvShowSeason season1 = moved.getTvShowSeason();
+
+    TvShowTableFormat tableFormat = new TvShowTableFormat();
+    int episodesIndex = tableFormat.getColumnIndex("episodes");
+
+    TmmTreeNode seasonNode = new TmmTreeNode(season1, null);
+    assertThat(tableFormat.getColumnValue(seasonNode, episodesIndex)).isEqualTo(1);
+
+    // move the episode to season 2, leaving the old season 1 behind (empty)
+    moved.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 2, 1));
+
+    // the cached value of the season the episode has left is dropped as well
+    EventBus.publishEvent(EventBus.TOPIC_TV_SHOWS, Event.createSaveEvent(moved));
+    awaitValue(() -> tableFormat.getColumnValue(seasonNode, episodesIndex), null);
+  }
+
+  @Test
+  public void testSettingsChangeClearsTheCache() throws Exception {
+    TvShowTableFormat tableFormat = new TvShowTableFormat();
+    int episodesIndex = tableFormat.getColumnIndex("episodes");
+
+    TmmTreeNode showNode = new TmmTreeNode(aladdin, null);
+    assertThat(tableFormat.getColumnValue(showNode, episodesIndex)).isEqualTo(1);
+
+    // change the entity without publishing any event - the cached value stays
+    TvShowEpisode second = new TvShowEpisode();
+    second.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 4));
+    second.setTvShow(aladdin);
+    aladdin.addEpisode(second);
+    assertThat(tableFormat.getColumnValue(showNode, episodesIndex)).isEqualTo(1);
+
+    // any settings change clears the cache (the settings fire on the EDT)
+    settings.setCustomColumns(new ArrayList<>());
+    awaitValue(() -> tableFormat.getColumnValue(showNode, episodesIndex), 2);
+  }
+
+  private void awaitValue(Callable<Object> callable, Object expected) throws Exception {
+    long deadline = System.currentTimeMillis() + 10000;
+    while (System.currentTimeMillis() < deadline) {
+      if (Objects.equals(expected, callable.call())) {
+        return;
+      }
+      Thread.sleep(50);
+    }
+    assertThat(callable.call()).isEqualTo(expected);
   }
 }

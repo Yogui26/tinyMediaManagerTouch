@@ -16,6 +16,7 @@
 package org.tinymediamanager.ui.tvshows;
 
 import java.awt.FontMetrics;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -32,6 +33,9 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.bus.IEventListener;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -65,9 +69,9 @@ import org.tinymediamanager.ui.renderer.RuntimeTableCellRenderer;
  */
 public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
 
-  private final TvShowList     tvShowList;
-  private final TvShowSettings settings;
-  private final Calendar       calendar = Calendar.getInstance();
+  private final TvShowList                  tvShowList;
+  private final TvShowSettings              settings;
+  private final Calendar                    calendar               = Calendar.getInstance();
 
   /** the evaluator for the freely configurable columns */
   private final TvShowCustomColumnEvaluator customColumnEvaluator  = new TvShowCustomColumnEvaluator();
@@ -82,6 +86,53 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     tvShowList = TvShowModuleManager.getInstance().getTvShowList();
     settings = TvShowModuleManager.getInstance().getSettings();
     FontMetrics fontMetrics = getFontMetrics();
+
+    // cache the column values per entity, they are recomputed lazily and dropped as soon as the entity changes
+    enableValueCaching();
+
+    // the show aggregates the values of its seasons, the season and the show aggregate the values of their episodes. Since an episode can move
+    // between seasons (and thus changes the aggregates of two seasons at once), any change on any level invalidates the whole show.
+    IEventListener tvShowListener = event -> {
+      switch (event.eventType()) {
+        case Event.TYPE_SAVE, Event.TYPE_ADD, Event.TYPE_REMOVE:
+          if (event.sender() instanceof TvShow tvShow) {
+            invalidateTvShow(tvShow);
+          }
+          else if (event.sender() instanceof TvShowSeason season) {
+            if (season.getTvShow() != null) {
+              invalidateTvShow(season.getTvShow());
+            }
+            else {
+              invalidateCache(season.getDbId());
+            }
+          }
+          else if (event.sender() instanceof TvShowEpisode episode) {
+            if (episode.getTvShow() != null) {
+              invalidateTvShow(episode.getTvShow());
+            }
+            else {
+              invalidateCache(episode.getDbId());
+              if (episode.getTvShowSeason() != null) {
+                invalidateCache(episode.getTvShowSeason().getDbId());
+              }
+            }
+          }
+          break;
+
+        default:
+          break;
+      }
+    };
+    EventBus.registerListener(EventBus.TOPIC_TV_SHOWS, tvShowListener);
+
+    // drops all cached column values as soon as a setting they depend on changes
+    PropertyChangeListener settingsListener = evt -> {
+      // always clear the cache, because the value of a column can depend on multiple settings (e.g. the rating column depends on the rating source
+      // and the rating scale). And going this way avoids new properties to be forgotten to be added to this listener. So just clear the cache on any
+      // change.
+      clearCache();
+    };
+    settings.addPropertyChangeListener(settingsListener);
 
     Comparator<MediaCertification> certificationComparator = new CertificationComparator();
     Comparator<String> stringComparator = new StringComparator();
@@ -612,6 +663,8 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
       col.setColumnComparator(customColumnComparator);
       col.setCellTooltip(showTooltip(node -> StringUtils.defaultString(getCustomColumnPattern(node, customColumn))));
       col.setDefaultHidden(true);
+      // the evaluator caches these values already, so do not cache them a second time here
+      col.setCacheEnabled(false);
       insertColumn(customColumnBaseIndex + i, col);
     }
   }
@@ -652,6 +705,30 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
       return null;
     }
     return mountedCustomColumns.get(position);
+  }
+
+  @Override
+  protected Object getCacheKey(TmmTreeNode node) {
+    // the value of a row is cached by the entity behind the node, not by the node itself (which gets recreated on structure changes)
+    return node.getUserObject() instanceof MediaEntity entity ? entity.getDbId() : null;
+  }
+
+  /**
+   * Drops the cached column values of the given TV show and all of its seasons and episodes. Needed because the show and its seasons aggregate the
+   * values of their episodes, and moving an episode between seasons changes the aggregates of two seasons at once. Since an emptied season is kept in
+   * the list of seasons, iterating all of them also reaches the season the episode has just left.
+   *
+   * @param tvShow
+   *          the show to invalidate
+   */
+  private void invalidateTvShow(TvShow tvShow) {
+    invalidateCache(tvShow.getDbId());
+    for (TvShowSeason season : tvShow.getSeasons()) {
+      invalidateCache(season.getDbId());
+    }
+    for (TvShowEpisode episode : tvShow.getEpisodes()) {
+      invalidateCache(episode.getDbId());
+    }
   }
 
   private <E> Function<E, String> showTooltip(Function<E, String> tooltipFunction) {
@@ -872,7 +949,7 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   private Date getDateAddedEpisode(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShow tvShow) {
-      List<TvShowEpisode> modifyableList = new ArrayList<TvShowEpisode>(tvShow.getEpisodes());
+      List<TvShowEpisode> modifyableList = new ArrayList<>(tvShow.getEpisodes());
       if (!modifyableList.isEmpty()) {
         TvShowEpisode latest = Collections.max(modifyableList, Comparator.comparing(TvShowEpisode::getDateAddedForUi));
         return latest.getDateAddedForUi();

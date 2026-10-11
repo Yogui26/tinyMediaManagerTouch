@@ -53,7 +53,10 @@ import ca.odell.glazedlists.gui.AdvancedTableFormat;
  * @author Manuel Laggner
  */
 public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
-  protected List<Column> columns = new ArrayList<>();
+  protected List<Column> columns     = new ArrayList<>();
+
+  /** turns on the lazy per-entity caching of the column values and tooltips - off by default for the small dialog tables */
+  private boolean        cacheValues = false;
 
   protected FontMetrics getFontMetrics() {
     Font defaultFont = UIManager.getFont("Table.font");
@@ -72,6 +75,51 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
 
   protected void addColumn(Column column) {
     columns.add(column);
+  }
+
+  /**
+   * Turns on the lazy per-entity caching of all column values and tooltips of this table format. Only the large tables (movie, movie set, TV show)
+   * should do this, the small dialog tables are cheap enough to be evaluated on the fly.
+   */
+  protected void enableValueCaching() {
+    cacheValues = true;
+  }
+
+  /**
+   * The key which identifies the entity behind the given row element for the value cache. Defaults to the element itself; the tree tables override
+   * this to unwrap the entity from their tree node.
+   *
+   * @param element
+   *          the row element to get the cache key for
+   * @return the cache key, or null to bypass the cache for this element
+   */
+  protected Object getCacheKey(E element) {
+    return element;
+  }
+
+  /**
+   * Drops the cached values and tooltips of the given entity in all columns.
+   *
+   * @param key
+   *          the cache key of the changed entity
+   */
+  public void invalidateCache(Object key) {
+    // work on a snapshot, the invalidation can run on the event bus thread while the EDT rebuilds the columns
+    for (Column column : List.copyOf(columns)) {
+      column.valueCache.invalidate(key);
+      column.tooltipCache.invalidate(key);
+    }
+  }
+
+  /**
+   * Drops all cached values and tooltips of all columns. Needed when a setting changed which they all depend on.
+   */
+  public void clearCache() {
+    // work on a snapshot, the invalidation can run on the event bus thread while the EDT rebuilds the columns
+    for (Column column : List.copyOf(columns)) {
+      column.valueCache.clear();
+      column.tooltipCache.clear();
+    }
   }
 
   /**
@@ -108,7 +156,17 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
 
   @Override
   public Object getColumnValue(E e, int i) {
-    return columns.get(i).columnValue.apply(e);
+    Column column = columns.get(i);
+    if (!cacheValues || !column.cacheEnabled) {
+      return column.columnValue.apply(e);
+    }
+
+    Object key = getCacheKey(e);
+    if (key == null) {
+      return column.columnValue.apply(e);
+    }
+
+    return column.valueCache.get(key, () -> column.columnValue.apply(e));
   }
 
   public String getHeaderTooltip(int i) {
@@ -121,10 +179,20 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
 
   public String getColumnTooltip(E e, int i) {
     Column column = columns.get(i);
-    if (column.cellTooltip != null) {
+    if (column.cellTooltip == null) {
+      return null;
+    }
+
+    if (!cacheValues || !column.cacheEnabled) {
       return column.cellTooltip.apply(e);
     }
-    return null;
+
+    Object key = getCacheKey(e);
+    if (key == null) {
+      return column.cellTooltip.apply(e);
+    }
+
+    return (String) column.tooltipCache.get(key, () -> column.cellTooltip.apply(e));
   }
 
   public String getColumnIdentifier(int i) {
@@ -199,6 +267,9 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
     private int                  minWidth         = 0;
     private int                  maxWidth         = 0;
     private boolean              defaultHidden    = false;
+    private boolean                cacheEnabled     = true;
+    private final ColumnValueCache valueCache       = new ColumnValueCache();
+    private final ColumnValueCache tooltipCache     = new ColumnValueCache();
 
     public Column(String title, String identifier, Function<E, ?> value, Class<?> clazz) {
       columnTitle = title;
@@ -242,6 +313,17 @@ public abstract class TmmTableFormat<E> implements AdvancedTableFormat<E> {
 
     public void setDefaultHidden(boolean defaultHidden) {
       this.defaultHidden = defaultHidden;
+    }
+
+    /**
+     * Turns the per-entity caching of this column's value and tooltip on or off. On by default, only columns which are already cached elsewhere (the
+     * freely configurable ones) turn it off.
+     *
+     * @param cacheEnabled
+     *          whether to cache the value and tooltip of this column
+     */
+    public void setCacheEnabled(boolean cacheEnabled) {
+      this.cacheEnabled = cacheEnabled;
     }
   }
 
