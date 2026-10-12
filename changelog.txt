@@ -7,6 +7,8 @@ Version 5.3.5
 + [UI] added a value caching mechanism for the movie/movie set/TV show table to improve performance
 + [UI] the notification button shows a red dot as soon as there are new messages
 + [API] added a system endpoint (/api/system) to query the current status and to shut tinyMediaManager down automatically after the last task has finished
++ [API] added scope parameters to select movies/TV shows/episodes by their external IDs (TMDB/IMDb for movies, TVDB/TMDB/IMDb for TV shows)
++ [API] added an action to set the watched state of movies and episodes
 + [Simkl] switched the Simkl.com sign-in to the new OAuth 2.0 device flow (AUTH V2) - your browser opens the Simkl.com approval page, you only have to click allow
   Existing connections keep working, but Simkl retires the old sign-in around April 2027 - please connect to Simkl.com once again in the settings
 ---

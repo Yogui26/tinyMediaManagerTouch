@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -80,6 +80,7 @@ import org.tinymediamanager.core.tvshow.tasks.TvShowSubtitleSearchAndDownloadTas
 import org.tinymediamanager.core.tvshow.tasks.TvShowThemeDownloadTask;
 import org.tinymediamanager.core.tvshow.tasks.TvShowTrailerDownloadTask;
 import org.tinymediamanager.core.tvshow.tasks.TvShowUpdateDatasourceTask;
+import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
@@ -127,6 +128,9 @@ class TvShowCommandTask extends TmmThreadPool {
 
     // 2.1 fetch ratings
     fetchRatings();
+
+    // 2.2 set watched state (after scraping, before the other phases)
+    setWatched();
 
     // 3. download trailer
     downloadTrailer();
@@ -724,6 +728,48 @@ class TvShowCommandTask extends TmmThreadPool {
     }
   }
 
+  private void setWatched() {
+    for (AbstractCommandHandler.Command command : commands) {
+      if ("setWatched".equals(command.action)) {
+        LOGGER.debug("HTTP API: setting watched state - '{}'", command);
+        List<TvShowEpisode> episodes = getEpisodesForScope(command.scope);
+
+        if (episodes.isEmpty()) {
+          continue;
+        }
+
+        boolean watched = getBoolArg(command, "watched", true);
+
+        int playcount = watched ? 1 : 0;
+        if (StringUtils.isNotBlank(command.args.get("playcount"))) {
+          try {
+            playcount = Integer.parseInt(command.args.get("playcount").strip());
+          }
+          catch (NumberFormatException e) {
+            LOGGER.debug("Could not parse playcount from command - '{}'", command.args.get("playcount"));
+          }
+        }
+
+        setTaskName(TmmResourceBundle.getString("tvshowepisode.setwatched"));
+        publishState(TmmResourceBundle.getString("tvshowepisode.setwatched"), getProgressDone());
+
+        int i = 0;
+        for (TvShowEpisode episode : episodes) {
+          episode.setWatched(watched);
+          episode.setPlaycount(playcount);
+          episode.setLastWatched(watched ? new Date() : null);
+          episode.writeNFO();
+          episode.saveToDb();
+
+          publishState(TmmResourceBundle.getString("tvshowepisode.setwatched"), ++i);
+          if (cancel) {
+            return;
+          }
+        }
+      }
+    }
+  }
+
   private void downloadTrailer() {
     Set<TvShow> tvShowsToProcess = new LinkedHashSet<>();
 
@@ -1261,6 +1307,18 @@ class TvShowCommandTask extends TmmThreadPool {
         }
         break;
 
+      case "tvdbId":
+        tvShowsToProcess.addAll(getTvShowsByIds(scope.args, MediaMetadata.TVDB));
+        break;
+
+      case "tmdbId":
+        tvShowsToProcess.addAll(getTvShowsByIds(scope.args, MediaMetadata.TMDB));
+        break;
+
+      case "imdbId":
+        tvShowsToProcess.addAll(getTvShowsByIds(scope.args, MediaMetadata.IMDB));
+        break;
+
       case "dataSource":
         if (scope.args != null && scope.args.length > 0) {
           List<String> dataSources = Arrays.asList(scope.args);
@@ -1282,8 +1340,14 @@ class TvShowCommandTask extends TmmThreadPool {
         break;
     }
 
-    // filter out locked ones
-    return tvShowsToProcess.stream().filter(tvShow -> !tvShow.isLocked()).collect(Collectors.toList());
+    // filter out locked ones and remove duplicates
+    List<TvShow> result = new ArrayList<>();
+    for (TvShow tvShow : AbstractCommandHandler.distinctByIdentity(tvShowsToProcess)) {
+      if (!tvShow.isLocked()) {
+        result.add(tvShow);
+      }
+    }
+    return result;
   }
 
   private List<TvShowEpisode> getEpisodesForScope(CommandScope scope) {
@@ -1304,6 +1368,18 @@ class TvShowCommandTask extends TmmThreadPool {
             episodesToProcess.addAll(tvShow.getEpisodes());
           }
         }
+        break;
+
+      case "tvdbId":
+        addEpisodesByIds(episodesToProcess, scope.args, MediaMetadata.TVDB);
+        break;
+
+      case "tmdbId":
+        addEpisodesByIds(episodesToProcess, scope.args, MediaMetadata.TMDB);
+        break;
+
+      case "imdbId":
+        addEpisodesByIds(episodesToProcess, scope.args, MediaMetadata.IMDB);
         break;
 
       case "dataSource":
@@ -1332,8 +1408,52 @@ class TvShowCommandTask extends TmmThreadPool {
         break;
     }
 
-    // filter out locked ones
-    return episodesToProcess.stream().filter(episode -> !episode.isLocked()).collect(Collectors.toList());
+    // filter out locked ones and remove duplicates
+    List<TvShowEpisode> result = new ArrayList<>();
+    for (TvShowEpisode episode : AbstractCommandHandler.distinctByIdentity(episodesToProcess)) {
+      if (!episode.isLocked()) {
+        result.add(episode);
+      }
+    }
+    return result;
+  }
+
+  private List<TvShow> getTvShowsByIds(String[] args, String idKey) {
+    List<TvShow> tvShowsToProcess = new ArrayList<>();
+
+    for (TvShow tvShow : tvShowList.getTvShows()) {
+      if (matchesId(tvShow.getIds().get(idKey), args)) {
+        tvShowsToProcess.add(tvShow);
+      }
+    }
+
+    return tvShowsToProcess;
+  }
+
+  private void addEpisodesByIds(List<TvShowEpisode> episodesToProcess, String[] args, String idKey) {
+    for (TvShow tvShow : tvShowList.getTvShows()) {
+      for (TvShowEpisode episode : tvShow.getEpisodes()) {
+        // match the episode itself or its surrounding TV show
+        if (matchesId(episode.getIds().get(idKey), args) || matchesId(tvShow.getIds().get(idKey), args)) {
+          episodesToProcess.add(episode);
+        }
+      }
+    }
+  }
+
+  private boolean matchesId(Object id, String[] args) {
+    if (id == null || args == null) {
+      return false;
+    }
+
+    String idString = String.valueOf(id);
+    for (String arg : args) {
+      if (StringUtils.isNotBlank(arg) && arg.strip().equals(idString)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @Override

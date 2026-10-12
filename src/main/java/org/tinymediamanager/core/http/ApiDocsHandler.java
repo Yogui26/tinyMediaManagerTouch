@@ -50,7 +50,7 @@ public class ApiDocsHandler implements HttpHandler {
 
       **The commands are NOT executed in the order they have been sent in, but in a logical order:**
       1. update the library (`update`, `readNfo`, `reloadMediaInfo`, `calculateChecksum`, `detectAspectRatio`)
-      2. scrape (`scrape`, `fetchRatings`, `assignMovieSet`)
+      2. scrape (`scrape`, `fetchRatings`, `assignMovieSet`) and set the watched state (`setWatched`)
       3. download tasks (`downloadTrailer`, `downloadSubtitle`, `downloadMissingArtwork`, `downloadTheme`, `cleanupArtwork`)
       4. rename (`rename`)
       5. export (`export`, `writeNfo`)
@@ -73,6 +73,8 @@ public class ApiDocsHandler implements HttpHandler {
       * `unscraped` - all entities which have not been scraped yet
       * `path` - the entities at the given paths (paths given in `args`)
       * `dataSource` - the entities of the given data sources (paths or indices given in `args`)
+      * `tmdbId` / `imdbId` (movies) - the already scraped movies with the given TMDb/IMDb ids (ids given in `args`)
+      * `tvdbId` / `tmdbId` / `imdbId` (TV shows) - the already scraped TV shows and their episodes with the given TVDb/TMDb/IMDb ids (episodes are also matched by their own id; ids given in `args`)
       * `name` (movie sets only) - the movie sets with the given titles (titles given in `args`)
 
       Only used with the `update` command (data source scope):
@@ -95,6 +97,7 @@ public class ApiDocsHandler implements HttpHandler {
       | `scrape` | 2 - scrape | `scraper`: id of the metadata scraper to use | scrape the metadata of the movies |
       | `fetchRatings` | 2 - scrape | – | fetch the ratings from the configured rating sources |
       | `assignMovieSet` | 2 - scrape | – | assign the movies to their movie sets (needs the scraped `movie set` data) |
+      | `setWatched` | 2 - scrape | `watched`: `true` (default) / `false`, `playcount`: play count to set (default: `1` when watched, else `0`) | set the watched state of the movies |
       | `downloadTrailer` | 3 - download | `onlyMissing`: `true` (default) / `false` | download trailers |
       | `downloadSubtitle` | 3 - download | `language`: subtitle language, `onlyMissing`: `true` (default) / `false` | search and download subtitles |
       | `downloadMissingArtwork` | 3 - download | `scraper`: comma separated list of artwork scraper ids | download missing artwork |
@@ -120,6 +123,7 @@ public class ApiDocsHandler implements HttpHandler {
       | `detectAspectRatio` | 1 - update library | – | detect the aspect ratio of the main video files |
       | `scrape` | 2 - scrape | – | scrape the metadata of the TV shows and episodes (also syncs to Trakt if enabled) |
       | `fetchRatings` | 2 - scrape | – | fetch the ratings from the configured rating sources |
+      | `setWatched` | 2 - scrape | `watched`: `true` (default) / `false`, `playcount`: play count to set (default: `1` when watched, else `0`) | set the watched state of the episodes |
       | `downloadTrailer` | 3 - download | `onlyMissing`: `true` (default) / `false` | download trailers |
       | `downloadSubtitle` | 3 - download | `language`: subtitle language, `onlyMissing`: `true` (default) / `false` | search and download subtitles |
       | `downloadMissingArtwork` | 3 - download | `scraper`: comma separated list of artwork scraper ids | download missing artwork |
@@ -250,7 +254,7 @@ public class ApiDocsHandler implements HttpHandler {
     scopeProps.putObject("name").put("type", "string").put("description", SCOPE_DESCRIPTION);
     scopeProps.putObject("args")
         .put("type", "array")
-        .put("description", "arguments of the scope (paths or indices)")
+        .put("description", "arguments of the scope (paths, indices or IDs)")
         .putObject("items")
         .put("type", "string");
 

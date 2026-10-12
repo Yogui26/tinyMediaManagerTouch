@@ -18,10 +18,13 @@ package org.tinymediamanager.core.http;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -83,5 +86,20 @@ public abstract class AbstractCommandHandler implements ITmmCommandHandler {
   public static class CommandScope {
     public String   name;
     public String[] args;
+  }
+
+  /**
+   * Removes duplicate entries from the given entities while keeping the original order. The comparison is done by object identity - equal but
+   * distinct objects are kept.
+   *
+   * @param entities
+   *          the entities to filter
+   * @return a new {@link List} without duplicated entities
+   */
+  public static <T> List<T> distinctByIdentity(Collection<T> entities) {
+    Set<T> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    seen.addAll(entities);
+
+    return new ArrayList<>(seen);
   }
 }

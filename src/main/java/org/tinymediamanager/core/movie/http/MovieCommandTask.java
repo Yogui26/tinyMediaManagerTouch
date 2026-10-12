@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -65,6 +66,7 @@ import org.tinymediamanager.core.tasks.ExportTask;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
+import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
@@ -109,6 +111,9 @@ class MovieCommandTask extends TmmThreadPool {
     // 2. scrape commands (incl. ratings)
     scrape();
     assignMovieSet();
+
+    // 2.2 set watched state (after scraping, before the other phases)
+    setWatched();
 
     // 3. download trailer
     downloadTrailer();
@@ -490,6 +495,48 @@ class MovieCommandTask extends TmmThreadPool {
 
           // done
           activeTask = null;
+        }
+      }
+    }
+  }
+
+  private void setWatched() {
+    for (AbstractCommandHandler.Command command : commands) {
+      if ("setWatched".equals(command.action)) {
+        LOGGER.debug("HTTP API: Setting watched state - '{}'", command);
+        List<Movie> movies = getMoviesForScope(command.scope);
+
+        if (movies.isEmpty()) {
+          continue;
+        }
+
+        boolean watched = getBoolArg(command, "watched", true);
+
+        int playcount = watched ? 1 : 0;
+        if (StringUtils.isNotBlank(command.args.get("playcount"))) {
+          try {
+            playcount = Integer.parseInt(command.args.get("playcount").strip());
+          }
+          catch (NumberFormatException e) {
+            LOGGER.debug("Could not parse playcount from command - '{}'", command.args.get("playcount"));
+          }
+        }
+
+        setTaskName(TmmResourceBundle.getString("movie.setwatched"));
+        publishState(TmmResourceBundle.getString("movie.setwatched"), getProgressDone());
+
+        int i = 0;
+        for (Movie movie : movies) {
+          movie.setWatched(watched);
+          movie.setPlaycount(playcount);
+          movie.setLastWatched(watched ? new Date() : null);
+          movie.writeNFO();
+          movie.saveToDb();
+
+          publishState(TmmResourceBundle.getString("movie.setwatched"), ++i);
+          if (cancel) {
+            return;
+          }
         }
       }
     }
@@ -926,6 +973,14 @@ class MovieCommandTask extends TmmThreadPool {
         }
         break;
 
+      case "tmdbId":
+        moviesToProcess.addAll(getMoviesByIds(scope.args, MediaMetadata.TMDB));
+        break;
+
+      case "imdbId":
+        moviesToProcess.addAll(getMoviesByIds(scope.args, MediaMetadata.IMDB));
+        break;
+
       case "dataSource":
         if (scope.args != null && scope.args.length > 0) {
           List<String> dataSources = new ArrayList<>();
@@ -958,8 +1013,41 @@ class MovieCommandTask extends TmmThreadPool {
         break;
     }
 
-    // filter out locked ones
-    return moviesToProcess.stream().filter(movie -> !movie.isLocked()).toList();
+    // filter out locked ones and remove duplicates
+    List<Movie> result = new ArrayList<>();
+    for (Movie movie : AbstractCommandHandler.distinctByIdentity(moviesToProcess)) {
+      if (!movie.isLocked()) {
+        result.add(movie);
+      }
+    }
+    return result;
+  }
+
+  private List<Movie> getMoviesByIds(String[] args, String idKey) {
+    List<Movie> moviesToProcess = new ArrayList<>();
+
+    for (Movie movie : movieList.getMovies()) {
+      if (matchesId(movie.getIds().get(idKey), args)) {
+        moviesToProcess.add(movie);
+      }
+    }
+
+    return moviesToProcess;
+  }
+
+  private boolean matchesId(Object id, String[] args) {
+    if (id == null || args == null) {
+      return false;
+    }
+
+    String idString = String.valueOf(id);
+    for (String arg : args) {
+      if (StringUtils.isNotBlank(arg) && arg.strip().equals(idString)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @Override

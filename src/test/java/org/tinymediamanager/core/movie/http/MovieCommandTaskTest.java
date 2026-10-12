@@ -179,10 +179,141 @@ public class MovieCommandTaskTest extends BasicMovieTest {
     assertThat(Path.of(movie.getPath()).resolve("leftover.txt")).exists();
   }
 
+  /**
+   * Tests that the {@code tmdbId} scope only processes the movies with the given TMDb id.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void cleanupScopeTmdbIdOnlyProcessesMatchingMovie() throws Exception {
+    Movie selected = createMovieWithJunk("Selected Tmdb Movie");
+    selected.setTmdbId(12345);
+    Movie other = createMovieWithJunk("Other Tmdb Movie");
+    other.setTmdbId(67890);
+
+    AbstractCommandHandler.Command command = cleanupCommand("tmdbId");
+    command.scope.args = new String[] { "12345" };
+
+    new MovieCommandTask(List.of(command)).run();
+
+    assertThat(Path.of(selected.getPath()).resolve("leftover.txt")).doesNotExist();
+    assertThat(Path.of(other.getPath()).resolve("leftover.txt")).exists();
+  }
+
+  /**
+   * Tests that the {@code imdbId} scope only processes the movies with the given IMDb id.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void cleanupScopeImdbIdOnlyProcessesMatchingMovie() throws Exception {
+    Movie selected = createMovieWithJunk("Selected Imdb Movie");
+    selected.setImdbId("tt0103639");
+    Movie other = createMovieWithJunk("Other Imdb Movie");
+    other.setImdbId("tt1234567");
+
+    AbstractCommandHandler.Command command = cleanupCommand("imdbId");
+    command.scope.args = new String[] { "tt0103639" };
+
+    new MovieCommandTask(List.of(command)).run();
+
+    assertThat(Path.of(selected.getPath()).resolve("leftover.txt")).doesNotExist();
+    assertThat(Path.of(other.getPath()).resolve("leftover.txt")).exists();
+  }
+
+  /**
+   * Tests that the {@code setWatched} action marks movies as watched (with playcount 1 and a last watched date).
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedMarksMoviesAsWatched() throws Exception {
+    Movie movie = createMovieWithJunk("Watch Me");
+    assertThat(movie.isWatched()).isFalse();
+
+    new MovieCommandTask(List.of(setWatchedCommand("all", true))).run();
+
+    assertThat(movie.isWatched()).isTrue();
+    assertThat(movie.getPlaycount()).isEqualTo(1);
+    assertThat(movie.getLastWatched()).isNotNull();
+  }
+
+  /**
+   * Tests that the {@code playcount} argument of the {@code setWatched} action is honored.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedHonorsPlaycountArgument() throws Exception {
+    Movie movie = createMovieWithJunk("Watch Me Twice");
+
+    AbstractCommandHandler.Command command = setWatchedCommand("all", true);
+    command.args.put("playcount", "5");
+
+    new MovieCommandTask(List.of(command)).run();
+
+    assertThat(movie.isWatched()).isTrue();
+    assertThat(movie.getPlaycount()).isEqualTo(5);
+  }
+
+  /**
+   * Tests that {@code setWatched} with {@code watched=false} clears the watched state.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedCanMarkAsUnwatched() throws Exception {
+    Movie movie = createMovieWithJunk("Unwatch Me");
+    movie.setWatched(true);
+    movie.setPlaycount(1);
+    movie.setLastWatched(new java.util.Date());
+
+    new MovieCommandTask(List.of(setWatchedCommand("all", false))).run();
+
+    assertThat(movie.isWatched()).isFalse();
+    assertThat(movie.getPlaycount()).isZero();
+    assertThat(movie.getLastWatched()).isNull();
+  }
+
+  /**
+   * Tests that {@code setWatched} only processes the movies of the given id scope.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedScopeImdbIdOnlyProcessesMatchingMovie() throws Exception {
+    Movie selected = createMovieWithJunk("Watch Selected Imdb Movie");
+    selected.setImdbId("tt0103639");
+    Movie other = createMovieWithJunk("Watch Other Imdb Movie");
+    other.setImdbId("tt1234567");
+
+    AbstractCommandHandler.Command command = setWatchedCommand("imdbId", true);
+    command.scope.args = new String[] { "tt0103639" };
+
+    new MovieCommandTask(List.of(command)).run();
+
+    assertThat(selected.isWatched()).isTrue();
+    assertThat(other.isWatched()).isFalse();
+  }
+
   private AbstractCommandHandler.Command cleanupCommand(String scopeName) {
     AbstractCommandHandler.Command command = new AbstractCommandHandler.Command();
     command.action = "cleanup";
     command.scope.name = scopeName;
+    return command;
+  }
+
+  private AbstractCommandHandler.Command setWatchedCommand(String scopeName, boolean watched) {
+    AbstractCommandHandler.Command command = new AbstractCommandHandler.Command();
+    command.action = "setWatched";
+    command.scope.name = scopeName;
+    command.args.put("watched", Boolean.toString(watched));
     return command;
   }
 

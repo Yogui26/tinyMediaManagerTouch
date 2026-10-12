@@ -214,6 +214,32 @@ public class ApiDocsHandlerTest {
     assertThat(response.body()).contains("only GET supported");
   }
 
+  /**
+   * Tests that the external id scopes and the {@code setWatched} action are documented.
+   *
+   * @throws Exception
+   *           thrown on HTTP errors
+   */
+  @Test
+  public void documentsExternalIdScopesAndSetWatched() throws Exception {
+    JsonNode root = mapper.readTree(request("GET", "/api/docs").body());
+
+    String scopeDescription = root.path("components")
+        .path("schemas")
+        .path("CommandScope")
+        .path("properties")
+        .path("name")
+        .path("description")
+        .asText();
+    assertThat(scopeDescription).contains("tmdbId", "imdbId", "tvdbId");
+
+    String movieActions = root.path("paths").path("/api/movie").path("post").path("description").asText();
+    assertThat(movieActions).contains("setWatched");
+
+    String tvShowActions = root.path("paths").path("/api/tvshow").path("post").path("description").asText();
+    assertThat(tvShowActions).contains("setWatched");
+  }
+
   private JsonNode documentPaths() throws Exception {
     return mapper.readTree(request("GET", "/api/docs").body()).path("paths");
   }
