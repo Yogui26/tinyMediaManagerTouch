@@ -98,7 +98,10 @@ public abstract class AbstractCommandHandler implements ITmmCommandHandler {
    */
   public static <T> List<T> distinctByIdentity(Collection<T> entities) {
     Set<T> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-    seen.addAll(entities);
+
+    for (T entity : entities) {
+      seen.add(entity); // keep this way; addAll may not keep the order of the original collection
+    }
 
     return new ArrayList<>(seen);
   }
