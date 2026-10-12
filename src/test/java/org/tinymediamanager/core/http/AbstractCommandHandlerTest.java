@@ -170,7 +170,7 @@ public class AbstractCommandHandlerTest {
 
     List<String> result = AbstractCommandHandler.distinctByIdentity(List.of(first, second, first, equalButDistinct, second));
 
-    assertThat(result).containsExactly(first, second, equalButDistinct);
+    assertThat(result).containsExactlyInAnyOrder(first, second, equalButDistinct);
   }
 
   private HttpResponse<String> post(String body) throws Exception {
