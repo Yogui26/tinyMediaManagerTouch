@@ -11,6 +11,7 @@ Version 5.3.5
 + [API] added an action to set the watched state of movies and episodes
 + [Simkl] switched the Simkl.com sign-in to the new OAuth 2.0 device flow (AUTH V2) - your browser opens the Simkl.com approval page, you only have to click allow
   Existing connections keep working, but Simkl retires the old sign-in around April 2027 - please connect to Simkl.com once again in the settings
++ [Template] added three new templates: ModernMovies, ModernCollections and ModernTVShows - thx @Johnnydement
 ---
 x [Core] do not abort image cache upgrade tasks on URL parse error #3373
 x [Movies, TV shows] every data source which gets skipped during "update data sources" now shows up as a notification #3377
