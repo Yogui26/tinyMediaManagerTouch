@@ -13,6 +13,7 @@ Version 5.3.5
 x [Core] do not abort image cache upgrade tasks on URL parse error #3373
 x [Movies, TV shows] every data source which gets skipped during "update data sources" now shows up as a notification #3377
 x [Movie Sets] fixed an application freeze when deleting movie sets #3378
+x [TV shows] fixed wrong media type detection of unsupported season poster namings
 x [UI] fixed some drawing issues in partially empty tables
 x [UI] the low memory indicator now scales its warning threshold to the heap size to avoid false alarms on large installations
 x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling libmediainfo #3376

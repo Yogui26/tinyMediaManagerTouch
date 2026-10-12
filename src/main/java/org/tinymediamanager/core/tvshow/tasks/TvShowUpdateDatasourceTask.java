@@ -1427,22 +1427,23 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // not so fast - try to parse S/E from remaining first!
       for (MediaFile mf : mfs) {
         // case poster.ext -> do not add to the TV show itself when it is NOT in the TV show root!
-        if (mf.getType() == MediaFileType.POSTER && !mf.getPath().equals(tvShow.getPath())) {
+        if (mf.getType() == MediaFileType.POSTER && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))) {
           // probably season poster
           mf.setType(MediaFileType.SEASON_POSTER);
         }
 
-        if (mf.getType() == MediaFileType.FANART && !mf.getPath().equals(tvShow.getPath())) {
+        if (mf.getType() == MediaFileType.FANART && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))) {
           // probably season fanart
           mf.setType(MediaFileType.SEASON_FANART);
         }
 
-        if (mf.getType() == MediaFileType.BANNER && !mf.getPath().equals(tvShow.getPath())) {
+        if (mf.getType() == MediaFileType.BANNER && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))) {
           // probably season banner
           mf.setType(MediaFileType.SEASON_BANNER);
         }
 
-        if (mf.getType() == MediaFileType.THUMB && !mf.getPath().equals(tvShow.getPath()) && mf.getBasename().matches("^(thumb|landscape)$")) {
+        if (mf.getType() == MediaFileType.THUMB && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))
+            && mf.getBasename().matches("^(thumb|landscape)$")) {
           // probably season thumb
           mf.setType(MediaFileType.SEASON_THUMB);
         }
