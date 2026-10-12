@@ -25,6 +25,7 @@ import java.util.concurrent.Callable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.bus.Event;
 import org.tinymediamanager.core.bus.EventBus;
@@ -165,8 +166,9 @@ public class MovieCustomColumnEvaluatorTest extends BasicMovieTest {
     settings.addCustomColumn(first);
     settings.addCustomColumn(second);
 
-    assertThat(first.getTitleOrPlaceholder(1)).isEqualTo("Custom column 1");
-    assertThat(second.getTitleOrPlaceholder(2)).isEqualTo("Custom column 2");
+    String prefix = TmmResourceBundle.getString("Table.columns.custom");
+    assertThat(first.getTitleOrPlaceholder(1)).isEqualTo(prefix + " 1");
+    assertThat(second.getTitleOrPlaceholder(2)).isEqualTo(prefix + " 2");
 
     first.setTitle("Mine");
     assertThat(first.getTitleOrPlaceholder(1)).isEqualTo("Mine");
