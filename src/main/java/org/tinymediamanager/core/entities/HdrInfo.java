@@ -7,6 +7,7 @@ public class HdrInfo {
     HDR_TYPE_DOLBYVISION("dolbyvision"),
     HDR_TYPE_DOLBYVISION2("dolbyvision2"), // TODO: as of 2026 - name=assumption
     HDR_TYPE_HLG("hlg"),
+    HDR_TYPE_HLGPLUS("hlgplus"),
     HDR_TYPE_HDR10("hdr10"),
     HDR_TYPE_HDR10PLUS("hdr10plus"),
     HDR_TYPE_HDR10PLUSADV("hdr10plusadv"); // TODO: as of 2026 - name=assumption

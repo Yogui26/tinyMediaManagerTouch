@@ -849,18 +849,18 @@ public class MediaInfoTest extends BasicTest {
     assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
     assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
-    // HLG (FIXME: no HDR info in XML!!!)
-    // mf = new MediaFile(mediainfoFolder.resolve("hlg.avi"));
-    // MediaFileHelper.gatherMediaInformation(mf, false);
-    // System.out.println(mf.getHdrInfo().getDisplayName());
-    // assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_DOLBYVISION);
-    // assertThat(mf.getHdrInfo().getCompatibilityType()).isEqualTo(HdrType.HDR_TYPE_HLG);
-    // assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
-    // assertThat(mf.getHdrInfo().getHdrLevel()).isEqualTo(12);
-    // assertThat(mf.getHdrInfo().getHdrProfile()).isEqualTo(8);
-    // assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(true);
-    // assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
-    // assertThat(mf.getHdrInfo().isRpu()).isEqualTo(true);
+    // HLG only, and not in HDR tags
+    mf = new MediaFile(mediainfoFolder.resolve("hlg.avi"));
+    MediaFileHelper.gatherMediaInformation(mf, false);
+    System.out.println(mf.getHdrInfo().getDisplayName());
+    assertThat(mf.getHdrInfo().getHdrType()).isEqualTo(HdrType.HDR_TYPE_HLG);
+    assertThat(mf.getHdrInfo().getCompatibilityType()).isNull();
+    assertThat(mf.getHdrInfo().getCompatibilityId()).isNull();
+    assertThat(mf.getHdrInfo().getHdrLevel()).isNull();
+    assertThat(mf.getHdrInfo().getHdrProfile()).isNull();
+    assertThat(mf.getHdrInfo().isBaseLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isEnhancementLayer()).isEqualTo(false);
+    assertThat(mf.getHdrInfo().isRpu()).isEqualTo(false);
 
     // Twister
     mf = new MediaFile(mediainfoFolder.resolve("Twister.1996.2160p.UHD.Blu-ray.DV.HDR10P.TrueHD.Atmos.8ch.h265.Remux.mkv"));

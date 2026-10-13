@@ -2776,6 +2776,15 @@ public class MediaFileHelper {
       }
       mediaFile.setHdrInfo(info);
     }
+    else {
+      // no HDR_format entries found - check other possibilities!
+      String transfer = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "transfer_characteristics");
+      if (transfer != null && transfer.toLowerCase(Locale.ROOT).contains("hlg")) {
+        HdrInfo info = new HdrInfo();
+        info.setHdrType(HdrType.HDR_TYPE_HLG);
+        mediaFile.setHdrInfo(info);
+      }
+    }
   }
 
   private static HdrType parseHdrType(String hdrFormat) {
@@ -2796,6 +2805,9 @@ public class MediaFileHelper {
       return HdrType.HDR_TYPE_HDR10PLUS;
     }
     else if (normalized.contains("hlg") || normalized.contains("hybrid log-gamma")) {
+      if (normalized.contains("hlg+")) {
+        return HdrType.HDR_TYPE_HLGPLUS;
+      }
       return HdrType.HDR_TYPE_HLG;
     }
     if (normalized.contains("2086") || normalized.contains("hdr10")) {
@@ -2843,6 +2855,7 @@ public class MediaFileHelper {
     }
 
     String normalized = compatibility.trim().toLowerCase(Locale.ROOT);
+    // TODO: HLG+
     if (normalized.contains("hlg")) {
       info.setCompatibilityType(HdrType.HDR_TYPE_HLG);
       if (isDolbyVisionProfile8(info)) {
