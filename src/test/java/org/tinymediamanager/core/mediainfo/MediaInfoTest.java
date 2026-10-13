@@ -863,7 +863,7 @@ public class MediaInfoTest extends BasicTest {
     assertThat(mf.getHdrInfo().hasDvRpu()).isEqualTo(false);
 
     // https://github.com/aberthil/mediainfo-hlgplus-dv84-repro/
-    // DV with HLG compatibility, plu additional HDR10+ (which also must have a HDR compatibility we cannot express)
+    // DV with HLG compatibility, plus additional HDR10+ (which also must have a HDR compatibility we cannot express)
     mf = new MediaFile(mediainfoFolder.resolve("dv84_hlgplus.mov"));
     MediaFileHelper.gatherMediaInformation(mf, false);
     System.out.println(mf.getHdrInfo().getDisplayName());
@@ -878,6 +878,7 @@ public class MediaInfoTest extends BasicTest {
     assertThat(mf.getHdrInfo().hasDvRpu()).isEqualTo(true);
 
     // Jurassic World
+    // DV with HDR10 compatibility, plus additional HDR10+ (which also must have a HDR compatibility)
     mf = new MediaFile(mediainfoFolder.resolve("Jurassic.World.Fallen.Kingdom.2018.2160p.UHD.Blu-ray.DV.HDR10plus.DTS-X.8ch.h265.Remux.mkv"));
     MediaFileHelper.gatherMediaInformation(mf, false);
     System.out.println(mf.getHdrInfo().getDisplayName());

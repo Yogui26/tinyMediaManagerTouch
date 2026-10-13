@@ -29,9 +29,12 @@ public class HdrInfo {
     }
   }
 
+  /**
+   * primary/best HDR type
+   */
   private HdrType hdrType;
   // Although there could be multiple HDR layers, we forcefully do not keep a list
-  // 95% of all medias have a single one, and for the rest, the 2nd type is enough.
+  // 99% of all medias have a single one, and for the rest, the 2nd type is enough.
   // Compatibility could be a List; filled, when we have DoVi+HLG fallback layer, AND a second HDR10+ layer...
   private HdrType secondHdrType;
   private String  hdrVersion;
@@ -139,6 +142,11 @@ public class HdrInfo {
     return sb.toString();
   }
 
+  /**
+   * We save only the first layers version (since version is not used widely)
+   * 
+   * @param hdrVersion
+   */
   public void parseHdrVersion(String hdrVersion) {
     if (StringUtils.isBlank(hdrVersion)) {
       return;
