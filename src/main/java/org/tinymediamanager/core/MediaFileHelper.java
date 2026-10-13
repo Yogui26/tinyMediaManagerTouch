@@ -2756,24 +2756,24 @@ public class MediaFileHelper {
     String hdrComm = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Commercial");
     if (!(hdrFormat.isBlank() && hdrComm.isBlank())) {
       HdrInfo info = new HdrInfo();
-      info.setHdrType(parseHdrType(hdrFormat));
+      info.parseHdrTypes(hdrFormat);
 
       String hdrVersion = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Version");
-      info.setHdrVersion(emptyToNull(hdrVersion));
-
-      String hdrProfile = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Profile");
-      info.setHdrProfile(parseHdrProfile(hdrProfile));
-
-      String hdrLevel = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Level");
-      info.setHdrLevel(parseInteger(hdrLevel));
-
-      String hdrCompat = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Compatibility");
-      parseCompatibility(info, hdrCompat);
+      info.parseHdrVersion(hdrVersion);
 
       if (info.getHdrType() == HdrType.HDR_TYPE_DOLBYVISION) {
+        String hdrProfile = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Profile");
+        info.parseDvProfile(hdrProfile);
+        String hdrLevel = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Level");
+        info.parseDvLevel(hdrLevel);
         String hdrSettings = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Settings");
-        parseDolbyVisionSettings(info, hdrSettings);
+        info.parseDvSettings(hdrSettings);
       }
+
+      // must run after DV detection
+      String hdrCompat = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "HDR_Format_Compatibility");
+      info.parseCompatibility(hdrCompat);
+
       mediaFile.setHdrInfo(info);
     }
     else {
@@ -2784,127 +2784,6 @@ public class MediaFileHelper {
         info.setHdrType(HdrType.HDR_TYPE_HLG);
         mediaFile.setHdrInfo(info);
       }
-    }
-  }
-
-  private static HdrType parseHdrType(String hdrFormat) {
-    if (StringUtils.isBlank(hdrFormat)) {
-      return null;
-    }
-    String normalized = hdrFormat.trim().toLowerCase(Locale.ROOT);
-    if (normalized.contains("dolby vision")) {
-      if (normalized.contains("dolby vision 2") || normalized.contains("version 2")) { // TODO: assumed
-        return HdrType.HDR_TYPE_DOLBYVISION2;
-      }
-      return HdrType.HDR_TYPE_DOLBYVISION;
-    }
-    else if (normalized.contains("2094") || normalized.contains("hdr10+")) {
-      if (normalized.contains("adv")) { // TODO: assumed
-        return HdrType.HDR_TYPE_HDR10PLUSADV;
-      }
-      return HdrType.HDR_TYPE_HDR10PLUS;
-    }
-    else if (normalized.contains("hlg") || normalized.contains("hybrid log-gamma")) {
-      if (normalized.contains("hlg+")) {
-        return HdrType.HDR_TYPE_HLGPLUS;
-      }
-      return HdrType.HDR_TYPE_HLG;
-    }
-    if (normalized.contains("2086") || normalized.contains("hdr10")) {
-      return HdrType.HDR_TYPE_HDR10;
-    }
-    return null;
-  }
-
-  private static Integer parseHdrProfile(String profile) {
-    if (StringUtils.isBlank(profile)) {
-      return null;
-    }
-    // Dolby Vision: dvhe.08, hev1.08, avc3.05
-    // Extract the numeric profile after the final dot.
-    String[] splitted = profile.split("/");
-    Matcher matcher = Pattern.compile("\\.(\\d+)$").matcher(splitted[0].trim());
-    if (matcher.find()) {
-      return Integer.valueOf(matcher.group(1));
-    }
-    // Other formats may provide a plain numeric profile.
-    if (splitted[0].trim().matches("\\d+")) {
-      return Integer.valueOf(splitted[0].trim());
-    }
-    return null;
-  }
-
-  private static void parseCompatibility(HdrInfo info, String compatibility) {
-    HdrType hdrType = info.getHdrType();
-
-    // Inherent/direct compatibility
-    if (hdrType == HdrType.HDR_TYPE_HDR10PLUSADV) {
-      info.setCompatibilityType(HdrType.HDR_TYPE_HDR10PLUS);
-      return;
-    }
-    if (hdrType == HdrType.HDR_TYPE_HDR10PLUS) {
-      info.setCompatibilityType(HdrType.HDR_TYPE_HDR10);
-      return;
-    }
-    if (hdrType == HdrType.HDR_TYPE_HDR10) {
-      // no compatibility here, as this is the base
-      return;
-    }
-    if (StringUtils.isBlank(compatibility)) {
-      return;
-    }
-
-    String normalized = compatibility.trim().toLowerCase(Locale.ROOT);
-    // TODO: HLG+
-    if (normalized.contains("hlg")) {
-      info.setCompatibilityType(HdrType.HDR_TYPE_HLG);
-      if (isDolbyVisionProfile8(info)) {
-        info.setCompatibilityId(4);
-      }
-      return;
-    }
-
-    if (normalized.contains("hdr10")) {
-      info.setCompatibilityType(HdrType.HDR_TYPE_HDR10);
-      if (isDolbyVisionProfile8(info)) {
-        info.setCompatibilityId(1);
-      }
-    }
-  }
-
-  private static boolean isDolbyVisionProfile8(HdrInfo info) {
-    return info.getHdrType() != null && info.getHdrType() == HdrType.HDR_TYPE_DOLBYVISION && Integer.valueOf(8).equals(info.getHdrProfile());
-  }
-
-  private static void parseDolbyVisionSettings(HdrInfo info, String settings) {
-    if (StringUtils.isBlank(settings)) {
-      return;
-    }
-    String value = settings.trim().toUpperCase(Locale.ROOT);
-    info.setBaseLayer(value.contains("BL"));
-    info.setEnhancementLayer(value.contains("EL")); // TODO: FEL/MEL
-    info.setRpu(value.contains("RPU"));
-  }
-
-  private static String emptyToNull(String value) {
-    if (!StringUtils.isBlank(value)) {
-      // sometimes we have splitted values, just take the first
-      String[] splitted = value.split("/");
-      return splitted[0].strip();
-    }
-    return null;
-  }
-
-  private static Integer parseInteger(String value) {
-    if (StringUtils.isBlank(value)) {
-      return null;
-    }
-    try {
-      String[] splitted = value.split("/");
-      return Integer.valueOf(splitted[0].trim());
-    }
-    catch (NumberFormatException e) {
-      return null;
     }
   }
   // #endregion
