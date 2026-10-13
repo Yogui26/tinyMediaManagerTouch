@@ -17,6 +17,7 @@ package org.tinymediamanager.core.entities;
 
 import java.util.Objects;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.tinymediamanager.core.TmmToStringStyle;
@@ -31,11 +32,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class MediaFileAudioStream extends MediaStreamInfo {
   @JsonProperty
-  private int audioChannels = 0;
+  private int    audioChannels        = 0;
   @JsonProperty
-  private int bitrate       = 0;
+  private int    bitrate              = 0;
   @JsonProperty
-  private int bitDepth      = 0;
+  private int    bitDepth             = 0;
+  @JsonProperty
+  private String channelConfiguration = "";
 
   public MediaFileAudioStream() {
     // empty constructor for jackson
@@ -73,6 +76,14 @@ public class MediaFileAudioStream extends MediaStreamInfo {
     this.bitDepth = bitDepth;
   }
 
+  public String getChannelConfiguration() {
+    return channelConfiguration;
+  }
+
+  public void setChannelConfiguration(String channelConfiguration) {
+    this.channelConfiguration = channelConfiguration;
+  }
+
   /**
    * <p>
    * Uses <code>ReflectionToStringBuilder</code> to generate a <code>toString</code> for the specified object.
@@ -100,12 +111,12 @@ public class MediaFileAudioStream extends MediaStreamInfo {
 
     MediaFileAudioStream that = (MediaFileAudioStream) o;
 
-    return audioChannels == that.audioChannels && bitrate == that.bitrate;
+    return audioChannels == that.audioChannels && bitrate == that.bitrate && StringUtils.equals(channelConfiguration, that.channelConfiguration);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), audioChannels, bitrate);
+    return Objects.hash(super.hashCode(), audioChannels, bitrate, channelConfiguration);
   }
 
   /**

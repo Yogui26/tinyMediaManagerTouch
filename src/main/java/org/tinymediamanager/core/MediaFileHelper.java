@@ -230,7 +230,7 @@ public class MediaFileHelper {
   }
 
   /**
-   * converts audion channels to "dot" notation (6 -> 5.1)
+   * converts audio channels to "dot" notation (6 -> 5.1)
    *
    * @param channels
    * @return
@@ -241,6 +241,54 @@ public class MediaFileHelper {
     }
     else {
       return channels - 1 + ".1";
+    }
+  }
+
+  /**
+   * converts audio channels to "dot" notation using channel configuration string<br>
+   * Uses two-digit notation only, height channels are excluded (see {@link #audioChannelInLongNotation(int, String)})<br>
+   * Examples: 3/2/0.1 -> 5.1, 3/2/0.1.2 -> 5.1, 3/2/2.1.4 -> 7.1
+   *
+   * @param channels
+   *          total channel count
+   * @param configuration
+   *          channel configuration string from MediaInfo (ChannelPositions_String2)
+   * @return formatted channel string (e.g., "5.1", "7.1")
+   */
+  public static String audioChannelInDotNotation(int channels, String configuration) {
+    ChannelConfiguration layout = ChannelConfiguration.parseChannelConfiguration(configuration);
+    if (layout == null) {
+      return audioChannelInDotNotation(channels);
+    }
+
+    return layout.lfe() > 0 ? String.format("%d.%d", layout.base(), layout.lfe()) : String.format("%d.0", layout.base());
+  }
+
+  /**
+   * converts audio channels to "long" notation using channel configuration string<br>
+   * Shows the full channel specification including height channels<br>
+   * Examples: 3/2/0.1.2 -> 5.1.2, 3/2/2.1.4 -> 7.1.4
+   *
+   * @param channels
+   *          total channel count
+   * @param configuration
+   *          channel configuration string from MediaInfo (ChannelPositions_String2)
+   * @return formatted channel string (e.g., "5.1.2", "7.1.4")
+   */
+  public static String audioChannelInLongNotation(int channels, String configuration) {
+    ChannelConfiguration layout = ChannelConfiguration.parseChannelConfiguration(configuration);
+    if (layout == null) {
+      return audioChannelInDotNotation(channels);
+    }
+
+    if (layout.height() > 0) {
+      return String.format("%d.%d.%d", layout.base(), layout.lfe(), layout.height());
+    }
+    else if (layout.lfe() > 0) {
+      return String.format("%d.%d", layout.base(), layout.lfe());
+    }
+    else {
+      return String.format("%d.0", layout.base());
     }
   }
 
@@ -2365,6 +2413,10 @@ public class MediaFileHelper {
       String title = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Audio, i, "Title");
       stream.setTitle(title);
 
+      // Channel positions string for enhanced channel format detection
+      String channelPositionsString2 = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Audio, i, "ChannelPositions_String2");
+      stream.setChannelConfiguration(channelPositionsString2);
+
       audioStreams.add(stream);
     }
 
@@ -3447,5 +3499,56 @@ public class MediaFileHelper {
     }
 
     return new Dimension(mediaFile.getVideoWidth(), mediaFile.getVideoHeight());
+  }
+
+  /**
+   * the parsed channel layout from a MediaInfo channel configuration string
+   */
+  private record ChannelConfiguration(int front, int side, int back, int lfe, int height) {
+    int base() {
+      return front + side + back;
+    }
+
+    /**
+     * parses a channel configuration string from MediaInfo (ChannelPositions_String2)<br>
+     * Format: x/y/z.f.h where x=front, y=side, z=back, f=LFE, h=height<br>
+     *
+     * @param configuration
+     *          channel configuration string from MediaInfo (ChannelPositions_String2)
+     * @return the parsed channel layout or null if the configuration is blank or could not be parsed
+     */
+    static ChannelConfiguration parseChannelConfiguration(String configuration) {
+      if (StringUtils.isBlank(configuration)) {
+        return null;
+      }
+
+      try {
+        // split by "." to separate "x/y/z" from "f.h"
+        String[] dotParts = configuration.split("\\.", 2);
+        String xyzPart = dotParts[0];
+        String fhPart = dotParts.length > 1 ? dotParts[1] : "";
+
+        // parse x/y/z
+        String[] xyz = xyzPart.split("/");
+        int front = Integer.parseInt(xyz[0]);
+        int side = (xyz.length > 1) ? Integer.parseInt(xyz[1]) : 0;
+        int back = (xyz.length > 2) ? Integer.parseInt(xyz[2]) : 0;
+
+        // parse f.h
+        int lfe = 0;
+        int height = 0;
+        if (!StringUtils.isBlank(fhPart)) {
+          String[] fh = fhPart.split("\\.");
+          lfe = Integer.parseInt(fh[0]);
+          height = (fh.length > 1) ? Integer.parseInt(fh[1]) : 0;
+        }
+
+        return new ChannelConfiguration(front, side, back, lfe, height);
+      }
+      catch (Exception e) {
+        LOGGER.debug("Could not parse channel configuration: {}", configuration);
+        return null;
+      }
+    }
   }
 }

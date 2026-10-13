@@ -53,70 +53,96 @@ public class MediaInfoTest extends BasicTest {
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("AAC");
     assertThat(mf.getAudioChannels()).isEqualTo("6ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("5.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("5.1");
 
     mf = new MediaFile(samplesFolder.resolve("AAC-HE_LC_8ch.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("AAC");
     assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("7.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("7.1");
 
     mf = new MediaFile(samplesFolder.resolve("DTS-X.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("DTS-X");
-    assertThat(mf.getAudioChannels()).containsAnyOf("8ch", "12ch"); // 8ch up to mediainfo 26.05; 12ch from 26.10
+    assertThat(mf.getAudioChannels()).isEqualTo("12ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("7.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("7.1.4");
     assertThat(mf.getAudioLanguage()).isEqualTo("eng");
 
     mf = new MediaFile(samplesFolder.resolve("DTS-ES_Discrete.ts"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("DTS-ES");
     assertThat(mf.getAudioChannels()).isEqualTo("7ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("6.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("6.1");
 
     mf = new MediaFile(samplesFolder.resolve("DTSHD-HRA.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("DTSHD-HRA");
     assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("7.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("7.1");
     assertThat(mf.getAudioLanguage()).isEqualTo("eng");
 
     mf = new MediaFile(samplesFolder.resolve("DTSHD-MA.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("DTSHD-MA");
     assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("7.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("7.1");
     assertThat(mf.getAudioLanguage()).isEqualTo("eng");
 
     mf = new MediaFile(samplesFolder.resolve("DTS.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("DTS");
     assertThat(mf.getAudioChannels()).isEqualTo("6ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("5.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("5.1");
 
     mf = new MediaFile(samplesFolder.resolve("TrueHD.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("TrueHD");
     assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("7.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("7.1");
     assertThat(mf.getAudioLanguage()).isEqualTo("eng");
 
     mf = new MediaFile(samplesFolder.resolve("TrueHD-Atmos.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("TrueHD/Atmos");
     assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("7.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("7.1");
 
     mf = new MediaFile(samplesFolder.resolve("EAC3-Atmos.mkv"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("EAC3/Atmos");
     assertThat(mf.getAudioChannels()).isEqualTo("8ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("5.1"); // IS reporting 5.1 instead of 7.1
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("5.1");
 
     mf = new MediaFile(samplesFolder.resolve("AC-3.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("AC3");
     assertThat(mf.getAudioChannels()).isEqualTo("6ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("5.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("5.1");
 
     mf = new MediaFile(samplesFolder.resolve("PCM.mka"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("PCM");
     assertThat(mf.getAudioChannels()).isEqualTo("6ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("5.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("5.1");
 
     mf = new MediaFile(samplesFolder.resolve("E-AC3.ac3"));
     mf.gatherMediaInformation();
     assertThat(mf.getAudioCodec()).isEqualTo("EAC3");
     assertThat(mf.getAudioChannels()).isEqualTo("6ch");
+    assertThat(mf.getAudioChannelsDot()).isEqualTo("5.1");
+    assertThat(mf.getAudioChannelsLong()).isEqualTo("5.1");
 
     // audio file with -mediainfo.xml - will not be read anylonger!
     // mf = new MediaFile(samplesFolder.resolve("E-AC3-2.ac3"));
