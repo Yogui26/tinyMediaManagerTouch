@@ -124,9 +124,6 @@ class MovieDatasourceSettingsPanel extends JPanel {
           TmmProperties.getInstance().putProperty("movie.datasource.path", file.toAbsolutePath().toString());
           panelDatasources.revalidate();
         }
-        else {
-          TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.datasource.nested"));
-        }
       }
     });
 

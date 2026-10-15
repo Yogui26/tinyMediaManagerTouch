@@ -101,9 +101,6 @@ class MovieSourcePanel extends JPanel {
           else if (MovieModuleManager.getInstance().getSettings().addMovieDataSources(file.toAbsolutePath().toString())) {
             TmmProperties.getInstance().putProperty("movie.datasource.path", file.toAbsolutePath().toString());
           }
-          else {
-            JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.datasource.nested"));
-          }
         }
       });
 

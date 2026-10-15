@@ -18,13 +18,16 @@ package org.tinymediamanager.core.tvshow.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,9 +42,9 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 
 public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
-  private static final int NUMBER_OF_EXPECTED_SHOWS      = 19;
-  private static final int NUMBER_OF_EXPECTED_EPISODES   = 166;
-  private static final int NUMBER_OF_EXPECTED_MEDIAFILES = 414;
+  private static final int NUMBER_OF_EXPECTED_SHOWS      = 20;
+  private static final int NUMBER_OF_EXPECTED_EPISODES   = 168;
+  private static final int NUMBER_OF_EXPECTED_MEDIAFILES = 416;
 
   @Before
   public void setup() throws Exception {
@@ -63,10 +66,30 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
 
   @Test
   public void udsNew() throws Exception {
+    // add nested DS to test that the nested DS is also fetched and the shows are not duplicated
+    TvShowModuleManager.getInstance()
+        .getSettings()
+        .addTvShowDataSources(getWorkFolder().resolve("testtvshows").resolve("nested").toAbsolutePath().toString());
+
     TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask();
+
     task.run();
 
-    check();
+    check(NUMBER_OF_EXPECTED_SHOWS, NUMBER_OF_EXPECTED_EPISODES, NUMBER_OF_EXPECTED_MEDIAFILES);
+  }
+
+  @Test
+  public void udsNewWoNested() throws Exception {
+    // add nested DS to test that the nested DS is skipped when only the parent is scanned
+    TvShowModuleManager.getInstance()
+        .getSettings()
+        .addTvShowDataSources(getWorkFolder().resolve("testtvshows").resolve("nested").toAbsolutePath().toString());
+
+    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask(List.of(getWorkFolder().resolve("testtvshows").toAbsolutePath()));
+
+    task.run();
+
+    check(NUMBER_OF_EXPECTED_SHOWS - 1, NUMBER_OF_EXPECTED_EPISODES - 2, NUMBER_OF_EXPECTED_MEDIAFILES - 2);
   }
 
   @Test
@@ -85,38 +108,38 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
 
     Path parentDs = getWorkFolder().resolve("testtvshows").toAbsolutePath();
-    Path nestedDs = parentDs.resolve("Breaking Bad");
+    Path nestedDs = parentDs.resolve("nested");
+    Path nestedShow = nestedDs.resolve("Breaking Bad");
 
-    // adding a nested data source via the settings API must be rejected
-    assertThat(settings.addTvShowDataSources(nestedDs.toString())).isFalse();
-    assertThat(settings.getTvShowDataSource()).doesNotContain(nestedDs.toString());
+    // move a show into the nested data source
+    Files.createDirectories(nestedDs);
+    Files.move(parentDs.resolve("Breaking Bad"), nestedShow);
 
-    // simulate an already broken setup (nested data source added before the guard existed)
-    settings.setTvShowDataSources(List.of(parentDs.toString(), nestedDs.toString()));
+    // adding a data source which is nested inside another one is allowed now
+    assertThat(settings.addTvShowDataSources(nestedDs.toString())).isTrue();
+    assertThat(settings.getTvShowDataSource()).contains(nestedDs.toString());
 
-    // and a bogus show which has been created by the nested data source on a previous run
-    TvShow bogusShow = new TvShow();
-    bogusShow.setDataSource(nestedDs.toString());
-    bogusShow.setPath(nestedDs.resolve("Season 01").toString());
-    bogusShow.setTitle("Season 01");
-    tvShowList.addTvShow(bogusShow);
+    new TvShowUpdateDatasourceTask().run();
 
-    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask();
-    task.run();
-
-    // the nested data source must not create bogus TV shows from its season folders
-    assertThat(tvShowList.getTvShowByPath(nestedDs.resolve("Season 01"))).isNull();
-    assertThat(tvShowList.getTvShowByPath(nestedDs.resolve("Season 02"))).isNull();
-
-    // the bogus show from a previous run must have been removed
-    assertThat(tvShowList.getTvShows()).noneMatch(tvShow -> nestedDs.toString().equals(tvShow.getDataSource()));
-
-    // the real TV show must still be present (found via the parent data source)
-    TvShow show = tvShowList.getTvShowByPath(nestedDs);
+    // the show inside the nested data source must belong to the nested data source
+    TvShow show = tvShowList.getTvShowByPath(nestedShow);
     assertThat(show).isNotNull();
     assertThat(show.getTitle()).isEqualTo("Breaking Bad");
-    assertThat(show.getEpisodes().size()).isEqualTo(62);
-    assertThat(show.getSeasons().size()).isEqualTo(5);
+    assertThat(show.getEpisodes()).hasSize(62);
+    assertThat(Paths.get(show.getDataSource())).isEqualTo(nestedDs);
+
+    // ... and it must exist exactly once - no duplicate from the parent scan
+    long count = tvShowList.getTvShows().stream().filter(s -> s.getPathNIO().equals(nestedShow)).count();
+    assertThat(count).isEqualTo(1);
+
+    // the nested data source must not create bogus TV shows from its season folders
+    assertThat(tvShowList.getTvShowByPath(nestedShow.resolve("Season 01"))).isNull();
+    assertThat(tvShowList.getTvShowByPath(nestedShow.resolve("Season 02"))).isNull();
+
+    // shows outside the nested data source still belong to the parent data source
+    TvShow firefly = tvShowList.getTvShowByPath(parentDs.resolve("Firefly"));
+    assertThat(firefly).isNotNull();
+    assertThat(Paths.get(firefly.getDataSource())).isEqualTo(parentDs);
   }
 
   @Test
@@ -124,37 +147,90 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
     TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
 
-    // first do a full scan to populate the TV show list
-    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask();
-    task.run();
-
-    // verify Breaking Bad exists
     Path parentDs = getWorkFolder().resolve("testtvshows").toAbsolutePath();
-    Path nestedDs = parentDs.resolve("Breaking Bad");
+    Path nestedDs = parentDs.resolve("nested");
+    Path nestedShow = nestedDs.resolve("Breaking Bad");
 
-    TvShow show = tvShowList.getTvShowByPath(nestedDs);
+    // move a show into the nested data source
+    Files.createDirectories(nestedDs);
+    Files.move(parentDs.resolve("Breaking Bad"), nestedShow);
+    settings.addTvShowDataSources(nestedDs.toString());
+
+    // first do a full scan to populate the TV show list
+    new TvShowUpdateDatasourceTask().run();
+
+    TvShow show = tvShowList.getTvShowByPath(nestedShow);
     assertThat(show).isNotNull();
-    assertThat(show.getTitle()).isEqualTo("Breaking Bad");
-
-    // simulate an already broken setup (nested data source added before the guard existed)
-    settings.setTvShowDataSources(List.of(parentDs.toString(), nestedDs.toString()));
+    assertThat(show.getEpisodes()).hasSize(62);
+    assertThat(Paths.get(show.getDataSource())).isEqualTo(nestedDs);
 
     // now update only the single TV show (like TvShowUpdateAction would)
-    TvShowUpdateDatasourceTask singleTask = new TvShowUpdateDatasourceTask(List.of(nestedDs));
-    singleTask.run();
+    new TvShowUpdateDatasourceTask(List.of(nestedShow)).run();
 
     // the show must still exist exactly once - no duplication
-    assertThat(tvShowList.getTvShows()).hasSizeGreaterThanOrEqualTo(1);
+    long count = tvShowList.getTvShows().stream().filter(s -> s.getPathNIO().equals(nestedShow)).count();
+    assertThat(count).isEqualTo(1);
 
-    // Breaking Bad must be present (not duplicated or removed)
-    show = tvShowList.getTvShowByPath(nestedDs);
+    show = tvShowList.getTvShowByPath(nestedShow);
     assertThat(show).isNotNull();
     assertThat(show.getTitle()).isEqualTo("Breaking Bad");
-    assertThat(show.getEpisodes().size()).isEqualTo(62);
+    assertThat(show.getEpisodes()).hasSize(62);
+    assertThat(Paths.get(show.getDataSource())).isEqualTo(nestedDs);
+  }
 
-    // there must be no duplicate - count shows with the same path
-    long count = tvShowList.getTvShows().stream().filter(s -> s.getPathNIO().equals(nestedDs)).count();
-    assertThat(count).isEqualTo(1);
+  @Test
+  public void udsNestedDatasourceCleanup() throws Exception {
+    TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
+    TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+
+    Path parentDs = getWorkFolder().resolve("testtvshows").toAbsolutePath();
+    Path nestedDs = parentDs.resolve("nested");
+    Path nestedShow = nestedDs.resolve("Breaking Bad");
+
+    // two shows in the nested data source, so removing one does not leave the data source empty
+    Files.createDirectories(nestedDs);
+    Files.move(parentDs.resolve("Breaking Bad"), nestedShow);
+    Files.move(parentDs.resolve("Firefly"), nestedDs.resolve("Firefly"));
+    assertThat(settings.addTvShowDataSources(nestedDs.toString())).isTrue();
+
+    new TvShowUpdateDatasourceTask().run();
+
+    assertThat(tvShowList.getTvShowByPath(nestedShow)).isNotNull();
+
+    // remove the show folder from disk and re-run -> the nested data source must clean up its own entry
+    FileUtils.deleteDirectory(nestedShow.toFile());
+
+    new TvShowUpdateDatasourceTask().run();
+
+    assertThat(tvShowList.getTvShowByPath(nestedShow)).isNull();
+    assertThat(tvShowList.getTvShows()).noneMatch(s -> s.getPathNIO().equals(nestedShow));
+  }
+
+  @Test
+  public void udsNestedDatasourceReassignsStaleShow() throws Exception {
+    TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
+    TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+
+    Path parentDs = getWorkFolder().resolve("testtvshows").toAbsolutePath();
+    Path nestedDs = parentDs.resolve("nested");
+    Files.createDirectories(nestedDs);
+    assertThat(settings.addTvShowDataSources(nestedDs.toString())).isTrue();
+
+    // a show which is still stored with the parent data source, but now lives inside the nested data source.
+    // NOTE: this state is not produced by a normal scan (the parent scan would treat 'nested' as a show folder);
+    // it guards against stale or manually mis-assigned entries
+    Path staleShowDir = nestedDs.resolve("Stale Show");
+    TvShow staleShow = new TvShow();
+    staleShow.setDataSource(parentDs.toString());
+    staleShow.setPath(staleShowDir.toString());
+    staleShow.setTitle("Stale Show");
+    tvShowList.addTvShow(staleShow);
+
+    // update only the parent data source - the cleanup must update the data source field and keep the show
+    new TvShowUpdateDatasourceTask(List.of(parentDs)).run();
+
+    assertThat(tvShowList.getTvShows()).contains(staleShow);
+    assertThat(Paths.get(staleShow.getDataSource())).isEqualTo(nestedDs);
   }
 
   @Test
@@ -173,12 +249,12 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     assertThat(episode.getDateAdded()).isEqualTo(expectedDate);
   }
 
-  private void check() throws Exception {
+  private void check(int numberOfExpectedShows, int numberOfExpectedEpisodes, int numberOfExpectedMediaFiles) throws Exception {
     TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
 
     // wait until all TV shows have been added (let propertychanges finish)
     for (int i = 0; i < 3; i++) {
-      if (tvShowList.getTvShows().size() == NUMBER_OF_EXPECTED_SHOWS) {
+      if (tvShowList.getTvShows().size() == numberOfExpectedShows) {
         break;
       }
 
@@ -206,9 +282,9 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
       }
     }
 
-    assertThat(tvShowList.getTvShows().size()).isEqualTo(NUMBER_OF_EXPECTED_SHOWS);
-    assertThat(episodeCnt).isEqualTo(NUMBER_OF_EXPECTED_EPISODES);
-    assertThat(mfCnt).isEqualTo(NUMBER_OF_EXPECTED_MEDIAFILES);
+    assertThat(tvShowList.getTvShows().size()).isEqualTo(numberOfExpectedShows);
+    assertThat(episodeCnt).isEqualTo(numberOfExpectedEpisodes);
+    assertThat(mfCnt).isEqualTo(numberOfExpectedMediaFiles);
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Breaking Bad

@@ -94,21 +94,18 @@ public class MovieUpdateDatasourceTaskMessageTest extends BasicMovieTest {
   }
 
   @Test
-  public void nestedDatasourceIsReported() throws Exception {
+  public void nestedDatasourceIsNotReported() throws Exception {
     Path parentDatasource = Files.createDirectories(getWorkFolder().resolve("movies"));
     Path nestedDatasource = Files.createDirectories(parentDatasource.resolve("nested"));
 
     MovieSettings settings = MovieModuleManager.getInstance().getSettings();
-    // simulate an already broken setup (nested data source added before the guard existed)
+    // nested data sources are allowed now - they must not be reported as skipped/removed
     settings.setMovieDataSources(List.of(parentDatasource.toString(), nestedDatasource.toString()));
 
-    // the nested data source is detected while preparing the task
-    new MovieUpdateDatasourceTask();
+    new MovieUpdateDatasourceTask().run();
 
-    List<Message> messages = findMessages("update.datasource.nested.skipped");
-    assertThat(messages).hasSize(1);
-    assertThat(messages.get(0).getMessageLevel()).isEqualTo(MessageLevel.WARN);
-    assertThat(messages.get(0).getIdParams()).containsExactly(nestedDatasource.toString());
+    assertThat(findMessages("update.datasource.nested.skipped")).isEmpty();
+    assertThat(findMessages("update.datasource.nested.removed")).isEmpty();
   }
 
   private List<Message> findMessages(String messageId) {

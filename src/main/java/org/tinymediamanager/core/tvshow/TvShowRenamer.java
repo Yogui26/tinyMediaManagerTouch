@@ -48,6 +48,7 @@ import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.DataSourceUtils;
 import org.tinymediamanager.core.IFileNaming;
 import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.LanguageStyle;
@@ -267,7 +268,24 @@ public class TvShowRenamer {
     // cleanup
     cleanupUnwantedFiles(tvShow, renamerProfile);
 
+    updateDataSource(tvShow);
     tvShow.saveToDb();
+  }
+
+  /**
+   * Keeps the data source field of a TV show in sync with its (possibly new) location. When a rename moves a TV show into a nested data source, the
+   * show now belongs to that data source.
+   *
+   * @param tvShow
+   *          the TV show to update
+   */
+  private static void updateDataSource(TvShow tvShow) {
+    String dataSource = DataSourceUtils.getDataSourceForPath(TvShowModuleManager.getInstance().getSettings().getTvShowDataSource(),
+        tvShow.getPathNIO());
+    if (dataSource != null && !dataSource.equals(tvShow.getDataSource())) {
+      LOGGER.info("TV show '{}' is now located in data source '{}' - updating the data source", tvShow.getTitle(), dataSource);
+      tvShow.setDataSource(dataSource);
+    }
   }
 
   /**
@@ -1313,6 +1331,7 @@ public class TvShowRenamer {
       undoRenameSeason(season);
     }
 
+    updateDataSource(tvShow);
     tvShow.saveToDb();
   }
 

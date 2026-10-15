@@ -650,17 +650,6 @@ public final class TvShowSettings extends AbstractSettings {
       return false;
     }
 
-    for (String ds : tvShowDataSources) {
-      if (StringUtils.isBlank(ds)) {
-        continue;
-      }
-
-      Path existingDatasource = Paths.get(ds).normalize().toAbsolutePath();
-      if (newDatasource.startsWith(existingDatasource) || existingDatasource.startsWith(newDatasource)) {
-        return false;
-      }
-    }
-
     if (!tvShowDataSources.contains(path)) {
       tvShowDataSources.add(path);
       firePropertyChange(TV_SHOW_DATA_SOURCE, null, tvShowDataSources);

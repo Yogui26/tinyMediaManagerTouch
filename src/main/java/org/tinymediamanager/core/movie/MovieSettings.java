@@ -659,17 +659,6 @@ public final class MovieSettings extends AbstractSettings {
       return false;
     }
 
-    for (String ds : movieDataSources) {
-      if (StringUtils.isBlank(ds)) {
-        continue;
-      }
-
-      Path existingDatasource = Paths.get(ds).normalize().toAbsolutePath();
-      if (newDatasource.startsWith(existingDatasource) || existingDatasource.startsWith(newDatasource)) {
-        return false;
-      }
-    }
-
     if (!movieDataSources.contains(path)) {
       movieDataSources.add(path);
       firePropertyChange(MOVIE_DATA_SOURCE, null, movieDataSources);

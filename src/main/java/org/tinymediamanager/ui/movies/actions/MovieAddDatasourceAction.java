@@ -61,10 +61,6 @@ public class MovieAddDatasourceAction extends TmmAction {
           MovieModuleManager.getInstance().getSettings().saveSettings();
           TmmProperties.getInstance().putProperty("movie.datasource.path", file.toAbsolutePath().toString());
         }
-        else {
-          MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "Settings.datasource.nested"));
-          TmmToastManager.showErrorToast(MovieUIModule.getInstance().getDetailPanel(), TmmResourceBundle.getString("Settings.datasource.nested"));
-        }
       }
     });
   }

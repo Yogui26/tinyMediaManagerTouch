@@ -2,6 +2,7 @@ package org.tinymediamanager.core.movie;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -225,6 +226,39 @@ public class MovieRenamerTest extends BasicMovieTest {
 
       // the last movie left behind can be upgraded to a single movie folder
       assertThat(movie1.isMultiMovieDir()).isFalse();
+    }
+    finally {
+      finishTest();
+    }
+  }
+
+  @Test
+  public void testRenameIntoNestedDatasource() throws Exception {
+    try {
+      initTest();
+
+      MovieList movieList = MovieList.getInstance();
+      Path parentDs = getWorkFolder().resolve("testmovies_rename").toAbsolutePath();
+      Path nestedDs = parentDs.resolve("archive");
+      Files.createDirectories(nestedDs);
+
+      // a data source nested inside the parent one is allowed now
+      assertThat(MovieModuleManager.getInstance().getSettings().addMovieDataSources(nestedDs.toString())).isTrue();
+
+      Movie movie = movieList.findFirstByPath(parentDs.resolve("Single"));
+      assertThat(movie).isNotNull();
+      assertThat(movie.getDataSource()).isEqualTo(parentDs.toString());
+
+      // rename/move the movie into the nested data source
+      MovieRenamerProfile profile = MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile();
+      profile.setRenamerPathname("archive/${titleSortable} (${year})");
+      profile.setRenamerFilename("${title} (${year})");
+
+      MovieRenamer.renameMovie(movie, profile);
+
+      // the movie is now located inside the nested data source - the data source field must follow
+      assertThat(movie.getPathNIO().startsWith(nestedDs)).isTrue();
+      assertThat(Paths.get(movie.getDataSource())).isEqualTo(nestedDs);
     }
     finally {
       finishTest();

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -464,6 +465,56 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     TvShowRenamer.undoRename(show);
     show.getEpisodes().forEach(TvShowRenamer::undoRename);
     checkFiles(tvShowPath, filenamesOld);
+  }
+
+  /**
+   * renaming a TV show into a nested data source must update the data source field of the show
+   */
+  @Test
+  public void testRenameIntoNestedDatasource() throws Exception {
+    // copy over the test files to a new folder
+    copyResourceFolderToWorkFolder("testtvshows/renamer_test/extra");
+
+    Path parentDs = getWorkFolder().resolve("testtvshows_rename").toAbsolutePath();
+    Path destination = parentDs.resolve("Breaking Bad");
+    FileUtils.copyDirectory(getWorkFolder().resolve("testtvshows/renamer_test/extra").toFile(), destination.toFile());
+
+    // a data source nested inside the parent one is allowed now
+    Path nestedDs = parentDs.resolve("archive");
+    Files.createDirectories(nestedDs);
+
+    TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
+    assertThat(settings.addTvShowDataSources(parentDs.toString())).isTrue();
+    assertThat(settings.addTvShowDataSources(nestedDs.toString())).isTrue();
+
+    TvShow show = new TvShow();
+    show.setTitle("Breaking Bad");
+    show.setYear(2008);
+    show.setDataSource(parentDs.toString());
+    show.setPath(destination.toAbsolutePath().toString());
+    TvShowList.getInstance().addTvShow(show);
+
+    TvShowEpisode ep = new TvShowEpisode();
+    ep.setTitle("Pilot");
+    ep.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 1));
+    ep.setPath(destination.toAbsolutePath().toString());
+
+    MediaFile mf = new MediaFile(destination.resolve("S01E01.mkv").toAbsolutePath());
+    ep.addToMediaFiles(mf);
+    ep.gatherMediaFileInformation(false);
+    ep.setTvShow(show);
+    show.addEpisode(ep);
+
+    // rename/move the show into the nested data source
+    TvShowRenamerProfile profile = new TvShowRenamerProfile();
+    profile.setRenamerTvShowFoldernameEnabled(true);
+    profile.setRenamerTvShowFoldername("archive/${showTitle} (${showYear})");
+
+    TvShowRenamer.renameTvShow(show, profile);
+
+    // the show is now located inside the nested data source - the data source field must follow
+    assertThat(show.getPathNIO().startsWith(nestedDs)).isTrue();
+    assertThat(Paths.get(show.getDataSource())).isEqualTo(nestedDs);
   }
 
   /**

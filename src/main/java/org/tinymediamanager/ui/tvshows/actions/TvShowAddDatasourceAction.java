@@ -61,10 +61,6 @@ public class TvShowAddDatasourceAction extends TmmAction {
           TvShowModuleManager.getInstance().getSettings().saveSettings();
           TmmProperties.getInstance().putProperty("tvshow.datasource.path", file.toAbsolutePath().toString());
         }
-        else {
-          MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "Settings.datasource.nested"));
-          TmmToastManager.showErrorToast(TvShowUIModule.getInstance().getDetailPanel(), TmmResourceBundle.getString("Settings.datasource.nested"));
-        }
       }
     });
   }
