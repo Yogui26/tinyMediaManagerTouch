@@ -122,40 +122,46 @@ public class MovieSetExporter extends MediaEntityExporter {
 
         MovieSet movieSet = (MovieSet) me;
 
-        // create a movie set
-        Path movieSetDir = exportDir.resolve(getFilename(movieSet));
         try {
-          Files.createDirectory(movieSetDir);
-        }
-        catch (FileAlreadyExistsException e) {
-          LOGGER.debug("Folder already exists...");
-        }
+          // create a movie set
+          Path movieSetDir = exportDir.resolve(getFilename(movieSet));
+          try {
+            Files.createDirectory(movieSetDir);
+          }
+          catch (FileAlreadyExistsException e) {
+            LOGGER.debug("Folder already exists...");
+          }
 
-        Path detailsExportFile = movieSetDir.resolve("movieset." + fileExtension);
-        root = new HashMap<>();
-        root.put("movieSet", movieSet);
+          Path detailsExportFile = movieSetDir.resolve("movieset." + fileExtension);
+          root = new HashMap<>();
+          root.put("movieSet", movieSet);
 
-        output = engine.transform(detailTemplate, root);
-        Utils.writeStringToFile(detailsExportFile, output);
+          output = engine.transform(detailTemplate, root);
+          Utils.writeStringToFile(detailsExportFile, output);
 
-        if (StringUtils.isNotBlank(movieTemplate)) {
-          for (Movie movie : movieSet.getMovies()) {
-            if (cancel) {
-              return;
-            }
+          if (StringUtils.isNotBlank(movieTemplate)) {
+            for (Movie movie : movieSet.getMovies()) {
+              if (cancel) {
+                return;
+              }
 
-            List<MediaFile> mfs = movie.getMediaFiles(MediaFileType.VIDEO);
-            if (!mfs.isEmpty()) {
-              String movieFileName = getFilename(movie) + "." + fileExtension;
-              Path episodeExportFile = movieSetDir.resolve(movieFileName);
+              List<MediaFile> mfs = movie.getMediaFiles(MediaFileType.VIDEO);
+              if (!mfs.isEmpty()) {
+                String movieFileName = getFilename(movie) + "." + fileExtension;
+                Path episodeExportFile = movieSetDir.resolve(movieFileName);
 
-              root = new HashMap<>();
-              root.put("movie", movie);
+                root = new HashMap<>();
+                root.put("movie", movie);
 
-              output = engine.transform(movieTemplate, root);
-              Utils.writeStringToFile(episodeExportFile, output);
+                output = engine.transform(movieTemplate, root);
+                Utils.writeStringToFile(episodeExportFile, output);
+              }
             }
           }
+        }
+        catch (Exception e) {
+          // do not let a single faulty collection abort the whole export
+          LOGGER.error("Could not export movie set '{}' - '{}'", movieSet.getTitle(), e.getMessage());
         }
       }
     }
@@ -197,6 +203,13 @@ public class MovieSetExporter extends MediaEntityExporter {
     // the set title is used as the export folder name - strip illegal filesystem characters (e.g. ':')
     String filename = MovieRenamer.replaceInvalidCharacters(movieSet.getTitle(),
         MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile());
+
+    // also remove illegal path separators ('/' and '\'), otherwise 'resolve()' would create a nested path
+    filename = MovieRenamer.replacePathSeparators(filename);
+
+    // replace multiple spaces with a single one and strip
+    filename = filename.replaceAll(" +", " ").strip();
+
     if (StringUtils.isNotBlank(filename)) {
       return filename;
     }

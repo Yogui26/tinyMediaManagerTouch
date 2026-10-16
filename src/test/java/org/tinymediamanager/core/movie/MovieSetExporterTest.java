@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,20 +42,32 @@ public class MovieSetExporterTest extends BasicMovieTest {
       Files.writeString(templateDir.resolve("list.jmte"), "list");
       Files.writeString(templateDir.resolve("detail.jmte"), "detail");
 
-      MovieSet movieSet = new MovieSet();
-      movieSet.setDbId(UUID.nameUUIDFromBytes("Alien: Romulus Collection".getBytes()));
-      movieSet.setTitle("Alien: Romulus Collection");
+      MovieSet colonSet = new MovieSet();
+      colonSet.setDbId(UUID.nameUUIDFromBytes("Alien: Romulus Collection".getBytes()));
+      colonSet.setTitle("Alien: Romulus Collection");
+
+      // a set title containing a path separator used to be resolved as a nested path, which made
+      // 'Files.createDirectory' throw NoSuchFileException and silently abort the whole export
+      MovieSet slashSet = new MovieSet();
+      slashSet.setDbId(UUID.nameUUIDFromBytes("Superman / Batman (Animated) Collection".getBytes()));
+      slashSet.setTitle("Superman / Batman (Animated) Collection");
+
+      MovieSet backslashSet = new MovieSet();
+      backslashSet.setDbId(UUID.nameUUIDFromBytes("Superman \\ Batman (Animated) Collection".getBytes()));
+      backslashSet.setTitle("Superman \\ Batman (Animated) Collection");
 
       Path exportDir = getWorkFolder().resolve("export");
-      new MovieSetExporter(templateDir).export(Collections.singletonList(movieSet), exportDir);
+      new MovieSetExporter(templateDir).export(Arrays.asList(colonSet, slashSet, backslashSet), exportDir);
 
       List<String> subdirectories;
       try (Stream<Path> entries = Files.list(exportDir)) {
         subdirectories = entries.filter(Files::isDirectory).map(p -> p.getFileName().toString()).collect(Collectors.toList());
       }
 
-      assertThat(subdirectories).containsExactly("Alien - Romulus Collection");
-      assertThat(subdirectories).noneMatch(name -> name.contains(":"));
+      assertThat(subdirectories).containsExactlyInAnyOrder("Alien - Romulus Collection", "Superman Batman (Animated) Collection");
+      assertThat(subdirectories).noneMatch(name -> name.contains(":") || name.contains("/") || name.contains("\\"));
+      // the list file and all detail files must still be present after the loop
+      assertThat(exportDir.resolve("moviesets.html")).exists();
     }
     finally {
       MovieModuleManager.getInstance().shutDown();
