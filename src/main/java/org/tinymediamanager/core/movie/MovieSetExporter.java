@@ -251,18 +251,31 @@ public class MovieSetExporter extends MediaEntityExporter {
 
     @Override
     public Class<?>[] getSupportedClasses() {
-      return new Class[] { Movie.class };
+      return new Class[] { Movie.class, MovieSet.class };
     }
 
     @Override
     public String render(Object o, String pattern, Locale locale, Map<String, Object> model) {
+      Map<String, Object> parameters = new HashMap<>();
+      if (pattern != null) {
+        parameters = parseParameters(pattern);
+      }
+
       if (o instanceof Movie movie) {
-        Map<String, Object> parameters = new HashMap<>();
-        if (pattern != null) {
-          parameters = parseParameters(pattern);
+        String filename = getMovieFilename(movie);
+        if (parameters.get("escape") == Boolean.TRUE) {
+          try {
+            filename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+          }
+          catch (Exception e) {
+            LOGGER.debug("could not encode filename - '{}'", e.getMessage());
+          }
         }
 
-        String filename = getMovieFilename(movie);
+        return filename;
+      }
+      else if (o instanceof MovieSet movieSet) {
+        String filename = getMovieSetFilename(movieSet);
         if (parameters.get("escape") == Boolean.TRUE) {
           try {
             filename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
