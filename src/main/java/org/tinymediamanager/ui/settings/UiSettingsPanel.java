@@ -83,6 +83,7 @@ class UiSettingsPanel extends JPanel {
   private JComboBox                  cbFontSize;
   private JComboBox                  cbFontFamily;
   private JCheckBox                  chckbxStoreWindowPreferences;
+  private JCheckBox                  chckbxRememberLastSelectedModule;
   private JComboBox                  cbTheme;
   private JCheckBox                  chckbxShowMemory;
   private JComboBox                  cbDatefield;
@@ -363,6 +364,10 @@ class UiSettingsPanel extends JPanel {
         chckbxShowMemory = new JCheckBox(TmmResourceBundle.getString("Settings.showmemory"));
         panelMisc.add(chckbxShowMemory, "cell 1 19 2 1");
       }
+      {
+        chckbxRememberLastSelectedModule = new JCheckBox(TmmResourceBundle.getString("Settings.rememberlastmodule"));
+        panelMisc.add(chckbxRememberLastSelectedModule, "cell 1 20 2 1");
+      }
     }
     {
       JPanel panelUpdate = new JPanel();
@@ -464,6 +469,11 @@ class UiSettingsPanel extends JPanel {
     AutoBinding autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_1, chckbxShowMemory,
         jCheckBoxBeanProperty);
     autoBinding_1.bind();
+    //
+    Property settingsBeanProperty_7 = BeanProperty.create("rememberLastSelectedModule");
+    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_7,
+        chckbxRememberLastSelectedModule, jCheckBoxBeanProperty);
+    autoBinding_8.bind();
     //
     Property settingsBeanProperty_2 = BeanProperty.create("dateField");
     Property jComboBoxBeanProperty = BeanProperty.create("selectedItem");

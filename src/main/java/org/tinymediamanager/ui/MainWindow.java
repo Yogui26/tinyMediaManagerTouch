@@ -49,6 +49,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.text.JTextComponent;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ import org.tinymediamanager.core.ITmmModule;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmModuleManager;
+import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.thirdparty.MediaInfo;
@@ -84,6 +86,8 @@ import net.miginfocom.swing.MigLayout;
 public class MainWindow extends JFrame implements IModalPopupPanelProvider {
   private static final Logger    LOGGER            = LoggerFactory.getLogger(MainWindow.class);
   public static final Image      LOGOS             = createLogos();
+
+  private static final String    LAST_MODULE_ID    = "mainWindow.lastSelectedModule";
 
   private static MainWindow      instance;
 
@@ -207,6 +211,9 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     LOGGER.debug("Initializing TvShowUIModule...");
     addModule(TvShowUIModule.getInstance());
     LOGGER.debug("Done initializing UI modules :)");
+
+    // select the module to be shown on startup
+    menuPanel.selectModule(getStartupModuleId());
 
     // add a hint for the tools and settings
     menuPanel.addHints();
@@ -382,6 +389,26 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     cl.show(detailPanel, module.getModuleId());
 
     updateMenuBar(module);
+
+    // remember the last selected module
+    if (Settings.getInstance().isRememberLastSelectedModule()) {
+      TmmProperties.getInstance().putProperty(LAST_MODULE_ID, module.getModuleId());
+    }
+  }
+
+  /**
+   * get the module id to be shown on startup (either the last used module or movies)
+   *
+   * @return the module id to display
+   */
+  private String getStartupModuleId() {
+    if (Settings.getInstance().isRememberLastSelectedModule()) {
+      String lastModuleId = TmmProperties.getInstance().getProperty(LAST_MODULE_ID);
+      if (StringUtils.isNotBlank(lastModuleId)) {
+        return lastModuleId;
+      }
+    }
+    return MovieUIModule.getInstance().getModuleId();
   }
 
   private void updateMenuBar(ITmmUIModule uiModule) {

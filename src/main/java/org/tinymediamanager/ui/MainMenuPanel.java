@@ -148,12 +148,34 @@ public class MainMenuPanel extends JPanel {
 
     buttons.add(btnModule);
 
-    // select movies per default on startup
     if (module instanceof MovieUIModule) {
-      btnModule.setSelected(true);
-
       // add the hint for this part
       HintManager.getInstance().addHint(TmmResourceBundle.getString("hintmanager.module"), btnModule, SwingConstants.RIGHT);
+    }
+  }
+
+  /**
+   * selects the module with the given id (used on startup). If the module could not be found, the movies module will be selected as fallback
+   *
+   * @param moduleId
+   *          the id of the module to select
+   */
+  public void selectModule(String moduleId) {
+    ModuleButton fallback = null;
+    for (Component comp : contentPanel.getComponents()) {
+      if (comp instanceof ModuleButton btn) {
+        ITmmUIModule module = (ITmmUIModule) btn.getClientProperty("tmm.module");
+        if (module.getModuleId().equals(moduleId)) {
+          btn.setSelected(true);
+          return;
+        }
+        if (module instanceof MovieUIModule) {
+          fallback = btn;
+        }
+      }
+    }
+    if (fallback != null) {
+      fallback.setSelected(true);
     }
   }
 
