@@ -2,6 +2,7 @@ Version 5.3.5
 =======================
 + [Core] added a housekeeping action to remove abandoned entries from the database
 + [Movies, TV shows] it is now possible to add a data source inside another data source
++ [Movies, TV shows] added support for Kodi skiptro sidecar files (*.skiptro.json) #3384 - thx @nice42q
 + [TV shows, Movie Sets] added an action to remove the missing episodes/movies from the selected TV shows/movie sets
 + [UI] added freely configurable columns to the movie/movie set/TV show table, which get their content from your own JMTE patterns
   You can add, rename and arrange these columns in settings, then enable them in the table

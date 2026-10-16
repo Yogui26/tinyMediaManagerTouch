@@ -364,6 +364,10 @@ public class MediaFileHelper {
       return MediaFileType.VSMETA;
     }
 
+    if (filename.toLowerCase(Locale.ROOT).endsWith(".skiptro.json")) {
+      return MediaFileType.SKIPTRO;
+    }
+
     if ((basename.endsWith("-mediainfo") || basename.endsWith(".mediainfo")) && "xml".equalsIgnoreCase(ext)) {
       return MediaFileType.MEDIAINFO;
     }
@@ -931,12 +935,13 @@ public class MediaFileHelper {
       // return; // let em run... we get some info out of filenames...
     }
 
-    // do not work further on non media files files
+    // do not work further on non-media files
     switch (mediaFile.getType()) {
       case NFO:
       case TEXT:
       case MEDIAINFO:
       case VSMETA:
+      case SKIPTRO:
       case UNKNOWN:
       case DOUBLE_EXT:
         // set container format to do not trigger it again

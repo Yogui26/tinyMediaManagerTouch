@@ -1158,6 +1158,19 @@ public class MovieRenamer {
         newFiles.add(doubleExt);
         break;
 
+      case SKIPTRO:
+        MediaFile skiptro = new MediaFile(mf);
+        if (movie.isDisc()) {
+          skiptro.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
+        }
+        else {
+          newFilename += getStackingString(mf, renamerProfile);
+          newFilename += ".skiptro.json";
+          skiptro.setFile(newMovieDir.resolve(newFilename));
+        }
+        newFiles.add(skiptro);
+        break;
+
       case SUBTITLE:
         List<MediaFileSubtitle> subtitles = mf.getSubtitles();
         newFilename += getStackingString(mf, renamerProfile);

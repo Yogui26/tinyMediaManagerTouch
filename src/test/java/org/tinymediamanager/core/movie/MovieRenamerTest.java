@@ -7,9 +7,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.Test;
+import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -485,6 +487,31 @@ public class MovieRenamerTest extends BasicMovieTest {
     m.setEnglishTitle(m.getOriginalTitle());
     assertEqual("The Original Dish", MovieRenamer.createDestinationForFoldername(
         "${originalTitle}${if englishTitle}${if englishTitle = originalTitle}${else} - ${englishTitle}${end}${end}", defaultRenamerProfile, m));
+  }
+
+  /**
+   * A skiptro sidecar must be renamed to "&lt;new video basename&gt;.skiptro.json" (without the videos container extension) - that is the naming
+   * convention of the Kodi addon "service.skiptro"
+   */
+  @Test
+  public void testGenerateFilenameForSkiptroSidecar() {
+    Path movieDir = getWorkFolder().resolve("Old Movie");
+
+    Movie movie = new Movie();
+    movie.setDataSource(getWorkFolder().toString());
+    movie.setPath(movieDir.toString());
+    movie.setTitle("New Movie");
+    movie.setYear(2020);
+
+    MediaFile skiptro = new MediaFile();
+    skiptro.setType(MediaFileType.SKIPTRO);
+    skiptro.setPath(movieDir.toString());
+    skiptro.setFilename("oldmovie.skiptro.json");
+
+    List<MediaFile> renamed = MovieRenamer.generateFilename(movie, skiptro, "New Movie (2020)", new MovieRenamerProfile());
+
+    assertThat(renamed).hasSize(1);
+    assertThat(renamed.get(0).getFilename()).isEqualTo("New Movie (2020).skiptro.json");
   }
 
   private static class UdsMiRenamerExample {

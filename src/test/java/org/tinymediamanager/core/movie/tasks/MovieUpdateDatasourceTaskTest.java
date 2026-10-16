@@ -18,6 +18,7 @@ package org.tinymediamanager.core.movie.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -289,6 +290,30 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Movie movie = MovieModuleManager.getInstance().getMovieList().findFirstByPath(testMoviesFolder.resolve(relativeMovieFolder));
     assertEqual("Movie not found for folder: " + relativeMovieFolder, false, movie == null);
     return movie;
+  }
+
+  /**
+   * A skiptro sidecar ("&lt;video basename&gt;.skiptro.json") must be detected as {@link MediaFileType#SKIPTRO} and associated to the movie,
+   * otherwise it would neither show up in the GUI nor be moved along with the video when renaming.
+   */
+  @Test
+  public void udsSkiptroSidecarIsAttached() throws Exception {
+    Path skiptroDs = getWorkFolder().resolve("skiptrods").toAbsolutePath();
+    Path movieFolder = skiptroDs.resolve("Test Movie (2020)");
+    Files.createDirectories(movieFolder);
+    Files.createFile(movieFolder.resolve("testmovie.mkv"));
+    Files.writeString(movieFolder.resolve("testmovie.skiptro.json"), "{ \"intro\": { \"start\": 0, \"end\": 87.5 } }");
+
+    MovieModuleManager.getInstance().getSettings().addMovieDataSources(skiptroDs.toString());
+
+    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    task.run();
+
+    Movie movie = getMovieByFolder(skiptroDs, "Test Movie (2020)");
+
+    List<MediaFile> skiptroFiles = movie.getMediaFiles(MediaFileType.SKIPTRO);
+    assertEqual("skiptro sidecar not associated to the movie", 1, skiptroFiles.size());
+    assertEqual("unexpected skiptro filename", "testmovie.skiptro.json", skiptroFiles.get(0).getFilename());
   }
 
   /**
