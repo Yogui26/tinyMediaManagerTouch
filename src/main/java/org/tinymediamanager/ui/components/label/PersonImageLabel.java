@@ -15,6 +15,8 @@
  */
 package org.tinymediamanager.ui.components.label;
 
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,9 +37,10 @@ import org.tinymediamanager.core.entities.Person;
  *
  * @author Manuel Laggner
  */
-public class PersonImageLabel extends ImageLabel {
+public class PersonImageLabel extends ImageLabel implements HierarchyListener {
   private SwingWorker<Void, Void> personWorker = null;
   private Person                  person       = null;
+  private MediaEntity             mediaEntity  = null;
 
   public PersonImageLabel() {
     super();
@@ -45,8 +48,21 @@ public class PersonImageLabel extends ImageLabel {
     cacheUrl = true;
   }
 
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    addHierarchyListener(this);
+  }
+
+  @Override
+  public void removeNotify() {
+    removeHierarchyListener(this);
+    super.removeNotify();
+  }
+
   /**
-   * Sets the person and media entity for which the image should be displayed.
+   * Sets the person and media entity for which the image should be displayed.<br>
+   * The image is only fetched if this label is currently visible; otherwise the fetch is deferred until this label gets shown (lazy loading).
    *
    * @param mediaEntity
    *          the media entity associated with the person
@@ -56,20 +72,47 @@ public class PersonImageLabel extends ImageLabel {
   public void setPerson(MediaEntity mediaEntity, Person person) {
     clearImage();
 
-    if (mediaEntity != null && person != null && person != this.person) {
-      if (personWorker != null && !personWorker.isDone()) {
-        personWorker.cancel(true);
-      }
+    if (mediaEntity != null && person != null) {
       this.person = person;
-      personWorker = new ActorImageLoader(person, mediaEntity);
-      personWorker.execute();
+      this.mediaEntity = mediaEntity;
+
+      // only fetch the image if this label is visible; otherwise it will be fetched once it gets shown
+      if (isShowing()) {
+        startLoading();
+      }
     }
+  }
+
+  /**
+   * Starts loading the image for the current person (at most once per person)
+   */
+  private void startLoading() {
+    if (person == null || mediaEntity == null || personWorker != null) {
+      return;
+    }
+
+    personWorker = new ActorImageLoader(person, mediaEntity);
+    personWorker.execute();
   }
 
   @Override
   public void clearImage() {
-    super.clearImage();
+    if (personWorker != null && !personWorker.isDone()) {
+      personWorker.cancel(true);
+    }
+    personWorker = null;
     this.person = null;
+    this.mediaEntity = null;
+
+    super.clearImage();
+  }
+
+  @Override
+  public void hierarchyChanged(HierarchyEvent e) {
+    // load a deferred image as soon as this label becomes visible
+    if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+      startLoading();
+    }
   }
 
   /**
@@ -109,7 +152,7 @@ public class PersonImageLabel extends ImageLabel {
         }
       }
 
-      // no file found, try to cache url (if visible, otherwise load on demand in paintComponent)
+      // no file found, try to resolve/cache the url
       if (StringUtils.isNotBlank(actor.getThumbUrl())) {
         if (Settings.getInstance().isImageCache()) {
           Path p = ImageCache.getCachedFile(actor.getThumbUrl());
