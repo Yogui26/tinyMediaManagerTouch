@@ -2266,13 +2266,21 @@ public class MediaFileHelper {
               audioCodec = "DTSHD-MA";
             }
           }
-          if (addFeature.equals("ES")) {
+          else if (addFeature.startsWith("XXCH")) {
+            if (addFeature.endsWith("X")) {
+              audioCodec = "DTS-X";
+            }
+            else {
+              audioCodec = "DTSHD-HRA";
+            }
+          }
+          else if (addFeature.equals("ES")) {
             audioCodec = "DTS-ES";
           }
-          if (addFeature.equals("XBR")) {
+          else if (addFeature.equals("XBR")) {
             audioCodec = "DTSHD-HRA";
           }
-          if (addFeature.equals("X96")) {
+          else if (addFeature.equals("X96")) {
             audioCodec = "DTS-96/24";
           }
           // stays DTS

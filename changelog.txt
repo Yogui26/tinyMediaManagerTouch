@@ -26,6 +26,7 @@ x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling li
 x [Performance] only load actor images if the cast panel is visible
 x [Library] upgraded libmediainfo to 26.10 (https://mediaarea.net/MediaInfo/ChangeLog)
 x [Mediainfo] enhanced detection of channel layout for audio streams
+x [Mediainfo] enhanced detection DTS-HD HRA + DTS:X streams #3350
 x [Jellyfin] fixed duplication of collection numbers in NFO files #3379
 
 
