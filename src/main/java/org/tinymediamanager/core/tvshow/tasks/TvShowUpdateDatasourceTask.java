@@ -59,6 +59,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractFileVisitor;
+import org.tinymediamanager.core.DataSourceUtils;
 import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
@@ -129,6 +130,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private final List<Path>                       dataSources       = new ArrayList<>();
   private final List<Path>                       foldersToUpdate   = new ArrayList<>();
   private final Set<Path>                        nestedDataSources = new HashSet<>();
+  /**
+   * all configured data sources (normalized) - used to resolve which data source owns a given entity
+   */
+  private final Set<Path>                        allDataSources    = new HashSet<>();
 
   private final List<Pattern>                    skipFolders       = new ArrayList<>();
   private final Set<Path>                        filesFound        = new HashSet<>();
@@ -191,12 +196,14 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
 
     // get all datasources from the settings
-    List<Path> datasourcesFromSettings = new ArrayList<>();
     for (String ds : settings.getTvShowDataSource()) {
       if (StringUtils.isNotBlank(ds)) {
-        datasourcesFromSettings.add(Paths.get(ds).normalize().toAbsolutePath());
+        allDataSources.add(Paths.get(ds).normalize().toAbsolutePath());
       }
     }
+
+    // nested data sources own their subtree - they must never be scanned by their parent data source
+    nestedDataSources.addAll(DataSourceUtils.getNestedDataSources(settings.getTvShowDataSource()));
 
     // classify each folder
     for (Path folder : ListUtils.nullSafe(folders)) {
@@ -212,7 +219,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
 
       // check if the folder is exactly a datasource from the settings
-      if (datasourcesFromSettings.contains(normalizedFolder)) {
+      if (allDataSources.contains(normalizedFolder)) {
         // put the datasource into the datasource list
         if (!dataSources.contains(normalizedFolder)) {
           dataSources.add(normalizedFolder);
@@ -220,50 +227,30 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
-      // check if the folder is a subpath of any datasource
-      for (Path ds : datasourcesFromSettings) {
-        if (normalizedFolder.startsWith(ds) && !normalizedFolder.equals(ds)) {
-          // it is a subfolder of this datasource
-          // if the parent datasource is already in the datasource list, skip
-          if (dataSources.contains(ds)) {
-            break;
-          }
-
-          // otherwise, put the first child folder of the datasource into folderToUpdate
-          Path relativePath = ds.relativize(normalizedFolder);
-          Path firstChild = ds.resolve(relativePath.getName(0));
-
-          // some support of basic nesting (like A-Z sub-folders)
-          if (firstChild.getFileName().toString().length() == 1) {
-            firstChild = firstChild.resolve(relativePath.getName(1));
-          }
-
-          if (!foldersToUpdate.contains(firstChild)) {
-            foldersToUpdate.add(firstChild);
-          }
-          break;
-        }
+      // find the deepest datasource this folder belongs to
+      Path parentDataSource = DataSourceUtils.getDeepestDataSource(allDataSources, normalizedFolder);
+      if (parentDataSource == null) {
+        // not matching either condition -> silently skip this path
+        continue;
       }
-      // not matching either condition -> silently skip this path
-    }
 
-    // detect nested data sources and skip them to avoid duplicate TV shows
-    // a nested data source is a subfolder of another data source; it would be mistaken for a TV show
-    // folder and its season folders would be treated as bogus TV shows
-    Set<Path> nestedToSkip = new HashSet<>();
-    for (Path ds : dataSources) {
-      for (Path other : dataSources) {
-        if (ds.startsWith(other) && !ds.equals(other)) {
-          nestedToSkip.add(ds);
-          break;
-        }
+      // if the parent datasource is already in the datasource list, this subfolder is covered by the datasource scan
+      if (dataSources.contains(parentDataSource)) {
+        continue;
       }
-    }
 
-    for (Path ds : nestedToSkip) {
-      LOGGER.warn("Data source '{}' is nested inside another data source - skipping to avoid duplicate TV shows", ds);
-      dataSources.remove(ds);
-      nestedDataSources.add(ds);
+      // otherwise, put the first child folder of the datasource into folderToUpdate
+      Path relativePath = parentDataSource.relativize(normalizedFolder);
+      Path firstChild = parentDataSource.resolve(relativePath.getName(0));
+
+      // some support of basic nesting (like A-Z sub-folders)
+      if (firstChild.getFileName().toString().length() == 1 && relativePath.getNameCount() > 1) {
+        firstChild = firstChild.resolve(relativePath.getName(1));
+      }
+
+      if (!foldersToUpdate.contains(firstChild)) {
+        foldersToUpdate.add(firstChild);
+      }
     }
   }
 
@@ -302,7 +289,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         for (Path dsAsPath : dataSources) {
           // check the special case, that the data source is also an ignore folder
           if (isInSkipFolder(dsAsPath)) {
-            LOGGER.debug("datasource '{}' is also a skipfolder - skipping", dsAsPath);
+            LOGGER.warn("Datasource '{}' is also a skip folder - skipping", dsAsPath);
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(MessageLevel.WARN, "update.datasource", "update.datasource.skipfolder", new String[] { dsAsPath.toString() }));
             continue;
           }
 
@@ -343,6 +333,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             if (isEmpty) {
               // error - continue with next datasource
+              LOGGER.warn("Data source '{}' is not available - skipping", dsAsPath);
               MessageManager.getInstance()
                   .pushMessage(
                       new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { dsAsPath.toString() }));
@@ -352,12 +343,17 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
           for (Path path : rootList) {
             if (Files.isDirectory(path)) {
+              // nested data sources own their subtree - never parse them from the parent data source
+              if (isNestedDataSource(path)) {
+                LOGGER.debug("Skipping nested data source: {}", path);
+                continue;
+              }
 
               // additional datasource/A/show sub dirs!
               if (path.getFileName().toString().length() == 1) {
                 List<Path> subList = listFilesAndDirs(path);
                 for (Path sub : subList) {
-                  if (Files.isDirectory(sub)) {
+                  if (Files.isDirectory(sub) && !isNestedDataSource(sub)) {
                     foundTvShowDirs.add(sub);
                   }
                 }
@@ -419,37 +415,6 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         } // end foreach datasource
       }
 
-      // remove TV shows which have been created by now-skipped nested data sources
-      // (their season folders have been mistaken for TV shows on previous runs)
-      if (!nestedDataSources.isEmpty()) {
-        List<TvShow> showsToRemove = new ArrayList<>();
-        for (TvShow tvShow : new ArrayList<>(tvShowList.getTvShows())) {
-          Path tvShowDs = Paths.get(tvShow.getDataSource()).normalize().toAbsolutePath();
-          if (!nestedDataSources.contains(tvShowDs)) {
-            continue;
-          }
-
-          if (tvShow.isLocked()) {
-            LOGGER.warn("TV show '{}' was created by the nested data source '{}', but is locked - leaving it untouched", tvShow.getPath(),
-                tvShow.getDataSource());
-            continue;
-          }
-
-          LOGGER.warn("Removing TV show '{}' created by the nested data source '{}'", tvShow.getPath(), tvShow.getDataSource());
-          showsToRemove.add(tvShow);
-        }
-
-        for (TvShow tvShow : showsToRemove) {
-          tvShowList.removeTvShow(tvShow);
-        }
-
-        if (!showsToRemove.isEmpty()) {
-          MessageManager.getInstance()
-              .pushMessage(new Message(MessageLevel.WARN, "update.datasource", "update.datasource.nested.removed",
-                  new String[] { String.valueOf(showsToRemove.size()) }));
-        }
-      }
-
       if (!foldersToUpdate.isEmpty()) { // for each selected show
         LOGGER.info("Start \"update data sources\" for selected folders");
         initThreadPool(3, "update");
@@ -491,6 +456,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             if (isEmpty) {
               // error - continue with next datasource
+              LOGGER.warn("Data source '{}' is not available - skipping", dsAsPath);
               MessageManager.getInstance()
                   .pushMessage(
                       new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { dsAsPath.toString() }));
@@ -619,6 +585,32 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
   }
 
+  /**
+   * Checks whether the given TV show now belongs to another data source than the one stored in the show - e.g. when a parent folder of the show has
+   * been added as a data source afterwards. In that case the data source field is updated to the owning data source, and the show must not be cleaned
+   * up by the current (wrong) data source.
+   *
+   * @param tvShow
+   *          the TV show to check
+   * @return true if the TV show belongs to another data source (and the data source field has been updated)
+   */
+  private boolean updateOwningDataSource(TvShow tvShow) {
+    Path owning = DataSourceUtils.getDeepestDataSource(allDataSources, tvShow.getPathNIO());
+    if (owning == null) {
+      return false;
+    }
+
+    if (owning.equals(DataSourceUtils.toPath(tvShow.getDataSource()))) {
+      return false;
+    }
+
+    LOGGER.info("TV show '{}' is located in data source '{}' (was '{}') - updating the data source", tvShow.getTitle(), owning,
+        tvShow.getDataSource());
+    tvShow.setDataSource(owning.toString());
+    tvShow.saveToDb();
+    return true;
+  }
+
   private void cleanup(List<TvShow> shows) {
     setTaskName(TmmResourceBundle.getString("update.cleanup"));
     setTaskDescription(null);
@@ -637,6 +629,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       publishState(showCount - i);
 
       TvShow tvShow = shows.get(i);
+
+      // if the show now lives in another data source, only update the data source field and skip all other cleanup checks
+      if (updateOwningDataSource(tvShow)) {
+        continue;
+      }
 
       // do not process locked TV shows (because filesFound has not been filled for them)
       if (tvShow.isLocked()) {
@@ -946,11 +943,19 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           }
         }
 
+        // set the location before publishing the show, so listeners never observe a show without path/data source
         tvShow.setPath(showDir.toAbsolutePath().toString());
         tvShow.setDataSource(datasource.toString());
         tvShow.setNewlyAdded(true);
         tvShowList.addTvShow(tvShow);
       }
+
+      // keep the location in sync - a TV show found under this data source belongs to it
+      if (!showDir.toAbsolutePath().toString().equals(tvShow.getPath()) || !datasource.toString().equals(tvShow.getDataSource())) {
+        LOGGER.debug("TV show '{}' is now located at '{}' in data source '{}'", tvShow.getTitle(), showDir, datasource);
+      }
+      tvShow.setPath(showDir.toAbsolutePath().toString());
+      tvShow.setDataSource(datasource.toString());
 
       // detect some IDs from show folder
       if (!MediaIdUtil.isValidImdbId(tvShow.getImdbId())) {
@@ -1420,22 +1425,23 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // not so fast - try to parse S/E from remaining first!
       for (MediaFile mf : mfs) {
         // case poster.ext -> do not add to the TV show itself when it is NOT in the TV show root!
-        if (mf.getType() == MediaFileType.POSTER && !mf.getPath().equals(tvShow.getPath())) {
+        if (mf.getType() == MediaFileType.POSTER && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))) {
           // probably season poster
           mf.setType(MediaFileType.SEASON_POSTER);
         }
 
-        if (mf.getType() == MediaFileType.FANART && !mf.getPath().equals(tvShow.getPath())) {
+        if (mf.getType() == MediaFileType.FANART && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))) {
           // probably season fanart
           mf.setType(MediaFileType.SEASON_FANART);
         }
 
-        if (mf.getType() == MediaFileType.BANNER && !mf.getPath().equals(tvShow.getPath())) {
+        if (mf.getType() == MediaFileType.BANNER && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))) {
           // probably season banner
           mf.setType(MediaFileType.SEASON_BANNER);
         }
 
-        if (mf.getType() == MediaFileType.THUMB && !mf.getPath().equals(tvShow.getPath()) && mf.getBasename().matches("^(thumb|landscape)$")) {
+        if (mf.getType() == MediaFileType.THUMB && (!mf.getPath().equals(tvShow.getPath()) || Strings.CI.startsWith(mf.getBasename(), "season"))
+            && mf.getBasename().matches("^(thumb|landscape)$")) {
           // probably season thumb
           mf.setType(MediaFileType.SEASON_THUMB);
         }
@@ -1674,7 +1680,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
      */
     private Set<Path> getAllFilesRecursive(Path path) {
       Path folder = path.toAbsolutePath();
-      AllFilesRecursive visitor = new AllFilesRecursive();
+      AllFilesRecursive visitor = new AllFilesRecursive(folder);
       try {
         Files.walkFileTree(folder, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
       }
@@ -1766,6 +1772,22 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   }
 
   /**
+   * Checks whether the given folder is a configured data source which is nested inside another data source. Such folders are owned by their own data
+   * source and must never be processed while scanning the parent data source.
+   *
+   * @param dir
+   *          the folder to check
+   * @return true if the folder is a nested data source
+   */
+  private boolean isNestedDataSource(Path dir) {
+    if (dir == null) {
+      return false;
+    }
+
+    return nestedDataSources.contains(dir.normalize().toAbsolutePath());
+  }
+
+  /**
    * simple NIO File.listFiles() replacement<br>
    * returns all folders in specified dir (NOT recursive)
    * 
@@ -1803,10 +1825,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
   private class AllFilesRecursive extends AbstractFileVisitor {
     private final List<String>  skipFiles;
+    private final Path          root;
 
     final Map<Path, List<Path>> filesPerDir = new HashMap<>();
 
-    public AllFilesRecursive() {
+    public AllFilesRecursive(Path root) {
+      this.root = root.toAbsolutePath();
       skipFiles = new ArrayList<>(SKIP_FILES);
       if (!TvShowModuleManager.getInstance().getSettings().isSkipFoldersWithNomedia()) {
         skipFiles.remove(".nomedia");
@@ -1891,6 +1915,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         // getFilename returns null on DS root!
         if (dir.getFileName() != null && isInSkipFolder(dir)) {// || containsSkipFile(dir))) {
           LOGGER.debug("Skipping dir: {}", dir);
+          return SKIP_SUBTREE;
+        }
+
+        // never descend into a nested data source - it owns and scans its subtree on its own
+        if (!dir.equals(root) && isNestedDataSource(dir)) {
+          LOGGER.debug("Skipping nested data source: {}", dir);
           return SKIP_SUBTREE;
         }
 

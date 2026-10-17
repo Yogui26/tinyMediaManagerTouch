@@ -24,6 +24,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -72,13 +75,15 @@ public class TmmHttpServerTest extends BasicTest {
   }
 
   /**
-   * Stops the HTTP server again.
+   * Stops the HTTP server again and restores the shutdown state of the singleton instance.
    *
    * @throws Exception
    *           thrown if the server cannot be stopped
    */
   @After
   public void tearDown() throws Exception {
+    httpServer.clearShutdownRequest();
+    httpServer.setExitTerminator(TmmHttpServer::terminateApplication);
     httpServer.updateConfiguration(false, port, "");
   }
 
@@ -227,6 +232,79 @@ public class TmmHttpServerTest extends BasicTest {
     assertThat(response.statusCode()).isEqualTo(500);
   }
 
+  /**
+   * Tests that a gated command context is rejected with 503 as soon as a shutdown has been requested, and that the shutdown is only initiated exactly
+   * once.
+   *
+   * @throws Exception
+   *           thrown on HTTP errors
+   */
+  @Test
+  public void commandContextRejectedAfterShutdownRequested() throws Exception {
+    CapturingHandler handler = registerContext(new CapturingHandler());
+    CountDownLatch terminated = new CountDownLatch(1);
+    httpServer.setExitTerminator(terminated::countDown);
+
+    assertThat(httpServer.requestShutdown(false)).isTrue();
+    assertThat(httpServer.isShuttingDown()).isTrue();
+    assertThat(httpServer.requestShutdown(false)).isFalse();
+
+    HttpResponse<String> response = post(testPath, "[{\"action\":\"update\"}]", null);
+
+    assertThat(response.statusCode()).isEqualTo(503);
+    assertThat(messageOf(response)).contains("shutting down");
+    assertThat(handler.receivedActions).isNull(); // handler was never called
+
+    assertThat(terminated.await(10, TimeUnit.SECONDS)).isTrue();
+  }
+
+  /**
+   * Tests that the ungated system context (e.g. the status query) is still reachable during the shutdown phase, and that the JVM termination happens
+   * after the graceful wait.
+   *
+   * @throws Exception
+   *           thrown on HTTP errors
+   */
+  @Test
+  public void systemContextStaysAvailableDuringShutdown() throws Exception {
+    CountDownLatch terminated = new CountDownLatch(1);
+    httpServer.setExitTerminator(terminated::countDown);
+
+    HttpResponse<String> before = get("system", null);
+    assertThat(before.statusCode()).isEqualTo(200);
+    assertThat(mapper.readTree(before.body()).path("data").path("state").asText()).isEqualTo("RUNNING");
+
+    assertThat(httpServer.requestShutdown(true)).isTrue();
+
+    HttpResponse<String> after = get("system", null);
+    assertThat(after.statusCode()).isEqualTo(200);
+    assertThat(mapper.readTree(after.body()).path("data").path("state").asText()).isEqualTo("SHUTTING_DOWN");
+
+    // the forced shutdown terminates without waiting for tasks
+    assertThat(terminated.await(10, TimeUnit.SECONDS)).isTrue();
+  }
+
+  /**
+   * Tests that the optional payload of a {@link TmmCommandResponse} is sent as {@code data} field, and that responses without payload do not contain
+   * the field at all.
+   *
+   * @throws Exception
+   *           thrown on HTTP errors
+   */
+  @Test
+  public void payloadIsSentAsDataField() throws Exception {
+    CapturingHandler handler = registerContext(new CapturingHandler());
+    handler.payload = Map.of("busy", false);
+
+    HttpResponse<String> withData = post(testPath, "[]", null);
+    assertThat(withData.statusCode()).isEqualTo(200);
+    assertThat(mapper.readTree(withData.body()).path("data").path("busy").asBoolean()).isFalse();
+
+    handler.payload = null;
+    HttpResponse<String> withoutData = post(testPath, "[]", null);
+    assertThat(withoutData.body()).doesNotContain("\"data\"");
+  }
+
   private CapturingHandler registerContext(CapturingHandler handler) {
     httpServer.createContext(testPath, handler);
     return handler;
@@ -278,6 +356,7 @@ public class TmmHttpServerTest extends BasicTest {
     private RuntimeException failWith;
     private int              responseCode    = 200;
     private String           responseMessage = "commands prepared";
+    private Object           payload;
 
     @Override
     public TmmCommandResponse post(HttpExchange httpExchange) throws Exception {

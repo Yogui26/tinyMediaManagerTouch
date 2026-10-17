@@ -121,6 +121,7 @@ public final class Settings extends AbstractSettings {
 
   private boolean                                          imageChooserUseEntityFolder  = false;
   private boolean                                          storeWindowPreferences       = true;
+  private boolean                                          rememberLastSelectedModule   = false;
   private TmmDateFormat.DateFormatStyle                    dateFormatStyle              = TmmDateFormat.DateFormatStyle.NATIVE;
   private TmmDateFormat.TimeFormatStyle                    timeFormatStyle              = TmmDateFormat.TimeFormatStyle.NATIVE;
   private DateField                                        dateField                    = DateField.DATE_ADDED;
@@ -1156,6 +1157,16 @@ public final class Settings extends AbstractSettings {
 
   public boolean isStoreWindowPreferences() {
     return storeWindowPreferences;
+  }
+
+  public void setRememberLastSelectedModule(boolean newValue) {
+    boolean oldValue = rememberLastSelectedModule;
+    rememberLastSelectedModule = newValue;
+    firePropertyChange("rememberLastSelectedModule", oldValue, newValue);
+  }
+
+  public boolean isRememberLastSelectedModule() {
+    return rememberLastSelectedModule;
   }
 
   public boolean isImageChooserUseEntityFolder() {

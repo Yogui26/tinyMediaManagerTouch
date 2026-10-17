@@ -18,9 +18,12 @@ package org.tinymediamanager.core.movie.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -92,29 +95,80 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Path parentDs = getWorkFolder().resolve("testmovies").toAbsolutePath();
     Path nestedDs = parentDs.resolve("Harry Potter");
 
-    // adding a nested data source via the settings API must be rejected
-    assertThat(settings.addMovieDataSources(nestedDs.toString())).isFalse();
-    assertThat(settings.getMovieDataSource()).doesNotContain(nestedDs.toString());
-
-    // simulate an already broken setup (nested data source added before the guard existed)
-    settings.setMovieDataSources(List.of(parentDs.toString(), nestedDs.toString()));
-
-    // and a bogus movie which has been created by the nested data source on a previous run
-    Movie bogusMovie = new Movie();
-    bogusMovie.setDataSource(nestedDs.toString());
-    bogusMovie.setPath(nestedDs.resolve("Nonexistent Movie").toString());
-    bogusMovie.setTitle("Nonexistent Movie");
-    movieList.addMovie(bogusMovie);
+    // adding a data source which is nested inside another one is allowed now
+    assertThat(settings.addMovieDataSources(nestedDs.toString())).isTrue();
+    assertThat(settings.getMovieDataSource()).contains(nestedDs.toString());
 
     MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
     task.run();
 
-    // the bogus movie from a previous run must have been removed
-    assertThat(movieList.getMovies()).noneMatch(movie -> nestedDs.toString().equals(movie.getDataSource()));
+    // the movies inside the nested data source must belong to the nested data source
+    Movie hp1 = movieList.findFirstByPath(nestedDs.resolve("HP7 Deathly Hallows Part 1 (2010)"));
+    assertThat(hp1).isNotNull();
+    assertThat(Paths.get(hp1.getDataSource())).isEqualTo(nestedDs);
 
-    // the movies found via the parent data source must still be present
-    assertThat(movieList.findFirstByPath(nestedDs.resolve("HP7 Deathly Hallows Part 1 (2010)"))).isNotNull();
-    assertThat(movieList.findFirstByPath(nestedDs.resolve("HP7 Deathly Hallows Part 2"))).isNotNull();
+    Movie hp2 = movieList.findFirstByPath(nestedDs.resolve("HP7 Deathly Hallows Part 2"));
+    assertThat(hp2).isNotNull();
+    assertThat(Paths.get(hp2.getDataSource())).isEqualTo(nestedDs);
+
+    // ... and each of them must exist exactly once (no duplicates from the parent scan)
+    assertThat(movieList.findByPath(nestedDs.resolve("HP7 Deathly Hallows Part 1 (2010)"))).hasSize(1);
+    assertThat(movieList.findByPath(nestedDs.resolve("HP7 Deathly Hallows Part 2"))).hasSize(1);
+
+    // movies outside the nested data source still belong to the parent data source
+    Movie parentMovie = movieList.getMovies().stream().filter(movie -> !movie.getPathNIO().startsWith(nestedDs)).findFirst().orElse(null);
+    assertThat(parentMovie).isNotNull();
+    assertThat(Paths.get(parentMovie.getDataSource())).isEqualTo(parentDs);
+  }
+
+  @Test
+  public void udsNestedDatasourceCleanup() throws Exception {
+    MovieSettings settings = MovieModuleManager.getInstance().getSettings();
+    MovieList movieList = MovieModuleManager.getInstance().getMovieList();
+
+    Path parentDs = getWorkFolder().resolve("testmovies").toAbsolutePath();
+    Path nestedDs = parentDs.resolve("Harry Potter");
+    assertThat(settings.addMovieDataSources(nestedDs.toString())).isTrue();
+
+    new MovieUpdateDatasourceTask().run();
+
+    Path removedMovie = nestedDs.resolve("HP7 Deathly Hallows Part 2");
+    assertThat(movieList.findFirstByPath(removedMovie)).isNotNull();
+
+    // remove the movie folder from disk and re-run -> the nested data source must clean up its own entry
+    FileUtils.deleteDirectory(removedMovie.toFile());
+
+    new MovieUpdateDatasourceTask().run();
+
+    assertThat(movieList.findFirstByPath(removedMovie)).isNull();
+    assertThat(movieList.getMovies()).noneMatch(movie -> movie.getPathNIO().equals(removedMovie));
+  }
+
+  @Test
+  public void udsNestedDatasourceReassignsStaleMovie() throws Exception {
+    MovieSettings settings = MovieModuleManager.getInstance().getSettings();
+    MovieList movieList = MovieModuleManager.getInstance().getMovieList();
+
+    Path parentDs = getWorkFolder().resolve("testmovies").toAbsolutePath();
+    Path nestedDs = parentDs.resolve("Harry Potter");
+
+    // first scan with only the parent data source - the HP movies are stored with the parent data source
+    new MovieUpdateDatasourceTask().run();
+
+    Path hpMovie = nestedDs.resolve("HP7 Deathly Hallows Part 1 (2010)");
+    Movie hp1 = movieList.findFirstByPath(hpMovie);
+    assertThat(hp1).isNotNull();
+    assertThat(Paths.get(hp1.getDataSource())).isEqualTo(parentDs);
+
+    // add the parent folder of the movie as a data source afterwards
+    assertThat(settings.addMovieDataSources(nestedDs.toString())).isTrue();
+
+    // update only the parent data source - the cleanup must update the data source field and keep the movie
+    new MovieUpdateDatasourceTask(List.of(parentDs)).run();
+
+    hp1 = movieList.findFirstByPath(hpMovie);
+    assertThat(hp1).isNotNull();
+    assertThat(Paths.get(hp1.getDataSource())).isEqualTo(nestedDs);
   }
 
   private void showEntries() throws Exception {
@@ -236,6 +290,30 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Movie movie = MovieModuleManager.getInstance().getMovieList().findFirstByPath(testMoviesFolder.resolve(relativeMovieFolder));
     assertEqual("Movie not found for folder: " + relativeMovieFolder, false, movie == null);
     return movie;
+  }
+
+  /**
+   * A skiptro sidecar ("&lt;video basename&gt;.skiptro.json") must be detected as {@link MediaFileType#SKIPTRO} and associated to the movie,
+   * otherwise it would neither show up in the GUI nor be moved along with the video when renaming.
+   */
+  @Test
+  public void udsSkiptroSidecarIsAttached() throws Exception {
+    Path skiptroDs = getWorkFolder().resolve("skiptrods").toAbsolutePath();
+    Path movieFolder = skiptroDs.resolve("Test Movie (2020)");
+    Files.createDirectories(movieFolder);
+    Files.createFile(movieFolder.resolve("testmovie.mkv"));
+    Files.writeString(movieFolder.resolve("testmovie.skiptro.json"), "{ \"intro\": { \"start\": 0, \"end\": 87.5 } }");
+
+    MovieModuleManager.getInstance().getSettings().addMovieDataSources(skiptroDs.toString());
+
+    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    task.run();
+
+    Movie movie = getMovieByFolder(skiptroDs, "Test Movie (2020)");
+
+    List<MediaFile> skiptroFiles = movie.getMediaFiles(MediaFileType.SKIPTRO);
+    assertEqual("skiptro sidecar not associated to the movie", 1, skiptroFiles.size());
+    assertEqual("unexpected skiptro filename", "testmovie.skiptro.json", skiptroFiles.get(0).getFilename());
   }
 
   /**

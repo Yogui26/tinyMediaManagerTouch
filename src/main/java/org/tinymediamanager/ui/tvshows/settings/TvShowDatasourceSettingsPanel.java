@@ -103,9 +103,6 @@ class TvShowDatasourceSettingsPanel extends JPanel {
           TmmProperties.getInstance().putProperty("tvshow.datasource.path", file.toAbsolutePath().toString());
           panelDatasources.revalidate();
         }
-        else {
-          TmmToastManager.showErrorToast(this, TmmResourceBundle.getString("Settings.datasource.nested"));
-        }
       }
     });
 

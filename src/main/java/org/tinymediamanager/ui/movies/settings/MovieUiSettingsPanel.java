@@ -32,21 +32,26 @@ import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Window;
 import java.awt.event.ItemListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jdesktop.beansbinding.AutoBinding;
@@ -59,6 +64,7 @@ import org.jdesktop.swingbinding.SwingBindings;
 import org.tinymediamanager.core.AbstractSettings;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.movie.MovieCustomColumn;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSettings;
@@ -72,7 +78,19 @@ import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
 import org.tinymediamanager.ui.components.label.JHintLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
+import org.tinymediamanager.ui.components.table.CustomColumnEditorPanel;
+import org.tinymediamanager.ui.components.table.CustomColumnLevel;
+import org.tinymediamanager.ui.components.table.CustomColumnTable;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
+import org.tinymediamanager.ui.movies.dialogs.MovieJmteExplorerDialog;
+import org.tinymediamanager.ui.panels.IModalPopupPanelProvider;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
+import org.tinymediamanager.ui.panels.ScrollablePanel;
 
+import ca.odell.glazedlists.BasicEventList;
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.GlazedLists;
+import ca.odell.glazedlists.ObservableElementList;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -80,10 +98,18 @@ import net.miginfocom.swing.MigLayout;
  * 
  * @author Manuel Laggner
  */
-class MovieUiSettingsPanel extends JPanel {
-  private static final int                                 COL_COUNT = 7;
+class MovieUiSettingsPanel extends ScrollablePanel {
+  private static final int                                        COL_COUNT             = 7;
 
-  private final MovieSettings                              settings  = MovieModuleManager.getInstance().getSettings();
+  /** the hierarchy levels a movie table custom column carries a JMTE pattern for */
+  private static final List<CustomColumnLevel<MovieCustomColumn>> CUSTOM_COLUMN_LEVELS  = List
+      .of(new CustomColumnLevel<>("Settings.movie.customcolumns.pattern", "Settings.movie.customcolumns.pattern.hint", MovieCustomColumn::getPattern,
+          MovieCustomColumn::setPattern));
+
+  /** the JMTE explorer of a custom column, without the renamer profile import/export */
+  private static final Function<Window, JDialog>                  JMTE_EXPLORER_FACTORY = window -> new MovieJmteExplorerDialog(window, true);
+
+  private final MovieSettings                                     settings              = MovieModuleManager.getInstance().getSettings();
   private AutocompleteComboBox<String>                     cbRating;
   private JCheckBox                                        chckbxMovieTableTooltips;
 
@@ -127,7 +153,18 @@ class MovieUiSettingsPanel extends JPanel {
   private final Map<MovieScraperMetadataConfig, JCheckBox> artworkCheckBoxes;
   private final ItemListener                               checkBoxListener;
 
+  /** the view onto the freely configurable movie table columns */
+  private final EventList<MovieCustomColumn>                      customColumnEventList;
+  private CustomColumnTable<MovieCustomColumn>                    tableCustomColumns;
+  private JButton                                                 btnAddCustomColumn;
+  private JButton                                                 btnRemoveCustomColumn;
+  private JButton                                                 btnMoveCustomColumnUp;
+  private JButton                                                 btnMoveCustomColumnDown;
+
   public MovieUiSettingsPanel() {
+    customColumnEventList = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()),
+        GlazedLists.beanConnector(MovieCustomColumn.class));
+
     metadataCheckBoxes = new LinkedHashMap<>();
     artworkCheckBoxes = new LinkedHashMap<>();
     checkBoxListener = e -> checkChanges();
@@ -197,6 +234,103 @@ class MovieUiSettingsPanel extends JPanel {
     });
 
     buildCheckBoxes();
+    buildCustomColumns();
+  }
+
+  /**
+   * Fills the viewport while there is room for the whole content, but keeps our preferred width once the dialog gets too narrow. Otherwise the outer
+   * scroll pane could never show a horizontal scroll bar and the content would be clipped.
+   */
+  @Override
+  public boolean getScrollableTracksViewportWidth() {
+    return getParent() != null && getParent().getWidth() >= getPreferredSize().width;
+  }
+
+  /**
+   * Wires the buttons of the freely configurable movie table columns. Every change goes through the settings, so the movie table always sees the very
+   * same data the user sees here.
+   */
+  private void buildCustomColumns() {
+    refreshCustomColumnEventList();
+
+    // a change somewhere else (or a structural change done by these very buttons) always comes back here
+    settings.addPropertyChangeListener(event -> {
+      if (MovieSettings.CUSTOM_COLUMNS.equals(event.getPropertyName())) {
+        SwingUtilities.invokeLater(() -> {
+          refreshCustomColumnEventList();
+          tableCustomColumns.repaint();
+        });
+      }
+    });
+
+    btnAddCustomColumn.addActionListener(e -> {
+      MovieCustomColumn customColumn = new MovieCustomColumn();
+      showCustomColumnEditor(customColumn, () -> settings.addCustomColumn(customColumn));
+    });
+
+    btnRemoveCustomColumn.addActionListener(e -> {
+      int row = tableCustomColumns.convertRowIndexToModel(tableCustomColumns.getSelectedRow());
+      if (row >= 0 && row < customColumnEventList.size()) {
+        settings.removeCustomColumn(customColumnEventList.get(row));
+      }
+    });
+
+    btnMoveCustomColumnUp.addActionListener(e -> {
+      int row = tableCustomColumns.convertRowIndexToModel(tableCustomColumns.getSelectedRow());
+      if (row > 0) {
+        settings.swapCustomColumns(row, row - 1);
+        tableCustomColumns.getSelectionModel().setSelectionInterval(row - 1, row - 1);
+      }
+    });
+
+    btnMoveCustomColumnDown.addActionListener(e -> {
+      int row = tableCustomColumns.convertRowIndexToModel(tableCustomColumns.getSelectedRow());
+      if (row >= 0 && row < customColumnEventList.size() - 1) {
+        settings.swapCustomColumns(row, row + 1);
+        tableCustomColumns.getSelectionModel().setSelectionInterval(row + 1, row + 1);
+      }
+    });
+  }
+
+  /**
+   * Brings the table of the freely configurable columns back in sync with the settings.
+   */
+  private void refreshCustomColumnEventList() {
+    customColumnEventList.clear();
+    customColumnEventList.addAll(settings.getCustomColumns());
+
+    adjustCustomColumnWidths();
+  }
+
+  /**
+   * Gives the columns of the custom column table the width they need - which can only be done while the table actually holds rows.
+   */
+  private void adjustCustomColumnWidths() {
+    tableCustomColumns.adjustColumnPreferredWidths(3);
+  }
+
+  /**
+   * Opens the popup to configure one freely configurable column.
+   *
+   * @param customColumn
+   *          the column to configure
+   * @param onSaved
+   *          what to do when the popup has been closed with the save button
+   */
+  private void showCustomColumnEditor(MovieCustomColumn customColumn, Runnable onSaved) {
+    IModalPopupPanelProvider modalPopupPanelProvider = IModalPopupPanelProvider.findModalProvider(this);
+    if (modalPopupPanelProvider == null) {
+      return;
+    }
+
+    ModalPopupPanel popupPanel = modalPopupPanelProvider.createModalPopupPanel();
+    popupPanel.setTitle(TmmResourceBundle.getString("Settings.movie.customcolumns"));
+
+    popupPanel.setOnCloseHandler(onSaved);
+    popupPanel.setContent(
+        new CustomColumnEditorPanel<>(customColumn, "Settings.movie.customcolumns.title.hint", CUSTOM_COLUMN_LEVELS, JMTE_EXPLORER_FACTORY));
+
+    modalPopupPanelProvider.showModalPopupPanel(popupPanel);
   }
 
   private void checkChanges() {
@@ -628,6 +762,50 @@ class MovieUiSettingsPanel extends JPanel {
       }
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/movies/settings#filters"));
       add(collapsiblePanel, "cell 0 2,growx,wmin 0");
+    }
+
+    addCustomColumnPanel();
+  }
+
+  private void addCustomColumnPanel() {
+    JPanel panelCustomColumns = new JPanel();
+    panelCustomColumns.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][450lp,grow]10lp[50lp,grow]", "[][]"));
+
+    JLabel lblCustomColumns = new TmmLabel(TmmResourceBundle.getString("Settings.movie.customcolumns"), H3);
+    CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelCustomColumns, lblCustomColumns, true);
+    collapsiblePanel.addExtraTitleComponent(new DocsButton("/movies/settings#ui-settings"));
+    add(collapsiblePanel, "cell 0 4,growx,wmin 0");
+
+    JTextArea lblHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.movie.customcolumns.hint"), true);
+    panelCustomColumns.add(lblHint, "cell 1 0 2 1,growx,wmin 0");
+
+    {
+      tableCustomColumns = new CustomColumnTable<>(customColumnEventList, CUSTOM_COLUMN_LEVELS) {
+        @Override
+        protected void editButtonClicked(int row) {
+          // the row is already a model row, the editor popup must not be opened for a stale index
+          if (row >= 0 && row < customColumnEventList.size()) {
+            showCustomColumnEditor(customColumnEventList.get(row), MovieUiSettingsPanel.this::adjustCustomColumnWidths);
+          }
+        }
+      };
+      // no scroll pane here: the table shows all its rows and the settings panel itself does the scrolling
+      panelCustomColumns.add(tableCustomColumns.createComponent(), "cell 1 1,grow");
+    }
+    {
+      btnAddCustomColumn = new SquareIconButton(IconManager.ADD_INV);
+      btnAddCustomColumn.setToolTipText(TmmResourceBundle.getString("Settings.movie.customcolumns.add"));
+      panelCustomColumns.add(btnAddCustomColumn, "flowy,cell 2 1,aligny top");
+
+      btnRemoveCustomColumn = new SquareIconButton(IconManager.REMOVE_INV);
+      btnRemoveCustomColumn.setToolTipText(TmmResourceBundle.getString("Settings.movie.customcolumns.remove"));
+      panelCustomColumns.add(btnRemoveCustomColumn, "cell 2 1");
+
+      btnMoveCustomColumnUp = new SquareIconButton(IconManager.ARROW_UP_INV);
+      panelCustomColumns.add(btnMoveCustomColumnUp, "cell 2 1");
+
+      btnMoveCustomColumnDown = new SquareIconButton(IconManager.ARROW_DOWN_INV);
+      panelCustomColumns.add(btnMoveCustomColumnDown, "cell 2 1");
     }
   }
 

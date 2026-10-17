@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.mediainfo.MediaInfoException;
 import org.tinymediamanager.thirdparty.MediaInfoLibrary.SizeT;
 
@@ -85,8 +86,10 @@ public class MediaInfo implements Closeable {
     }
 
     if (file != null && isLoaded()) {
-      LOGGER.trace("MediaInfo open file: {}", file.toAbsolutePath().toString());
-      return MediaInfoLibrary.INSTANCE.Open(handle, new WString(file.toAbsolutePath().toString())).intValue() > 0;
+      // on macOS, paths on non-APFS volumes (e.g. SMB/NFS mounts) need the NFD form the OS exposes, otherwise the native open fails with ENOENT
+      String filePath = Utils.adaptForNativeAccess(file).toAbsolutePath().toString();
+      LOGGER.trace("MediaInfo open file: {}", filePath);
+      return MediaInfoLibrary.INSTANCE.Open(handle, new WString(filePath)).intValue() > 0;
     }
     else {
       return false;

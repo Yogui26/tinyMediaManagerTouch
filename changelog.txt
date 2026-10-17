@@ -1,3 +1,36 @@
+Version 5.3.5
+=======================
++ [Core] added a housekeeping action to remove abandoned entries from the database
++ [Movies, TV shows] it is now possible to add a data source inside another data source
++ [Movies, TV shows] added support for Kodi skiptro sidecar files (*.skiptro.json) #3384 - thx @nice42q
++ [TV shows, Movie Sets] added an action to remove the missing episodes/movies from the selected TV shows/movie sets
++ [UI] added freely configurable columns to the movie/movie set/TV show table, which get their content from your own JMTE patterns
+  You can add, rename and arrange these columns in settings, then enable them in the table
++ [UI] added a value caching mechanism for the movie/movie set/TV show table to improve performance
++ [UI] the notification button shows a red dot as soon as there are new messages
++ [UI] added an option to remember the last used module and restore it on startup #3306
++ [API] added a system endpoint (/api/system) to query the current status and to shut tinyMediaManager down automatically after the last task has finished
++ [API] added scope parameters to select movies/TV shows/episodes by their external IDs (TMDB/IMDb for movies, TVDB/TMDB/IMDb for TV shows)
++ [API] added an action to set the watched state of movies and episodes
++ [Simkl] switched the Simkl.com sign-in to the new OAuth 2.0 device flow (AUTH V2) - your browser opens the Simkl.com approval page, you only have to click allow
+  Existing connections keep working, but Simkl retires the old sign-in around April 2027 - please connect to Simkl.com once again in the settings
++ [Template] added three new templates: ModernMovies, ModernCollections and ModernTVShows - thx @Johnnydement
+---
+x [Core] do not abort image cache upgrade tasks on URL parse error #3373
+x [Movies, TV shows] every data source which gets skipped during "update data sources" now shows up as a notification #3377
+x [Movie Sets] fixed an application freeze when deleting movie sets #3378
+x [Movie Sets] fixed exporting of movie sets with file separators in their name #3369
+x [TV shows] fixed wrong media type detection of unsupported season poster namings
+x [UI] fixed some drawing issues in partially empty tables
+x [UI] the low memory indicator now scales its warning threshold to the heap size to avoid false alarms on large installations
+x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling libmediainfo #3376
+x [Performance] only load actor images if the cast panel is visible
+x [Library] upgraded libmediainfo to 26.10 (https://mediaarea.net/MediaInfo/ChangeLog)
+x [Mediainfo] enhanced detection of channel layout for audio streams
+x [Mediainfo] enhanced detection DTS-HD HRA + DTS:X streams #3350
+x [Jellyfin] fixed duplication of collection numbers in NFO files #3379
+
+
 Version 5.3.4
 =======================
 + [Movies] added TVDB to the available scrapers in the universal scraper

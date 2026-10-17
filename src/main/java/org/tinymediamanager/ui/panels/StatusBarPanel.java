@@ -85,11 +85,9 @@ public class StatusBarPanel extends JPanel implements TmmTaskListener {
     });
     // listener for settings change
 
-    settings.addPropertyChangeListener(evt -> {
-      memoryUsagePanel.setVisible(settings.isShowMemory());
-    });
+    settings.addPropertyChangeListener(evt -> memoryUsagePanel.setVisible(settings.isShowMemory()));
 
-    // pre-load the dialog (to fetch all events)
+    // preload the dialog (to fetch all events)
     TaskListDialog.getInstance();
   }
 

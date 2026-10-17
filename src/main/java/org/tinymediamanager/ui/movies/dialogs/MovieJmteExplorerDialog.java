@@ -141,7 +141,26 @@ public class MovieJmteExplorerDialog extends TmmDialog {
   private MovieRenamerProfile              renamerProfile;
   private Engine                           engine;
 
+  /**
+   * Creates the JMTE explorer.
+   *
+   * @param owner
+   *          the owner of this dialog
+   */
   public MovieJmteExplorerDialog(Window owner) {
+    this(owner, false);
+  }
+
+  /**
+   * Creates the JMTE explorer.
+   *
+   * @param owner
+   *          the owner of this dialog
+   * @param withoutRenamerProfile
+   *          true when the worked out pattern is <b>not</b> meant for the renamer, e.g. for a custom table column. The import/export of the renamer
+   *          profiles is hidden in this case, as it would not help the user at all.
+   */
+  public MovieJmteExplorerDialog(Window owner, boolean withoutRenamerProfile) {
     super(owner, TmmResourceBundle.getString("jmteexplorer.title"), "moviejmteexplorer");
     setMinimumSize(new Dimension(900, 600));
 
@@ -150,7 +169,7 @@ public class MovieJmteExplorerDialog extends TmmDialog {
     this.engine = MovieRenamer.createEngine(renamerProfile);
     this.buttonGroup = new ButtonGroup();
 
-    if (owner instanceof SettingsDialog) {
+    if (owner instanceof SettingsDialog && !withoutRenamerProfile) {
       renamerMode = true;
     }
     else {

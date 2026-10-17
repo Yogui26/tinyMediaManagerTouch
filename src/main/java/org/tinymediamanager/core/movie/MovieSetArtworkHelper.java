@@ -901,32 +901,51 @@ public class MovieSetArtworkHelper {
       Utils.deleteFileSafely(mediaFile.getFile());
     }
 
-    // and also remove any empty subfolders from the artwork folder
-    if (StringUtils.isBlank(MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder())) {
+    // and also remove the now maybe empty folder(s) of this movie set from the artwork folder
+    Path movieSetArtworkFolder = getArtworkFolder();
+    if (movieSetArtworkFolder == null) {
       return;
     }
 
-    Path movieSetArtworkFolder = Paths.get(MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder());
-    List<Path> subfolders;
+    Set<String> folderNames = getMovieSetFolderNamesForStorage(movieSet);
     try (Stream<Path> stream = Files.walk(movieSetArtworkFolder, 1)) {
-      subfolders = stream.filter(Files::isDirectory).toList();
+      stream.filter(Files::isDirectory)
+          .filter(path -> !path.equals(movieSetArtworkFolder))
+          .filter(path -> folderNames.contains(path.getFileName().toString()))
+          .forEach(path -> {
+            try {
+              Utils.deleteEmptyDirectoryRecursive(path);
+            }
+            catch (Exception e) {
+              LOGGER.warn("Could not clean empty movie set folder '{}' - '{}'", path, e.getMessage());
+            }
+          });
     }
     catch (Exception e) {
-      LOGGER.warn("Could not clean movie set artwork subfolders '{}' - '{}'", movieSetArtworkFolder, e.getMessage());
-      return;
+      LOGGER.warn("Could not scan movie set artwork folder '{}' - '{}'", movieSetArtworkFolder, e.getMessage());
     }
+  }
 
-    for (Path path : subfolders) {
-      if (path.equals(movieSetArtworkFolder)) {
+  /**
+   * collect all possible folder names for the given {@link MovieSet} (all supported naming styles, with and without TMDB ID)
+   *
+   * @param movieSet
+   *          the movie set to get the folder names for
+   * @return the set of possible folder names
+   */
+  private static Set<String> getMovieSetFolderNamesForStorage(MovieSet movieSet) {
+    Set<String> names = new TreeSet<>();
+    for (String name : List.of(getMovieSetTitleForStorage(movieSet), getMovieSetTitleForStorage(movieSet, "_"),
+        getMovieSetTitleForStorage(movieSet, " "))) {
+      if (StringUtils.isBlank(name)) {
         continue;
       }
-      try {
-        Utils.deleteEmptyDirectoryRecursive(path);
-      }
-      catch (Exception e) {
-        LOGGER.warn("Could not clean empty subfolder '{}' - '{}'", path, e.getMessage());
+      names.add(name);
+      if (movieSet.getTmdbId() > 0) {
+        names.add(name + "-tmdb-" + movieSet.getTmdbId());
       }
     }
+    return names;
   }
 
   public static boolean hasMissingArtwork(MovieSet movieSet) {

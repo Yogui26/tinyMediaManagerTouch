@@ -74,6 +74,16 @@ final class TmmTreeTableEventBroadcaster implements TableModelListener, TreeMode
     return getModel().getTableModel();
   }
 
+  /**
+   * Fires a structural change of the columns to everybody listening to the table model, so that the table recreates its columns. This is the only
+   * event which does not originate from the tree, and it goes straight to the table listeners - the tree itself is not affected by a new column set.
+   */
+  public void fireTableStructureChanged() {
+    assert SwingUtilities.isEventDispatchThread();
+
+    fireTableChange(new TableModelEvent(getModel(), TableModelEvent.HEADER_ROW));
+  }
+
   public synchronized void addTableModelListener(TableModelListener l) {
     tableListeners.add(l);
   }

@@ -21,7 +21,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 
+import org.junit.After;
 import org.junit.Test;
 import org.tinymediamanager.core.Utils;
 
@@ -50,6 +53,167 @@ public class MovieSettingsTest extends BasicMovieTest {
     Path settingsFolder = getWorkFolder().resolve("settings/movie_renamer_loading");
     MovieSettings settings = MovieSettings.getInstance(settingsFolder.toAbsolutePath().toString());
     assertThat(settings.getMovieDataSource()).isNotEmpty();
+  }
+
+  @Test
+  public void testCustomColumnsOnLegacySettings() throws Exception {
+    copyResourceFolderToWorkFolder("settings/movie_renamer_loading");
+
+    Path settingsFolder = getWorkFolder().resolve("settings/movie_renamer_loading");
+    MovieSettings settings = MovieSettings.getInstance(settingsFolder.toAbsolutePath().toString());
+
+    // a settings file which does not know anything about custom columns simply has no custom columns at all
+    assertThat(settings.getCustomColumns()).isEmpty();
+    assertThat(settings.getMovieSetCustomColumns()).isEmpty();
+  }
+
+  @Test
+  public void testCustomColumnsAddRemoveAndSwap() {
+    MovieSettings settings = MovieSettings.getInstance();
+    settings.setCustomColumns(new ArrayList<>());
+
+    MovieCustomColumn first = new MovieCustomColumn("first", "${title}");
+    MovieCustomColumn second = new MovieCustomColumn("second", "${year}");
+    MovieCustomColumn third = new MovieCustomColumn("third", "${rated}");
+
+    settings.addCustomColumn(first);
+    settings.addCustomColumn(second);
+    settings.addCustomColumn(third);
+    assertThat(settings.getCustomColumns()).containsExactly(first, second, third);
+
+    settings.swapCustomColumns(0, 2);
+    assertThat(settings.getCustomColumns()).containsExactly(third, second, first);
+
+    // an out of range swap is simply ignored
+    settings.swapCustomColumns(0, 7);
+    assertThat(settings.getCustomColumns()).containsExactly(third, second, first);
+
+    settings.removeCustomColumn(second);
+    assertThat(settings.getCustomColumns()).containsExactly(third, first);
+
+    // the ids of the surviving columns are untouched, so their table state stays intact
+    assertThat(third.getColumnIdentifier()).startsWith(MovieCustomColumn.COLUMN_IDENTIFIER_PREFIX);
+    assertThat(first.getColumnIdentifier()).startsWith(MovieCustomColumn.COLUMN_IDENTIFIER_PREFIX);
+  }
+
+  @Test
+  public void testCustomColumnsWithoutIdAreToldApart() {
+    MovieSettings settings = MovieSettings.getInstance();
+
+    // a hand-tuned settings file can simply leave the id out - these two must never be mistaken for each other
+    MovieCustomColumn first = new MovieCustomColumn("first", "${title}");
+    MovieCustomColumn second = new MovieCustomColumn("second", "${year}");
+    first.setId("");
+    second.setId("");
+
+    assertThat(first.getColumnIdentifier()).isNotEqualTo(second.getColumnIdentifier());
+    assertThat(first).isNotEqualTo(second);
+
+    settings.setCustomColumns(new ArrayList<>(Arrays.asList(first, second)));
+    settings.removeCustomColumn(second);
+    assertThat(settings.getCustomColumns()).containsExactly(first);
+  }
+
+  @Test
+  public void testCustomColumnsWithDuplicatedIdGetHealedOnLoad() {
+    MovieSettings settings = MovieSettings.getInstance();
+
+    MovieCustomColumn first = new MovieCustomColumn("first", "${title}");
+    MovieCustomColumn second = new MovieCustomColumn("second", "${year}");
+    second.setId(first.getId());
+
+    settings.setCustomColumns(new ArrayList<>(Arrays.asList(first, second)));
+    assertThat(first.getColumnIdentifier()).isEqualTo(second.getColumnIdentifier());
+
+    final String duplicatedId = first.getId();
+
+    // this is what the settings loader calls right after the deserialization
+    settings.afterLoading();
+
+    // the first column keeps its id, only the duplicate gets a fresh one
+    assertThat(first.getId()).isEqualTo(duplicatedId);
+    assertThat(second.getId()).isNotEqualTo(duplicatedId);
+    assertThat(first.getColumnIdentifier()).isNotEqualTo(second.getColumnIdentifier());
+    assertThat(settings.getCustomColumns()).containsExactly(first, second);
+  }
+
+  @Test
+  public void testMovieSetCustomColumnsAddRemoveAndSwap() {
+    MovieSettings settings = MovieSettings.getInstance();
+    settings.setMovieSetCustomColumns(new ArrayList<>());
+
+    MovieCustomColumn first = new MovieCustomColumn("first", "${movie.title}");
+    first.setSetPattern("${movieSet.title}");
+    MovieCustomColumn second = new MovieCustomColumn("second", "${movie.year}");
+
+    settings.addMovieSetCustomColumn(first);
+    settings.addMovieSetCustomColumn(second);
+    assertThat(settings.getMovieSetCustomColumns()).containsExactly(first, second);
+
+    settings.swapMovieSetCustomColumns(0, 1);
+    assertThat(settings.getMovieSetCustomColumns()).containsExactly(second, first);
+
+    // an out of range swap is simply ignored
+    settings.swapMovieSetCustomColumns(0, 7);
+    assertThat(settings.getMovieSetCustomColumns()).containsExactly(second, first);
+
+    settings.removeMovieSetCustomColumn(first);
+    assertThat(settings.getMovieSetCustomColumns()).containsExactly(second);
+
+    // a column which only knows the movie level is still worth showing in the hierarchical movie set table
+    assertThat(second.isConfiguredForSets()).isTrue();
+    second.setPattern("");
+    assertThat(second.isConfiguredForSets()).isFalse();
+    second.setSetPattern("${movieSet.plot}");
+    assertThat(second.isConfiguredForSets()).isTrue();
+  }
+
+  @Test
+  public void testCustomColumnsWithDuplicatedIdGetHealedAcrossBothTables() {
+    MovieSettings settings = MovieSettings.getInstance();
+
+    MovieCustomColumn movieColumn = new MovieCustomColumn("movie", "${movie.title}");
+    MovieCustomColumn setColumn = new MovieCustomColumn("set", "");
+    setColumn.setId(movieColumn.getId());
+
+    settings.setCustomColumns(new ArrayList<>(Arrays.asList(movieColumn)));
+    settings.setMovieSetCustomColumns(new ArrayList<>(Arrays.asList(setColumn)));
+
+    // both tables derive their table column identifiers from the very same prefix, so a duplicate needs to be healed even across lists
+    assertThat(movieColumn.getColumnIdentifier()).isEqualTo(setColumn.getColumnIdentifier());
+    final String duplicatedId = movieColumn.getId();
+
+    settings.afterLoading();
+
+    assertThat(movieColumn.getId()).isEqualTo(duplicatedId);
+    assertThat(setColumn.getId()).isNotEqualTo(duplicatedId);
+    assertThat(movieColumn.getColumnIdentifier()).isNotEqualTo(setColumn.getColumnIdentifier());
+  }
+
+  @Test
+  public void testMovieSetCustomColumnsPersistence() throws Exception {
+    MovieSettings settings = MovieModuleManager.getInstance().getSettings();
+
+    MovieCustomColumn customColumn = new MovieCustomColumn();
+    customColumn.setTitle("Runtime of the set");
+    customColumn.setSetPattern("${movieSet.title}");
+    customColumn.setPattern("${movie.runtime}");
+    settings.setMovieSetCustomColumns(new ArrayList<>(Arrays.asList(customColumn)));
+
+    // let the dirty flag set by the async propertychange listener
+    Thread.sleep(100);
+    settings.saveSettings();
+
+    String config = Utils.readFileToString(getSettingsFolder().resolve(settings.getConfigFilename()));
+    assertThat(config).contains("\"movieSetCustomColumns\"");
+    assertThat(config).contains("\"setPattern\" : \"${movieSet.title}\"");
+  }
+
+  @After
+  public void resetCustomColumns() {
+    MovieSettings settings = MovieSettings.getInstance();
+    settings.setCustomColumns(new ArrayList<>());
+    settings.setMovieSetCustomColumns(new ArrayList<>());
   }
 
   @Test

@@ -1116,7 +1116,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     // get audio stream with highest channel count
     MediaFileAudioStream highestStream = getDefaultOrBestAudioStream();
     if (highestStream != null) {
-      channels = MediaFileHelper.audioChannelInDotNotation(highestStream.getAudioChannels());
+      channels = MediaFileHelper.audioChannelInDotNotation(highestStream.getAudioChannels(), highestStream.getChannelConfiguration());
     }
 
     return channels;
@@ -1144,7 +1144,34 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     List<String> audioChannels = new ArrayList<>();
 
     for (MediaFileAudioStream stream : ListUtils.nullSafe(audioStreams)) {
-      audioChannels.add(MediaFileHelper.audioChannelInDotNotation(stream.getAudioChannels()));
+      audioChannels.add(MediaFileHelper.audioChannelInDotNotation(stream.getAudioChannels(), stream.getChannelConfiguration()));
+    }
+    return audioChannels;
+  }
+
+  /**
+   * gets the audio channels in long notation showing all channels including height channels<br>
+   * Examples: 5.1.2, 7.1.4
+   *
+   * @return the audio channels in x.y.z format
+   */
+  public String getAudioChannelsLong() {
+    String channels = "";
+
+    // get audio stream with highest channel count
+    MediaFileAudioStream highestStream = getDefaultOrBestAudioStream();
+    if (highestStream != null) {
+      channels = MediaFileHelper.audioChannelInLongNotation(highestStream.getAudioChannels(), highestStream.getChannelConfiguration());
+    }
+
+    return channels;
+  }
+
+  public List<String> getAudioChannelsLongList() {
+    List<String> audioChannels = new ArrayList<>();
+
+    for (MediaFileAudioStream stream : ListUtils.nullSafe(audioStreams)) {
+      audioChannels.add(MediaFileHelper.audioChannelInLongNotation(stream.getAudioChannels(), stream.getChannelConfiguration()));
     }
     return audioChannels;
   }

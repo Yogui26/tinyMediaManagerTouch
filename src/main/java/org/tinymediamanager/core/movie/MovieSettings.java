@@ -23,12 +23,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jdesktop.observablecollections.ObservableCollections;
@@ -75,6 +79,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork.FanartSizes;
 import org.tinymediamanager.scraper.entities.MediaArtwork.PosterSizes;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.rating.RatingProvider;
+import org.tinymediamanager.scraper.util.ListUtils;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -98,7 +103,10 @@ public final class MovieSettings extends AbstractSettings {
    */
   public static final String                MOVIE_UI_FILTER_PRESETS        = "movieUiFilterPresets";
   public static final String                MOVIE_SET_UI_FILTER_PRESETS    = "movieSetUiFilterPresets";
-  static final String                       RENAMER_PROFILES               = "renamerProfiles";
+  public static final String                MOVIE_SET_CUSTOM_COLUMNS       = "movieSetCustomColumns";
+  public static final String                CUSTOM_COLUMNS                 = "customColumns";
+  public static final String                CUSTOM_COLUMN_CONTENT          = "customColumnContent";
+  public static final String                RENAMER_PROFILES               = "renamerProfiles";
   static final String                       MOVIE_DATA_SOURCE              = "movieDataSource";
   static final String                       NFO_FILENAME                   = "nfoFilename";
   static final String                       POSTER_FILENAME                = "posterFilename";
@@ -261,6 +269,7 @@ public final class MovieSettings extends AbstractSettings {
   final List<UIFilters>                     uiFilters                      = new ArrayList<>();
   final List<UniversalFilterFields>         universalFilterFields          = new ArrayList<>();
   boolean                                   resetNewFlagOnUds;
+  final List<MovieCustomColumn>             customColumns                  = new ArrayList<>();
 
   // movie sets
   MovieSetConnectors                        movieSetConnector;
@@ -282,15 +291,26 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   storeMovieSetUiFilters;
   final List<MovieSetClearlogoNaming>       movieSetClearlogoFilenames     = new ArrayList<>();
   final List<UIFilters>                     movieSetUiFilters              = new ArrayList<>();
+  final List<MovieCustomColumn>             movieSetCustomColumns          = new ArrayList<>();
   final Map<String, List<UIFilters>>        movieUiFilterPresets           = new HashMap<>();
   final List<MovieSetDiscartNaming>         movieSetDiscartFilenames       = new ArrayList<>();
   final Map<String, List<UIFilters>>        movieSetUiFilterPresets        = new HashMap<>();
 
   final PropertyChangeListener              propertyChangeListener;
 
+  /**
+   * forwards the title/pattern changes of a single custom column as one announcement for all of them, no matter which table it belongs to
+   */
+  final PropertyChangeListener              customColumnContentListener;
+
   public MovieSettings() {
     super();
     propertyChangeListener = evt -> setDirty();
+    customColumnContentListener = evt -> {
+      if ("title".equals(evt.getPropertyName()) || "pattern".equals(evt.getPropertyName()) || "setPattern".equals(evt.getPropertyName())) {
+        firePropertyChange(CUSTOM_COLUMN_CONTENT, evt.getOldValue(), evt.getNewValue());
+      }
+    };
 
     // set default entries - they will be overwritten by jackson later
     setDefaultValues();
@@ -397,6 +417,7 @@ public final class MovieSettings extends AbstractSettings {
     setMovieSetDisplayAllMissingArtwork(false);
     setStoreUiFilters(false);
     setResetNewFlagOnUds(true);
+    setCustomColumns(Collections.emptyList());
 
     // movie sets
     setMovieSetConnector(MovieSetConnectors.EMBY);
@@ -584,6 +605,9 @@ public final class MovieSettings extends AbstractSettings {
 
   @Override
   protected void afterLoading() {
+    // make sure that every column which came in from the settings file is unambiguously identifiable
+    attachCustomColumns();
+
     // warn about data sources which are dangerous system folders (added by older versions or hand-edited settings)
     for (String ds : movieDataSources) {
       try {
@@ -633,17 +657,6 @@ public final class MovieSettings extends AbstractSettings {
     if (DatasourceFolderGuard.isDangerous(newDatasource)) {
       LOGGER.warn("Refusing to add dangerous data source: {}", newDatasource);
       return false;
-    }
-
-    for (String ds : movieDataSources) {
-      if (StringUtils.isBlank(ds)) {
-        continue;
-      }
-
-      Path existingDatasource = Paths.get(ds).normalize().toAbsolutePath();
-      if (newDatasource.startsWith(existingDatasource) || existingDatasource.startsWith(newDatasource)) {
-        return false;
-      }
     }
 
     if (!movieDataSources.contains(path)) {
@@ -2270,5 +2283,190 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.resetNewFlagOnUds;
     this.resetNewFlagOnUds = newValue;
     firePropertyChange("resetNewFlagOnUds", oldValue, newValue);
+  }
+
+  /**
+   * Gets all freely configurable movie table columns. The list is live and can be empty - in that case the movie table has no custom column at all.
+   *
+   * @return the custom columns in table order
+   */
+  public List<MovieCustomColumn> getCustomColumns() {
+    return customColumns;
+  }
+
+  /**
+   * Sets the freely configurable movie table columns. This is a structural change.
+   *
+   * @param newValues
+   *          the custom columns to set
+   */
+  public void setCustomColumns(List<MovieCustomColumn> newValues) {
+    // copy first, the caller might pass in the very same list which has been granted by our getter
+    List<MovieCustomColumn> columns = new ArrayList<>(newValues);
+
+    customColumns.forEach(this::detachCustomColumn);
+    customColumns.clear();
+    customColumns.addAll(columns);
+    customColumns.forEach(this::attachCustomColumn);
+    firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+  }
+
+  /**
+   * Adds a freely configurable movie table column at the end of the list. This is a structural change.
+   *
+   * @param customColumn
+   *          the custom column to add
+   */
+  public void addCustomColumn(MovieCustomColumn customColumn) {
+    customColumns.add(customColumn);
+    attachCustomColumn(customColumn);
+    firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+  }
+
+  /**
+   * Removes a freely configurable movie table column. This is a structural change.
+   *
+   * @param customColumn
+   *          the custom column to remove
+   */
+  public void removeCustomColumn(MovieCustomColumn customColumn) {
+    if (customColumns.remove(customColumn)) {
+      detachCustomColumn(customColumn);
+      firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+    }
+  }
+
+  /**
+   * Swaps two freely configurable movie table columns to reorder them within the movie table. This is a structural change.
+   *
+   * @param index1
+   *          the 0-based index of the first column
+   * @param index2
+   *          the 0-based index of the second column
+   */
+  public void swapCustomColumns(int index1, int index2) {
+    if (index1 < 0 || index2 < 0 || index1 >= customColumns.size() || index2 >= customColumns.size() || index1 == index2) {
+      return;
+    }
+
+    ListUtils.swap(customColumns, index1, index2);
+    firePropertyChange(CUSTOM_COLUMNS, null, customColumns);
+  }
+
+  /**
+   * Gets all freely configurable movie set table columns. The list is live and can be empty - in that case the movie set table has no custom column
+   * at all.
+   *
+   * @return the custom columns in table order
+   */
+  public List<MovieCustomColumn> getMovieSetCustomColumns() {
+    return movieSetCustomColumns;
+  }
+
+  /**
+   * Sets the freely configurable movie set table columns. This is a structural change.
+   *
+   * @param newValues
+   *          the custom columns to set
+   */
+  public void setMovieSetCustomColumns(List<MovieCustomColumn> newValues) {
+    // copy first, the caller might pass in the very same list which has been granted by our getter
+    List<MovieCustomColumn> columns = new ArrayList<>(newValues);
+
+    movieSetCustomColumns.forEach(this::detachCustomColumn);
+    movieSetCustomColumns.clear();
+    movieSetCustomColumns.addAll(columns);
+    movieSetCustomColumns.forEach(this::attachCustomColumn);
+    firePropertyChange(MOVIE_SET_CUSTOM_COLUMNS, null, movieSetCustomColumns);
+  }
+
+  /**
+   * Adds a freely configurable movie set table column at the end of the list. This is a structural change.
+   *
+   * @param customColumn
+   *          the custom column to add
+   */
+  public void addMovieSetCustomColumn(MovieCustomColumn customColumn) {
+    movieSetCustomColumns.add(customColumn);
+    attachCustomColumn(customColumn);
+    firePropertyChange(MOVIE_SET_CUSTOM_COLUMNS, null, movieSetCustomColumns);
+  }
+
+  /**
+   * Removes a freely configurable movie set table column. This is a structural change.
+   *
+   * @param customColumn
+   *          the custom column to remove
+   */
+  public void removeMovieSetCustomColumn(MovieCustomColumn customColumn) {
+    if (movieSetCustomColumns.remove(customColumn)) {
+      detachCustomColumn(customColumn);
+      firePropertyChange(MOVIE_SET_CUSTOM_COLUMNS, null, movieSetCustomColumns);
+    }
+  }
+
+  /**
+   * Swaps two freely configurable movie set table columns to reorder them within the movie set table. This is a structural change.
+   *
+   * @param index1
+   *          the 0-based index of the first column
+   * @param index2
+   *          the 0-based index of the second column
+   */
+  public void swapMovieSetCustomColumns(int index1, int index2) {
+    if (index1 < 0 || index2 < 0 || index1 >= movieSetCustomColumns.size() || index2 >= movieSetCustomColumns.size() || index1 == index2) {
+      return;
+    }
+
+    ListUtils.swap(movieSetCustomColumns, index1, index2);
+    firePropertyChange(MOVIE_SET_CUSTOM_COLUMNS, null, movieSetCustomColumns);
+  }
+
+  /**
+   * Makes all custom columns of both tables which came from the settings file usable: their ids get healed when the config file left them out or even
+   * duplicated them, and their change listeners get attached. Attaching is idempotent, so it does not matter whether the deserialization went over
+   * {@link #setCustomColumns} or filled the list itself.
+   */
+  private void attachCustomColumns() {
+    // one single id set for both tables, since both derive their table column identifiers from the very same prefix
+    Set<String> ids = new HashSet<>();
+
+    attachCustomColumns(customColumns, ids);
+    attachCustomColumns(movieSetCustomColumns, ids);
+  }
+
+  private void attachCustomColumns(List<MovieCustomColumn> columns, Set<String> ids) {
+    for (MovieCustomColumn customColumn : columns) {
+      String id = customColumn.getId();
+      if (!ids.add(id)) {
+        // an outdated or hand-tuned config could give two columns the same id, which would make them impossible to tell apart
+        LOGGER.warn("The id '{}' of a custom table column is already in use - using a fresh one instead", id);
+        customColumn.setId(UUID.randomUUID().toString());
+        ids.add(customColumn.getId());
+      }
+
+      attachCustomColumn(customColumn);
+    }
+  }
+
+  /**
+   * Lets one custom column announce its changes. Detaching first makes this idempotent, since a column can be attached by the settings loader as well
+   * as by {@link #setCustomColumns}.
+   *
+   * @param customColumn
+   *          the custom column to observe
+   */
+  private void attachCustomColumn(MovieCustomColumn customColumn) {
+    detachCustomColumn(customColumn);
+
+    // mark these settings dirty whenever one single column changes
+    customColumn.addPropertyChangeListener(propertyChangeListener);
+    // and announce content changes to everyone waiting for a new title or pattern
+    customColumn.addPropertyChangeListener(customColumnContentListener);
+  }
+
+  private void detachCustomColumn(MovieCustomColumn customColumn) {
+    customColumn.removePropertyChangeListener(propertyChangeListener);
+    customColumn.removePropertyChangeListener(customColumnContentListener);
   }
 }

@@ -16,6 +16,7 @@
 
 package org.tinymediamanager.ui.components.textfield;
 
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Point;
 
@@ -34,12 +35,39 @@ import javax.swing.text.JTextComponent;
  */
 public class ReadOnlyTextArea extends JTextArea {
 
+  /**
+   * A wrapping text area reports the width it currently happens to have as its preferred width. In a growing cell that makes its container grow with
+   * every layout pass and prevents it from ever shrinking again. When this flag is set, the preferred width is reported as zero instead, so the text
+   * area simply fills the width it is given and the height keeps adapting to that width.
+   */
+  private boolean boundPreferredWidth;
+
   public ReadOnlyTextArea() {
     this("");
   }
 
   public ReadOnlyTextArea(String text) {
     super(text);
+  }
+
+  /**
+   * @param text
+   *          the text to display
+   * @param boundPreferredWidth
+   *          true to not report a growing preferred width (see {@link #boundPreferredWidth})
+   */
+  public ReadOnlyTextArea(String text, boolean boundPreferredWidth) {
+    super(text);
+    this.boundPreferredWidth = boundPreferredWidth;
+  }
+
+  @Override
+  public Dimension getPreferredSize() {
+    Dimension preferredSize = super.getPreferredSize();
+    if (boundPreferredWidth && !isPreferredSizeSet()) {
+      preferredSize.width = 0;
+    }
+    return preferredSize;
   }
 
   @Override

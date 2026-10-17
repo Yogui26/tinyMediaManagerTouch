@@ -408,6 +408,24 @@ public class TmmTaskManager implements TmmTaskListener {
   }
 
   /**
+   * Gets a snapshot of all tasks which are currently running.
+   *
+   * @return an immutable copy of the currently running {@link TmmTaskHandle}s
+   */
+  public Set<TmmTaskHandle> getRunningTasks() {
+    return Set.copyOf(runningTasks);
+  }
+
+  /**
+   * Gets the amount of main tasks which are queued up and not yet started.
+   *
+   * @return the size of the main task queue
+   */
+  public int getQueuedMainTaskCount() {
+    return mainTaskExecutor.getQueue().size();
+  }
+
+  /**
    * check if there are any image downloads running
    * 
    * @return true/false

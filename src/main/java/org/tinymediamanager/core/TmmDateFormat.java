@@ -517,4 +517,22 @@ public class TmmDateFormat {
   public static DateFormat getDateMediumTimeFormat() {
     return getCachedDateFormat(getDatePattern() + " " + getTimeMediumPattern());
   }
+
+  /**
+   * Get the short time format
+   *
+   * @return the short time format
+   */
+  public static DateFormat getTimeShortFormat() {
+    return getCachedDateFormat(getTimeShortPattern());
+  }
+
+  /**
+   * Get the medium time format
+   *
+   * @return the medium time format
+   */
+  public static DateFormat getTimeMediumFormat() {
+    return getCachedDateFormat(getTimeMediumPattern());
+  }
 }

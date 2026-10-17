@@ -29,6 +29,7 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 
 import org.apache.commons.lang3.StringUtils;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.components.MenuScroller;
 import org.tinymediamanager.ui.components.treetable.TmmTreeTableCellRenderer;
 import org.tinymediamanager.ui.components.treetable.TmmTreeTableModel;
@@ -112,6 +113,11 @@ public class TmmTableColumnSelectionPopup {
         checkBox.setEnabled(false);
         checkBox.putClientProperty("nodeColumn", Boolean.TRUE);
       }
+      else if (!isColumnEnabled(tableModel, etc.getModelIndex())) {
+        // column is there, but needs to be configured first - grey it out and tell the user where to do that
+        checkBox.setEnabled(false);
+        checkBox.setToolTipText(TmmResourceBundle.getString("Table.columns.custom.notconfigured"));
+      }
 
       checkBoxMenuItems.add(checkBox);
 
@@ -176,6 +182,27 @@ public class TmmTableColumnSelectionPopup {
     }
 
     popup.show(c, 8, 8);
+  }
+
+  /**
+   * Tells whether the user is allowed to show and hide the given column. Columns which are there but still need to be configured somewhere else are
+   * not, since ticking them would only give the user an empty one.
+   *
+   * @param tableModel
+   *          the model of the table the column belongs to
+   * @param modelIndex
+   *          the index of the column in the model
+   * @return true when the column can be shown/hidden
+   */
+  private static boolean isColumnEnabled(TableModel tableModel, int modelIndex) {
+    if (tableModel instanceof TmmTableModel<?> tmmTableModel) {
+      return tmmTableModel.isColumnEnabled(modelIndex);
+    }
+    if (tableModel instanceof TmmTreeTableModel tmmTreeTableModel) {
+      return tmmTreeTableModel.isColumnEnabled(modelIndex);
+    }
+
+    return true;
   }
 
   private static void checkCheckBoxStates(List<JCheckBoxMenuItem> checkBoxMenuItems) {

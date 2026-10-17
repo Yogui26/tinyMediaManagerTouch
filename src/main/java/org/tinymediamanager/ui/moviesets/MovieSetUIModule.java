@@ -67,6 +67,7 @@ import org.tinymediamanager.ui.moviesets.actions.MovieSetLockMovieAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetMissingArtworkAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetReadMovieNfoAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetRemoveAction;
+import org.tinymediamanager.ui.moviesets.actions.MovieSetRemoveMissingMoviesAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetRemoveMovieFromSetAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetRenameAction;
 import org.tinymediamanager.ui.moviesets.actions.MovieSetRenameWithProfileAction;
@@ -247,6 +248,7 @@ public class MovieSetUIModule extends AbstractTmmUIModule {
     popupMenu.add(new TmmMenuLabel(TmmResourceBundle.getString("metatag.movieset")));
     popupMenu.add(createAndRegisterAction(MovieSetSearchAction.class));
     popupMenu.add(createAndRegisterAction(MovieSetScrapeMissingMoviesAction.class));
+    popupMenu.add(createAndRegisterAction(MovieSetRemoveMissingMoviesAction.class));
     popupMenu.add(createAndRegisterAction(MovieSetAddAction.class));
     popupMenu.add(createAndRegisterAction(MovieSetEditAction.class));
     popupMenu.add(createAndRegisterAction(MovieSetRewriteNfoAction.class));

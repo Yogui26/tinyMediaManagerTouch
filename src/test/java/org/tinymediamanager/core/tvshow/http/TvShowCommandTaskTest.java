@@ -29,6 +29,7 @@ import org.tinymediamanager.core.threading.TmmTaskHandle.TaskState;
 import org.tinymediamanager.core.tvshow.BasicTvShowTest;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
+import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 
 /**
  * The class {@link TvShowCommandTaskTest} checks the TV show HTTP command task end-to-end with locally safe actions (the {@code cleanup} action and
@@ -153,10 +154,166 @@ public class TvShowCommandTaskTest extends BasicTvShowTest {
     assertThat(showJunk(show)).exists();
   }
 
+  /**
+   * Tests that the {@code tvdbId} scope only processes the shows with the given TVDb id.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void cleanupScopeTvdbIdOnlyProcessesMatchingShow() throws Exception {
+    TvShow selected = createShowWithJunk("Selected Tvdb Show");
+    selected.setTvdbId("11111");
+    TvShow other = createShowWithJunk("Other Tvdb Show");
+    other.setTvdbId("22222");
+
+    AbstractCommandHandler.Command command = cleanupCommand("tvdbId");
+    command.scope.args = new String[] { "11111" };
+
+    new TvShowCommandTask(List.of(command)).run();
+
+    assertThat(showJunk(selected)).doesNotExist();
+    assertThat(showJunk(other)).exists();
+  }
+
+  /**
+   * Tests that the {@code tmdbId} scope only processes the shows with the given TMDb id.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void cleanupScopeTmdbIdOnlyProcessesMatchingShow() throws Exception {
+    TvShow selected = createShowWithJunk("Selected Tmdb Show");
+    selected.setTmdbId(11111);
+    TvShow other = createShowWithJunk("Other Tmdb Show");
+    other.setTmdbId(22222);
+
+    AbstractCommandHandler.Command command = cleanupCommand("tmdbId");
+    command.scope.args = new String[] { "11111" };
+
+    new TvShowCommandTask(List.of(command)).run();
+
+    assertThat(showJunk(selected)).doesNotExist();
+    assertThat(showJunk(other)).exists();
+  }
+
+  /**
+   * Tests that the {@code imdbId} scope only processes the shows with the given IMDb id.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void cleanupScopeImdbIdOnlyProcessesMatchingShow() throws Exception {
+    TvShow selected = createShowWithJunk("Selected Imdb Show");
+    selected.setImdbId("tt0103639");
+    TvShow other = createShowWithJunk("Other Imdb Show");
+    other.setImdbId("tt1234567");
+
+    AbstractCommandHandler.Command command = cleanupCommand("imdbId");
+    command.scope.args = new String[] { "tt0103639" };
+
+    new TvShowCommandTask(List.of(command)).run();
+
+    assertThat(showJunk(selected)).doesNotExist();
+    assertThat(showJunk(other)).exists();
+  }
+
+  /**
+   * Tests that the {@code tvdbId} scope also matches on the id of a single episode (not only on the surrounding show).
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void cleanupScopeTvdbIdMatchesEpisodeId() throws Exception {
+    TvShow show = createShowWithJunk("Episode Id Show");
+    TvShowEpisode episode = show.getEpisodes().get(0);
+    episode.setId("tvdb", "909090");
+
+    AbstractCommandHandler.Command command = cleanupCommand("tvdbId");
+    command.scope.args = new String[] { "909090" };
+
+    new TvShowCommandTask(List.of(command)).run();
+
+    assertThat(showJunk(show)).doesNotExist();
+  }
+
+  /**
+   * Tests that the {@code setWatched} action marks episodes as watched (with playcount 1 and a last watched date).
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedMarksEpisodesAsWatched() throws Exception {
+    TvShow show = createShowWithJunk("Watch Show");
+    TvShowEpisode episode = show.getEpisodes().get(0);
+    assertThat(episode.isWatched()).isFalse();
+
+    new TvShowCommandTask(List.of(setWatchedCommand("all", true))).run();
+
+    assertThat(episode.isWatched()).isTrue();
+    assertThat(episode.getPlaycount()).isEqualTo(1);
+    assertThat(episode.getLastWatched()).isNotNull();
+  }
+
+  /**
+   * Tests that {@code setWatched} with {@code watched=false} clears the watched state of episodes.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedCanMarkEpisodesAsUnwatched() throws Exception {
+    TvShow show = createShowWithJunk("Unwatch Show");
+    TvShowEpisode episode = show.getEpisodes().get(0);
+    episode.setWatched(true);
+    episode.setPlaycount(1);
+    episode.setLastWatched(new java.util.Date());
+
+    new TvShowCommandTask(List.of(setWatchedCommand("all", false))).run();
+
+    assertThat(episode.isWatched()).isFalse();
+    assertThat(episode.getPlaycount()).isZero();
+    assertThat(episode.getLastWatched()).isNull();
+  }
+
+  /**
+   * Tests that {@code setWatched} only processes the episodes of the shows of the given id scope.
+   *
+   * @throws Exception
+   *           thrown on I/O errors
+   */
+  @Test
+  public void setWatchedScopeTvdbIdOnlyProcessesMatchingShowEpisodes() throws Exception {
+    TvShow selected = createShowWithJunk("Watch Selected Tvdb Show");
+    selected.setTvdbId("33333");
+    TvShow other = createShowWithJunk("Watch Other Tvdb Show");
+    other.setTvdbId("44444");
+
+    AbstractCommandHandler.Command command = setWatchedCommand("tvdbId", true);
+    command.scope.args = new String[] { "33333" };
+
+    new TvShowCommandTask(List.of(command)).run();
+
+    assertThat(selected.getEpisodes().get(0).isWatched()).isTrue();
+    assertThat(other.getEpisodes().get(0).isWatched()).isFalse();
+  }
+
   private AbstractCommandHandler.Command cleanupCommand(String scopeName) {
     AbstractCommandHandler.Command command = new AbstractCommandHandler.Command();
     command.action = "cleanup";
     command.scope.name = scopeName;
+    return command;
+  }
+
+  private AbstractCommandHandler.Command setWatchedCommand(String scopeName, boolean watched) {
+    AbstractCommandHandler.Command command = new AbstractCommandHandler.Command();
+    command.action = "setWatched";
+    command.scope.name = scopeName;
+    command.args.put("watched", Boolean.toString(watched));
     return command;
   }
 
@@ -175,6 +332,9 @@ public class TvShowCommandTaskTest extends BasicTvShowTest {
     Files.createDirectories(folder);
     Files.createFile(folder.resolve("episode-s01e01.mkv"));
     Files.createFile(folder.resolve("leftover.txt"));
+
+    // the fake episode has no path yet, but writeNFO needs one
+    show.getEpisodes().get(0).setPath(folder.toString());
 
     return show;
   }

@@ -221,9 +221,14 @@ public class ImageCacheCleanupTask extends TmmTask {
       return;
     }
 
-    String md5WithSubfolder = ImageCache.getMD5WithSubfolder(path.toString());
-    if (md5WithSubfolder != null) {
-      referencedFiles.add(ImageCache.getCacheDir().resolve(md5WithSubfolder + "." + mf.getExtension()));
+    try {
+      String md5WithSubfolder = ImageCache.getMD5WithSubfolder(path.toString());
+      if (md5WithSubfolder != null) {
+        referencedFiles.add(ImageCache.getCacheDir().resolve(md5WithSubfolder + "." + mf.getExtension()));
+      }
+    }
+    catch (Exception e) {
+      LOGGER.debug("Failed to compute cache path for media file: {}", path, e);
     }
   }
 
@@ -240,14 +245,19 @@ public class ImageCacheCleanupTask extends TmmTask {
       return;
     }
 
-    String ext = UrlUtil.getExtension(url);
-    if (ext.isEmpty()) {
-      ext = "jpg";
-    }
+    try {
+      String ext = UrlUtil.getExtension(url);
+      if (ext.isEmpty()) {
+        ext = "jpg";
+      }
 
-    String md5WithSubfolder = ImageCache.getMD5WithSubfolder(url);
-    if (md5WithSubfolder != null) {
-      referencedFiles.add(ImageCache.getCacheDir().resolve(md5WithSubfolder + "." + ext));
+      String md5WithSubfolder = ImageCache.getMD5WithSubfolder(url);
+      if (md5WithSubfolder != null) {
+        referencedFiles.add(ImageCache.getCacheDir().resolve(md5WithSubfolder + "." + ext));
+      }
+    }
+    catch (Exception e) {
+      LOGGER.debug("Failed to compute cache path for URL: {}", url, e);
     }
   }
 }

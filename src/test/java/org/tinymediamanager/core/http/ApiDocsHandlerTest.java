@@ -97,20 +97,27 @@ public class ApiDocsHandlerTest {
     assertThat(paths.has("/api/movie")).isTrue();
     assertThat(paths.has("/api/tvshow")).isTrue();
     assertThat(paths.has("/api/movieset")).isTrue();
+    assertThat(paths.has("/api/system")).isTrue();
     assertThat(paths.has("/api/docs")).isTrue();
 
     assertThat(paths.path("/api/movie").path("post").isObject()).isTrue();
     assertThat(paths.path("/api/tvshow").path("post").isObject()).isTrue();
     assertThat(paths.path("/api/movieset").path("post").isObject()).isTrue();
+    assertThat(paths.path("/api/system").path("post").isObject()).isTrue();
+    assertThat(paths.path("/api/system").path("get").isObject()).isTrue();
     assertThat(paths.path("/api/docs").path("get").isObject()).isTrue();
 
-    // every command endpoint needs a request body and the queue/forbidden responses
+    // every command endpoint needs a request body and the queue/forbidden/shutting-down responses
     for (String endpoint : new String[] { "/api/movie", "/api/tvshow", "/api/movieset" }) {
       JsonNode post = paths.path(endpoint).path("post");
       assertThat(post.path("requestBody").path("required").asBoolean()).as(endpoint + " requires a body").isTrue();
       assertThat(post.path("responses").has("200")).as(endpoint + " documents 200").isTrue();
       assertThat(post.path("responses").has("403")).as(endpoint + " documents 403").isTrue();
+      assertThat(post.path("responses").has("503")).as(endpoint + " documents 503").isTrue();
     }
+
+    // the dead /api/command stub has been replaced by the system endpoint
+    assertThat(paths.has("/api/command")).isFalse();
   }
 
   /**
@@ -205,6 +212,32 @@ public class ApiDocsHandlerTest {
 
     assertThat(response.statusCode()).isEqualTo(405);
     assertThat(response.body()).contains("only GET supported");
+  }
+
+  /**
+   * Tests that the external id scopes and the {@code setWatched} action are documented.
+   *
+   * @throws Exception
+   *           thrown on HTTP errors
+   */
+  @Test
+  public void documentsExternalIdScopesAndSetWatched() throws Exception {
+    JsonNode root = mapper.readTree(request("GET", "/api/docs").body());
+
+    String scopeDescription = root.path("components")
+        .path("schemas")
+        .path("CommandScope")
+        .path("properties")
+        .path("name")
+        .path("description")
+        .asText();
+    assertThat(scopeDescription).contains("tmdbId", "imdbId", "tvdbId");
+
+    String movieActions = root.path("paths").path("/api/movie").path("post").path("description").asText();
+    assertThat(movieActions).contains("setWatched");
+
+    String tvShowActions = root.path("paths").path("/api/tvshow").path("post").path("description").asText();
+    assertThat(tvShowActions).contains("setWatched");
   }
 
   private JsonNode documentPaths() throws Exception {

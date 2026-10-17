@@ -100,6 +100,28 @@ public class TmmTreeTableModel implements ITmmTreeTableModel {
   }
 
   /**
+   * Tells whether the given column can be chosen by the user in the column selection popup.
+   *
+   * @param columnIndex
+   *          the index of the column in the model, 0 being the tree column itself
+   * @return true when the column can be shown/hidden by the user
+   */
+  public boolean isColumnEnabled(int columnIndex) {
+    if (columnIndex == 0) {
+      return true;
+    }
+
+    return tableModel.getTableFormat().isColumnEnabled(columnIndex - 1);
+  }
+
+  /**
+   * Announces a change of the column structure, which lets the table recreate all its columns from the table format.
+   */
+  public void fireTableStructureChanged() {
+    eventBroadcaster.fireTableStructureChanged();
+  }
+
+  /**
    * Returns the class of the specified column.
    *
    * @param columnIndex

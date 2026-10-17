@@ -16,11 +16,13 @@
 package org.tinymediamanager.ui.moviesets;
 
 import java.awt.FontMetrics;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Function;
 
 import javax.swing.ImageIcon;
 
@@ -30,10 +32,14 @@ import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.bus.IEventListener;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaSource;
+import org.tinymediamanager.core.movie.MovieCustomColumn;
 import org.tinymediamanager.core.movie.MovieEdition;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
@@ -41,6 +47,7 @@ import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSetScraperMetadataConfig;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
+import org.tinymediamanager.core.movie.jmte.MovieCustomColumnEvaluator;
 import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.tree.TmmTreeNode;
@@ -57,11 +64,71 @@ import org.tinymediamanager.ui.renderer.RuntimeTableCellRenderer;
  */
 public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
 
-  private final MovieList movieList;
+  private final MovieList                  movieList;
+
+  /** the evaluator for the freely configurable columns */
+  private final MovieCustomColumnEvaluator customColumnEvaluator  = new MovieCustomColumnEvaluator();
+
+  /** the model index of the first custom column */
+  private int                              customColumnBaseIndex;
+
+  /** the custom columns which are currently mounted into this table, in the very same order as the table columns */
+  private final List<MovieCustomColumn>    mountedCustomColumns   = new ArrayList<>();
+
+  /** the comparator used by all custom columns */
+  private final Comparator<String>         customColumnComparator = new StringComparator();
 
   public MovieSetTableFormat() {
 
     movieList = MovieModuleManager.getInstance().getMovieList();
+
+    // cache the column values per entity, they are recomputed lazily and dropped as soon as the entity changes
+    enableValueCaching();
+
+    // drops the cached column values of a movie and its movie set as soon as it changes - the set aggregates the values of its movies
+    IEventListener movieListener = event -> {
+      if (event.sender() instanceof Movie movie) {
+        switch (event.eventType()) {
+          case Event.TYPE_SAVE, Event.TYPE_ADD, Event.TYPE_REMOVE:
+            invalidateCache(movie.getDbId());
+            if (movie.getMovieSet() != null) {
+              invalidateCache(movie.getMovieSet().getDbId());
+            }
+            break;
+
+          default:
+            break;
+        }
+      }
+    };
+    EventBus.registerListener(EventBus.TOPIC_MOVIES, movieListener);
+
+    // drops the cached column values of a movie set and its movies as soon as it changes
+    IEventListener movieSetListener = event -> {
+      if (event.sender() instanceof MovieSet movieSet) {
+        switch (event.eventType()) {
+          case Event.TYPE_SAVE, Event.TYPE_ADD, Event.TYPE_REMOVE:
+            invalidateCache(movieSet.getDbId());
+            for (Movie movie : movieSet.getMoviesForDisplay()) {
+              invalidateCache(movie.getDbId());
+            }
+            break;
+
+          default:
+            break;
+        }
+      }
+    };
+    EventBus.registerListener(EventBus.TOPIC_MOVIE_SETS, movieSetListener);
+
+    // drops all cached column values as soon as a setting they depend on changes
+    PropertyChangeListener settingsListener = evt -> {
+      // always clear the cache, because the value of a column can depend on multiple settings (e.g. the rating column depends on the rating source
+      // and the rating scale). And going this way avoids new properties to be forgotten to be added to this listener. So just clear the cache on any
+      // change.
+      clearCache();
+    };
+    MovieModuleManager.getInstance().getSettings().addPropertyChangeListener(settingsListener);
 
     FontMetrics fontMetrics = getFontMetrics();
 
@@ -281,6 +348,13 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
 
     /*
+     * the freely configurable columns - their content is evaluated lazily by the MovieCustomColumnEvaluator and they are placed right before the icon
+     * columns
+     */
+    customColumnBaseIndex = columns.size();
+    addCustomColumns();
+
+    /*
      * metadata
      */
     col = new Column(TmmResourceBundle.getString("tmm.metadata"), "metadata", this::hasMetadata, ImageIcon.class);
@@ -310,14 +384,141 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
   }
 
+  /**
+   * Mounts all currently configured custom columns right before the icon columns. They are hidden per default, so an unconfigured or unused column
+   * costs nothing at all.
+   */
+  private void addCustomColumns() {
+    // copy the settings, so that an already mounted column can never be swapped against another one by a tinkered around settings list
+    mountedCustomColumns.clear();
+    mountedCustomColumns.addAll(MovieModuleManager.getInstance().getSettings().getMovieSetCustomColumns());
+
+    for (int i = 0; i < mountedCustomColumns.size(); i++) {
+      final int position = i + 1;
+      final MovieCustomColumn customColumn = mountedCustomColumns.get(i);
+
+      Column col = new Column(customColumn.getTitleOrPlaceholder(position), customColumn.getColumnIdentifier(),
+          node -> getCustomColumnValue(node, customColumn), String.class);
+      col.setColumnComparator(customColumnComparator);
+      col.setCellTooltip(showTooltip(node -> StringUtils.defaultString(getCustomColumnPattern(node, customColumn))));
+      col.setDefaultHidden(true);
+      // the evaluator caches these values already, so do not cache them a second time here
+      col.setCacheEnabled(false);
+      insertColumn(customColumnBaseIndex + i, col);
+    }
+  }
+
+  /**
+   * Remounts the freely configurable columns according to the current settings. Needed when columns have been added, removed or reordered.
+   */
+  public void rebuildCustomColumns() {
+    for (int i = 0; i < mountedCustomColumns.size(); i++) {
+      columns.remove(customColumnBaseIndex);
+    }
+
+    addCustomColumns();
+  }
+
+  /**
+   * Evaluates a custom column for one row of the hierarchical movie set table: the movie set rows use the pattern of the set level, the movie rows
+   * the pattern of the movie level.
+   *
+   * @param node
+   *          the node of the row to evaluate
+   * @param customColumn
+   *          the custom column to evaluate
+   * @return the value of this cell
+   */
+  private String getCustomColumnValue(TmmTreeNode node, MovieCustomColumn customColumn) {
+    Object userObject = node.getUserObject();
+
+    if (userObject instanceof MovieSet movieSet) {
+      return customColumnEvaluator.evaluate(movieSet, customColumn);
+    }
+    if (userObject instanceof Movie movie) {
+      return customColumnEvaluator.evaluate(movie, getParentMovieSet(node), customColumn);
+    }
+    return "";
+  }
+
+  /**
+   * Gets the JMTE pattern belonging to the level of the given row, so that the tooltip tells the user where the content of this cell is coming from.
+   *
+   * @param node
+   *          the node of the row to evaluate
+   * @param customColumn
+   *          the custom column to evaluate
+   * @return the pattern of the row level
+   */
+  private String getCustomColumnPattern(TmmTreeNode node, MovieCustomColumn customColumn) {
+    if (node.getUserObject() instanceof MovieSet) {
+      return customColumn.getSetPattern();
+    }
+    if (node.getUserObject() instanceof Movie) {
+      return customColumn.getPattern();
+    }
+    return null;
+  }
+
+  private static MovieSet getParentMovieSet(TmmTreeNode node) {
+    return node.getParent() instanceof TmmTreeNode parent && parent.getUserObject() instanceof MovieSet movieSet ? movieSet : null;
+  }
+
   @Override
   public String getColumnName(int i) {
     if (i == NODE_COLUMN) {
       return TmmResourceBundle.getString("metatag.title");
     }
-    else {
-      return super.getColumnName(i);
+
+    MovieCustomColumn customColumn = getCustomColumn(i);
+    if (customColumn != null) {
+      // the title is read live from the mounted bean, so no table rebuild is needed when the user only renames a column
+      return customColumn.getTitleOrPlaceholder(i - customColumnBaseIndex + 1);
     }
+
+    return super.getColumnName(i);
+  }
+
+  @Override
+  public boolean isColumnEnabled(int i) {
+    MovieCustomColumn customColumn = getCustomColumn(i);
+    if (customColumn != null) {
+      return customColumn.isConfiguredForSets();
+    }
+    return true;
+  }
+
+  /**
+   * Gets the custom column which is mounted at the given model index. The mounted columns are the ones the user currently sees, they can well be out
+   * of sync with the settings until the table has been rebuilt.
+   *
+   * @param i
+   *          the model index of the column
+   * @return the {@link MovieCustomColumn} at this index, or null when the column is no custom column
+   */
+  private MovieCustomColumn getCustomColumn(int i) {
+    int position = i - customColumnBaseIndex;
+    if (position < 0 || position >= mountedCustomColumns.size()) {
+      return null;
+    }
+    return mountedCustomColumns.get(position);
+  }
+
+  @Override
+  protected Object getCacheKey(TmmTreeNode node) {
+    // the value of a row is cached by the entity behind the node, not by the node itself (which gets recreated on structure changes)
+    return node.getUserObject() instanceof MediaEntity entity ? entity.getDbId() : null;
+  }
+
+  private static <E> Function<E, String> showTooltip(Function<E, String> tooltipFunction) {
+    return node -> {
+      if (MovieModuleManager.getInstance().getSettings().isShowMovieSetTableTooltips()) {
+        return tooltipFunction.apply(node);
+      }
+      else {
+        return null;
+      }
+    };
   }
 
   private String getSortTitle(TmmTreeNode node) {

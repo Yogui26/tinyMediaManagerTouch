@@ -16,13 +16,26 @@
 package org.tinymediamanager.thirdparty.simkl.model;
 
 /**
- * The response of the <code>/oauth/pin</code> endpoint.
+ * The response of the <code>/oauth2/device</code> endpoint (AUTH V2 device flow according to RFC 8628).
  *
  * @author Manuel Laggner
  */
-public class SimklPinCodeResponse {
+public class SimklDeviceCodeResponse {
+  /** The device code to poll the token endpoint with - this is a credential and must never be shown to the user */
+  public String device_code;
+
+  /** The code the user has to enter on Simkl.com, if the pre-filled URL could not be used */
   public String user_code;
+
+  /** The plain approval page on Simkl.com */
   public String verification_uri;
+
+  /** The approval page on Simkl.com with the user code already pre-filled */
+  public String verification_uri_complete;
+
+  /** The seconds the device code is valid */
   public String expires_in;
+
+  /** The seconds to wait between two polls of the token endpoint */
   public String interval;
 }

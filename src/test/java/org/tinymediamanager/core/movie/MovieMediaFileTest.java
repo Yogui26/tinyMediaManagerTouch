@@ -9,6 +9,7 @@ import org.junit.Test;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.movie.entities.Movie;
 
 public class MovieMediaFileTest extends BasicMovieTest {
@@ -125,5 +126,89 @@ public class MovieMediaFileTest extends BasicMovieTest {
     assertEqual(8, MediaFileHelper.parseChannelsAsInt("Object Based / 8 channels"));
     assertEqual(6, MediaFileHelper.parseChannelsAsInt("11 objects / 6 channels"));
     assertEqual(6, MediaFileHelper.parseChannelsAsInt("11 objects / 5.1 channels"));
+  }
+
+  @Test
+  public void testAudioChannelInDotNotation() {
+    // Traditional formats without configuration
+    assertEqual("5.0", MediaFileHelper.audioChannelInDotNotation(5, ""));
+    assertEqual("5.1", MediaFileHelper.audioChannelInDotNotation(6, ""));
+    assertEqual("7.1", MediaFileHelper.audioChannelInDotNotation(8, ""));
+
+    // Traditional formats with configuration (3/2/0.1 = 5.1)
+    assertEqual("5.1", MediaFileHelper.audioChannelInDotNotation(6, "3/2/0.1"));
+    assertEqual("5.1", MediaFileHelper.audioChannelInDotNotation(8, "3/2/0.1"));
+
+    // Atmos formats with height channels (short notation excludes height)
+    assertEqual("5.1", MediaFileHelper.audioChannelInDotNotation(8, "3/2/0.1.2"));
+    assertEqual("5.1", MediaFileHelper.audioChannelInDotNotation(12, "3/2/0.1.4"));
+    assertEqual("7.1", MediaFileHelper.audioChannelInDotNotation(10, "3/2/2.1.2"));
+    assertEqual("7.1", MediaFileHelper.audioChannelInDotNotation(12, "3/2/2.1.4"));
+
+    // DTS-ES formats with back center (3/2/1.1 = 6.1)
+    assertEqual("6.1", MediaFileHelper.audioChannelInDotNotation(7, "3/2/1.1"));
+
+    // some real world examples of my audio/video test files front/side/back.LFE.heigth
+    assertEqual("1.0", MediaFileHelper.audioChannelInDotNotation(1, "1/0/0"));
+    assertEqual("2.0", MediaFileHelper.audioChannelInDotNotation(2, "2/0/0"));
+    assertEqual("2.0", MediaFileHelper.audioChannelInDotNotation(2, "2/0/0.0"));
+    assertEqual("4.0", MediaFileHelper.audioChannelInDotNotation(4, "2/2/0"));
+    assertEqual("3.0", MediaFileHelper.audioChannelInDotNotation(3, "3/0/0"));
+    assertEqual("4.0", MediaFileHelper.audioChannelInDotNotation(4, "3/0/1"));
+    assertEqual("5.1", MediaFileHelper.audioChannelInDotNotation(6, "3/2/0.1"));
+    assertEqual("5.2", MediaFileHelper.audioChannelInDotNotation(8, "3/2/0.2.1"));
+    assertEqual("5.0", MediaFileHelper.audioChannelInDotNotation(5, "3/2/0"));
+    assertEqual("6.1", MediaFileHelper.audioChannelInDotNotation(8, "3/2/1.1.1"));
+    assertEqual("6.1", MediaFileHelper.audioChannelInDotNotation(7, "3/2/1.1"));
+    assertEqual("6.2", MediaFileHelper.audioChannelInDotNotation(9, "3/2/1.2.1"));
+    assertEqual("7.1", MediaFileHelper.audioChannelInDotNotation(12, "3/2/2.1.4"));
+    assertEqual("7.1", MediaFileHelper.audioChannelInDotNotation(8, "3/2/2.1"));
+    // standardized shorthand layout string with traditional 5.0 DTS core structure - phew!
+    // this would be 7.1.4, so... 7.1 or 11.1?
+    assertEqual("11.1", MediaFileHelper.audioChannelInDotNotation(12, "3.2/2/2.2.1 / 3/2/0"));
+  }
+
+  @Test
+  public void testAudioChannelInLongNotation() {
+    // Long notation should show all channels including height
+    assertEqual("5.1.2", MediaFileHelper.audioChannelInLongNotation(8, "3/2/0.1.2"));
+    assertEqual("5.1.4", MediaFileHelper.audioChannelInLongNotation(12, "3/2/0.1.4"));
+    assertEqual("7.1.2", MediaFileHelper.audioChannelInLongNotation(10, "3/2/2.1.2"));
+    assertEqual("7.1.4", MediaFileHelper.audioChannelInLongNotation(12, "3/2/2.1.4"));
+
+    // Traditional formats
+    assertEqual("5.1", MediaFileHelper.audioChannelInLongNotation(6, "3/2/0.1"));
+    assertEqual("5.1", MediaFileHelper.audioChannelInLongNotation(8, "3/2/0.1"));
+
+    // some real world examples of my audio/video test files front/side/back.LFE.heigth
+    assertEqual("1.0", MediaFileHelper.audioChannelInLongNotation(1, "1/0/0"));
+    assertEqual("2.0", MediaFileHelper.audioChannelInLongNotation(2, "2/0/0"));
+    assertEqual("2.0", MediaFileHelper.audioChannelInLongNotation(2, "2/0/0.0"));
+    assertEqual("4.0", MediaFileHelper.audioChannelInLongNotation(4, "2/2/0"));
+    assertEqual("3.0", MediaFileHelper.audioChannelInLongNotation(3, "3/0/0"));
+    assertEqual("4.0", MediaFileHelper.audioChannelInLongNotation(4, "3/0/1"));
+    assertEqual("5.1", MediaFileHelper.audioChannelInLongNotation(6, "3/2/0.1"));
+    assertEqual("5.2.1", MediaFileHelper.audioChannelInLongNotation(8, "3/2/0.2.1"));
+    assertEqual("5.0", MediaFileHelper.audioChannelInLongNotation(5, "3/2/0"));
+    assertEqual("6.1.1", MediaFileHelper.audioChannelInLongNotation(8, "3/2/1.1.1"));
+    assertEqual("6.1", MediaFileHelper.audioChannelInLongNotation(7, "3/2/1.1"));
+    assertEqual("6.2.1", MediaFileHelper.audioChannelInLongNotation(9, "3/2/1.2.1"));
+    assertEqual("7.1.4", MediaFileHelper.audioChannelInLongNotation(12, "3/2/2.1.4"));
+    assertEqual("7.1", MediaFileHelper.audioChannelInLongNotation(8, "3/2/2.1"));
+    // standardized shorthand layout string with traditional 5.0 DTS core structure - phew!
+    // this would be 7.1.4, so... 7.1 or 11.1?
+    assertEqual("11.1", MediaFileHelper.audioChannelInLongNotation(12, "3.2/2/2.2.1 / 3/2/0"));
+  }
+
+  @Test
+  public void testMediaFileAudioStreamChannelConfiguration() {
+    MediaFileAudioStream stream = new MediaFileAudioStream();
+    assertEqual("", stream.getChannelConfiguration());
+
+    stream.setChannelConfiguration("3/2/0.1.2");
+    assertEqual("3/2/0.1.2", stream.getChannelConfiguration());
+
+    stream.setChannelConfiguration("3/2/2.1.4");
+    assertEqual("3/2/2.1.4", stream.getChannelConfiguration());
   }
 }

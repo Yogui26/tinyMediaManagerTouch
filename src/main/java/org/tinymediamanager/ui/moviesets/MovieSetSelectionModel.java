@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import org.tinymediamanager.core.AbstractModelObject;
@@ -49,8 +50,8 @@ public class MovieSetSelectionModel extends AbstractModelObject {
   public MovieSetSelectionModel() {
     selectedMovieSet = initalMovieSet;
 
-    // eventbus listener
-    EventBus.registerListener(EventBus.TOPIC_MOVIE_SETS, event -> {
+    // eventbus listener (fires on the event-bus thread, so delegate to the EDT as we notify UI listeners)
+    EventBus.registerListener(EventBus.TOPIC_MOVIE_SETS, event -> SwingUtilities.invokeLater(() -> {
       if (event.sender() instanceof MovieSet movieSet && movieSet == selectedMovieSet) {
         if (event.eventType().equals(Event.TYPE_REMOVE)) {
           setSelectedMovieSet(initalMovieSet);
@@ -60,7 +61,7 @@ public class MovieSetSelectionModel extends AbstractModelObject {
           firePropertyChange(SELECTED_MOVIE_SET, null, movieSet);
         }
       }
-    });
+    }));
   }
 
   public void setTreeTable(TmmTreeTable treeTable) {

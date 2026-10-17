@@ -715,6 +715,8 @@ public final class TinyMediaManager {
   public static void shutdown() {
     LOGGER.info("Shutting down tinyMediaManager");
     try {
+      // stop the HTTP API server first to not accept any further calls
+      TmmHttpServer.stopServer();
       // stop all events
       EventBus.shutdown();
       // persist all stored properties

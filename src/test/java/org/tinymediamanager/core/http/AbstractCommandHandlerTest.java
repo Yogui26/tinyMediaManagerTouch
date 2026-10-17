@@ -158,6 +158,21 @@ public class AbstractCommandHandlerTest {
     assertThat(capturingHandler.commands).isEmpty();
   }
 
+  /**
+   * Tests that {@link AbstractCommandHandler#distinctByIdentity(java.util.Collection)} removes only the exact same instances (by identity), keeps the
+   * order and does not collapse equal but distinct objects.
+   */
+  @Test
+  public void distinctByIdentityRemovesOnlySameInstances() {
+    String first = new String("a");
+    String equalButDistinct = new String("a");
+    String second = new String("b");
+
+    List<String> result = AbstractCommandHandler.distinctByIdentity(List.of(first, second, first, equalButDistinct, second));
+
+    assertThat(result).containsExactlyInAnyOrder(first, second, equalButDistinct);
+  }
+
   private HttpResponse<String> post(String body) throws Exception {
     HttpRequest request = HttpRequest.newBuilder()
         .uri(URI.create(baseUrl + "/api/command"))

@@ -76,7 +76,7 @@ public class MessageHistoryDialog extends TmmDialog implements ListEventListener
 
     messagesPanel = new JPanel();
     messagesPanel.setOpaque(false);
-    messagesPanel.setLayout(new MigLayout("wrap", "[grow]", "[]"));
+    messagesPanel.setLayout(new MigLayout("insets 0, wrap", "[grow]", "[]"));
 
     JScrollPane scrollPane = new NoBorderScrollPane();
     scrollPane.setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_NEVER);

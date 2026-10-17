@@ -2,13 +2,16 @@ package org.tinymediamanager.core.movie;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.Test;
+import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -225,6 +228,39 @@ public class MovieRenamerTest extends BasicMovieTest {
 
       // the last movie left behind can be upgraded to a single movie folder
       assertThat(movie1.isMultiMovieDir()).isFalse();
+    }
+    finally {
+      finishTest();
+    }
+  }
+
+  @Test
+  public void testRenameIntoNestedDatasource() throws Exception {
+    try {
+      initTest();
+
+      MovieList movieList = MovieList.getInstance();
+      Path parentDs = getWorkFolder().resolve("testmovies_rename").toAbsolutePath();
+      Path nestedDs = parentDs.resolve("archive");
+      Files.createDirectories(nestedDs);
+
+      // a data source nested inside the parent one is allowed now
+      assertThat(MovieModuleManager.getInstance().getSettings().addMovieDataSources(nestedDs.toString())).isTrue();
+
+      Movie movie = movieList.findFirstByPath(parentDs.resolve("Single"));
+      assertThat(movie).isNotNull();
+      assertThat(movie.getDataSource()).isEqualTo(parentDs.toString());
+
+      // rename/move the movie into the nested data source
+      MovieRenamerProfile profile = MovieModuleManager.getInstance().getSettings().getDefaultRenamerProfile();
+      profile.setRenamerPathname("archive/${titleSortable} (${year})");
+      profile.setRenamerFilename("${title} (${year})");
+
+      MovieRenamer.renameMovie(movie, profile);
+
+      // the movie is now located inside the nested data source - the data source field must follow
+      assertThat(movie.getPathNIO().startsWith(nestedDs)).isTrue();
+      assertThat(Paths.get(movie.getDataSource())).isEqualTo(nestedDs);
     }
     finally {
       finishTest();
@@ -451,6 +487,31 @@ public class MovieRenamerTest extends BasicMovieTest {
     m.setEnglishTitle(m.getOriginalTitle());
     assertEqual("The Original Dish", MovieRenamer.createDestinationForFoldername(
         "${originalTitle}${if englishTitle}${if englishTitle = originalTitle}${else} - ${englishTitle}${end}${end}", defaultRenamerProfile, m));
+  }
+
+  /**
+   * A skiptro sidecar must be renamed to "&lt;new video basename&gt;.skiptro.json" (without the videos container extension) - that is the naming
+   * convention of the Kodi addon "service.skiptro"
+   */
+  @Test
+  public void testGenerateFilenameForSkiptroSidecar() {
+    Path movieDir = getWorkFolder().resolve("Old Movie");
+
+    Movie movie = new Movie();
+    movie.setDataSource(getWorkFolder().toString());
+    movie.setPath(movieDir.toString());
+    movie.setTitle("New Movie");
+    movie.setYear(2020);
+
+    MediaFile skiptro = new MediaFile();
+    skiptro.setType(MediaFileType.SKIPTRO);
+    skiptro.setPath(movieDir.toString());
+    skiptro.setFilename("oldmovie.skiptro.json");
+
+    List<MediaFile> renamed = MovieRenamer.generateFilename(movie, skiptro, "New Movie (2020)", new MovieRenamerProfile());
+
+    assertThat(renamed).hasSize(1);
+    assertThat(renamed.get(0).getFilename()).isEqualTo("New Movie (2020).skiptro.json");
   }
 
   private static class UdsMiRenamerExample {

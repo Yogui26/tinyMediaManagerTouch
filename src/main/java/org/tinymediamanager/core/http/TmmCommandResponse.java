@@ -23,6 +23,7 @@ package org.tinymediamanager.core.http;
 public class TmmCommandResponse {
   private int    responseCode;
   private String responseMessage;
+  private Object payload;
 
   public TmmCommandResponse(int responseCode, String responseMessage) {
     this.responseCode = responseCode;
@@ -44,6 +45,27 @@ public class TmmCommandResponse {
 
   public TmmCommandResponse setResponseMessage(String responseMessage) {
     this.responseMessage = responseMessage;
+    return this;
+  }
+
+  /**
+   * the optional payload which will be sent as {@code data} in the JSON response
+   * 
+   * @return the payload object, or null
+   */
+  public Object getPayload() {
+    return payload;
+  }
+
+  /**
+   * set the optional payload which will be sent as {@code data} in the JSON response
+   * 
+   * @param payload
+   *          the payload object
+   * @return this {@link TmmCommandResponse} for chaining
+   */
+  public TmmCommandResponse setPayload(Object payload) {
+    this.payload = payload;
     return this;
   }
 }

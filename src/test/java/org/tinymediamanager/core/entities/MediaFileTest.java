@@ -130,6 +130,22 @@ public class MediaFileTest extends BasicTest {
   }
 
   @Test
+  public void testMediaFileTypeSkiptro() {
+    // naming convention of the Kodi addon service.skiptro: "<video basename>.skiptro.json"
+    checkMediaFileType("Episode 01.skiptro.json", MediaFileType.SKIPTRO);
+    checkMediaFileType("Movie (2020).cd2.skiptro.json", MediaFileType.SKIPTRO);
+    checkMediaFileType("Episode 01.mkv.skiptro.json", MediaFileType.SKIPTRO);
+    checkMediaFileType("some-other-file.skiptro.json", MediaFileType.SKIPTRO);
+    // case-insensitive
+    checkMediaFileType("Episode 01.Skiptro.JSON", MediaFileType.SKIPTRO);
+
+    // plain JSON and near-misses must not be detected as skiptro
+    checkMediaFileType("movie.json", MediaFileType.UNKNOWN);
+    checkMediaFileType("movie.skiptro.txt", MediaFileType.TEXT);
+    checkMediaFileType("movie.skiptro.jsonx", MediaFileType.UNKNOWN);
+  }
+
+  @Test
   public void testMediaFileTypeTheme() {
     checkMediaFileType("movie-theme.mp3", MediaFileType.THEME);
     checkMediaFileType("movie.theme1.aac", MediaFileType.THEME);

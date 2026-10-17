@@ -50,7 +50,7 @@ public class ApiDocsHandler implements HttpHandler {
 
       **The commands are NOT executed in the order they have been sent in, but in a logical order:**
       1. update the library (`update`, `readNfo`, `reloadMediaInfo`, `calculateChecksum`, `detectAspectRatio`)
-      2. scrape (`scrape`, `fetchRatings`, `assignMovieSet`)
+      2. scrape (`scrape`, `fetchRatings`, `assignMovieSet`) and set the watched state (`setWatched`)
       3. download tasks (`downloadTrailer`, `downloadSubtitle`, `downloadMissingArtwork`, `downloadTheme`, `cleanupArtwork`)
       4. rename (`rename`)
       5. export (`export`, `writeNfo`)
@@ -59,6 +59,11 @@ public class ApiDocsHandler implements HttpHandler {
       8. notify/sync external services (`updateKodi`, `syncTrakt`, `syncSimkl`)
 
       Multiple HTTP calls are queued up and executed one after another.
+
+      **Automated one-shot tasks:** start tinyMediaManager with the CLI option `--start-api`, send your work commands, and finish with the
+      `shutdown` action - tinyMediaManager then refuses further commands (all command endpoints answer with **503**), waits until the last queued
+      task has finished, and exits on its own. The `status` action (or a plain `GET /api/system`) is only needed if you want to watch the progress,
+      `force` makes `shutdown` exit immediately.
       """;
 
   private static final String SCOPE_DESCRIPTION = """
@@ -68,6 +73,8 @@ public class ApiDocsHandler implements HttpHandler {
       * `unscraped` - all entities which have not been scraped yet
       * `path` - the entities at the given paths (paths given in `args`)
       * `dataSource` - the entities of the given data sources (paths or indices given in `args`)
+      * `tmdbId` / `imdbId` (movies) - the already scraped movies with the given TMDb/IMDb ids (ids given in `args`)
+      * `tvdbId` / `tmdbId` / `imdbId` (TV shows) - the already scraped TV shows and their episodes with the given TVDb/TMDb/IMDb ids (episodes are also matched by their own id; ids given in `args`)
       * `name` (movie sets only) - the movie sets with the given titles (titles given in `args`)
 
       Only used with the `update` command (data source scope):
@@ -90,6 +97,7 @@ public class ApiDocsHandler implements HttpHandler {
       | `scrape` | 2 - scrape | `scraper`: id of the metadata scraper to use | scrape the metadata of the movies |
       | `fetchRatings` | 2 - scrape | – | fetch the ratings from the configured rating sources |
       | `assignMovieSet` | 2 - scrape | – | assign the movies to their movie sets (needs the scraped `movie set` data) |
+      | `setWatched` | 2 - scrape | `watched`: `true` (default) / `false`, `playcount`: play count to set (default: `1` when watched, else `0`) | set the watched state of the movies |
       | `downloadTrailer` | 3 - download | `onlyMissing`: `true` (default) / `false` | download trailers |
       | `downloadSubtitle` | 3 - download | `language`: subtitle language, `onlyMissing`: `true` (default) / `false` | search and download subtitles |
       | `downloadMissingArtwork` | 3 - download | `scraper`: comma separated list of artwork scraper ids | download missing artwork |
@@ -115,6 +123,7 @@ public class ApiDocsHandler implements HttpHandler {
       | `detectAspectRatio` | 1 - update library | – | detect the aspect ratio of the main video files |
       | `scrape` | 2 - scrape | – | scrape the metadata of the TV shows and episodes (also syncs to Trakt if enabled) |
       | `fetchRatings` | 2 - scrape | – | fetch the ratings from the configured rating sources |
+      | `setWatched` | 2 - scrape | `watched`: `true` (default) / `false`, `playcount`: play count to set (default: `1` when watched, else `0`) | set the watched state of the episodes |
       | `downloadTrailer` | 3 - download | `onlyMissing`: `true` (default) / `false` | download trailers |
       | `downloadSubtitle` | 3 - download | `language`: subtitle language, `onlyMissing`: `true` (default) / `false` | search and download subtitles |
       | `downloadMissingArtwork` | 3 - download | `scraper`: comma separated list of artwork scraper ids | download missing artwork |
@@ -143,6 +152,15 @@ public class ApiDocsHandler implements HttpHandler {
       | `postProcess` | 7 - post process | – | execute all configured post-processing scripts for movie sets and their movies |
       | `updateKodi` | 8 - external | – | tell Kodi to reload the movies of the movie sets out of the NFO files (needs a configured Kodi host) |
       | `syncTrakt` | 8 - external | `collection`, `watched`, `rating`: `true` (default) / `false` | synchronize the movies of the movie sets to Trakt.tv |
+      """;
+
+  private static final String SYSTEM_ACTIONS    = """
+      Executes system related commands (no data source scope needed).
+
+      | action | extra args | description |
+      |---|---|---|
+      | `status` | – | returns the current state of tinyMediaManager in the `data` field of the response: version, state (`RUNNING` / `SHUTTING_DOWN`), busy flag, queued/running tasks and worker pool state |
+      | `shutdown` | `force`: `false` (default) / `true` | no more commands will be accepted (all command endpoints answer with **503**) and tinyMediaManager exits after the last task has finished - with `force` it exits immediately |
       """;
 
   private final ObjectMapper  objectMapper;
@@ -199,6 +217,7 @@ public class ApiDocsHandler implements HttpHandler {
     createCommandsPath(paths, "/api/movie", "movie", "Queue movie commands", MOVIE_ACTIONS);
     createCommandsPath(paths, "/api/tvshow", "tvshow", "Queue TV show commands", TVSHOW_ACTIONS);
     createCommandsPath(paths, "/api/movieset", "movieset", "Queue movie set commands", MOVIESET_ACTIONS);
+    createSystemPath(paths);
 
     ObjectNode docsGet = paths.putObject("/api/docs").putObject("get");
     docsGet.putArray("tags").add("docs");
@@ -235,13 +254,17 @@ public class ApiDocsHandler implements HttpHandler {
     scopeProps.putObject("name").put("type", "string").put("description", SCOPE_DESCRIPTION);
     scopeProps.putObject("args")
         .put("type", "array")
-        .put("description", "arguments of the scope (paths or indices)")
+        .put("description", "arguments of the scope (paths, indices or IDs)")
         .putObject("items")
         .put("type", "string");
 
     ObjectNode response = schemas.putObject("TmmResponse");
     response.put("type", "object");
-    response.putObject("properties").putObject("message").put("type", "string");
+    ObjectNode responseProps = response.putObject("properties");
+    responseProps.putObject("message").put("type", "string");
+    responseProps.putObject("data")
+        .put("type", "object")
+        .put("description", "optional structured data (e.g. the status information of the system endpoint)");
   }
 
   private void createCommandsPath(ObjectNode paths, String path, String tag, String summary, String actionTable) {
@@ -278,6 +301,57 @@ public class ApiDocsHandler implements HttpHandler {
     ObjectNode responses = post.putObject("responses");
     responses.putObject("200")
         .put("description", "the commands have been queued for execution")
+        .putObject("content")
+        .putObject("application/json")
+        .putObject("schema")
+        .put("$ref", "#/components/schemas/TmmResponse");
+    responses.putObject("403").put("description", "invalid API key");
+    responses.putObject("503").put("description", "tinyMediaManager is shutting down - no more commands are accepted");
+  }
+
+  /**
+   * Creates the OpenAPI description of the system endpoint.
+   *
+   * @param paths
+   *          the {@link ObjectNode} holding all paths of the OpenAPI document
+   */
+  private void createSystemPath(ObjectNode paths) {
+    ObjectNode system = paths.putObject("/api/system");
+
+    ObjectNode get = system.putObject("get");
+    get.putArray("tags").add("system");
+    get.put("operationId", "status");
+    get.put("summary", "Get the current state of tinyMediaManager");
+    get.put("description", "Convenience shortcut for the `status` action - returns the state in the `data` field of the response");
+    ObjectNode getResponses = get.putObject("responses");
+    getResponses.putObject("200")
+        .put("description", "the current state")
+        .putObject("content")
+        .putObject("application/json")
+        .putObject("schema")
+        .put("$ref", "#/components/schemas/TmmResponse");
+    getResponses.putObject("403").put("description", "invalid API key");
+
+    ObjectNode post = system.putObject("post");
+    post.putArray("tags").add("system");
+    post.put("operationId", "commands_system");
+    post.put("summary", "Query the state of tinyMediaManager or initiate a shutdown");
+    post.put("description", SYSTEM_ACTIONS);
+
+    ObjectNode content = post.putObject("requestBody").put("required", true).putObject("content").putObject("application/json");
+
+    ObjectNode schema = content.putObject("schema");
+    ArrayNode oneOf = schema.putArray("oneOf");
+    oneOf.addObject().put("type", "array").putObject("items").put("$ref", "#/components/schemas/Command");
+    oneOf.addObject().put("$ref", "#/components/schemas/Command");
+
+    ArrayNode example = content.putArray("example");
+    example.addObject().put("action", "status");
+    example.addObject().put("action", "shutdown").putObject("args").put("force", "false");
+
+    ObjectNode responses = post.putObject("responses");
+    responses.putObject("200")
+        .put("description", "the status data or the initiated shutdown")
         .putObject("content")
         .putObject("application/json")
         .putObject("schema")

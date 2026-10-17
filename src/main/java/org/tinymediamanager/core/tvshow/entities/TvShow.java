@@ -733,6 +733,23 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   }
 
   /**
+   * completely remove all dummy episodes from this TV show
+   */
+  public void removeAllDummyEpisodes() {
+    // remove the dummies from the seasons first (for UI events) while the list is still intact
+    for (TvShowEpisode dummy : new ArrayList<>(dummyEpisodes)) {
+      removeEpisode(dummy);
+    }
+
+    // then clear the list and persist only once
+    dummyEpisodes.clear();
+
+    invalidateEpisodeForDisplayCache();
+
+    saveToDb();
+  }
+
+  /**
    * build a list of <br>
    * a) available episodes along with<br>
    * b) missing episodes <br>

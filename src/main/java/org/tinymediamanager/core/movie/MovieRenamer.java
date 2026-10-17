@@ -39,6 +39,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.DataSourceUtils;
 import org.tinymediamanager.core.IFileNaming;
 import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.LanguageStyle;
@@ -628,7 +629,23 @@ public class MovieRenamer {
     fileNameHistory.setNewPath(newPathname);
     movie.setRenameHistory(fileNameHistory);
 
+    updateDataSource(movie);
     movie.saveToDb();
+  }
+
+  /**
+   * Keeps the data source field of a movie in sync with its (possibly new) location. When a rename moves a movie into a nested data source, the movie
+   * now belongs to that data source.
+   *
+   * @param movie
+   *          the movie to update
+   */
+  private static void updateDataSource(Movie movie) {
+    String dataSource = DataSourceUtils.getDataSourceForPath(MovieModuleManager.getInstance().getSettings().getMovieDataSource(), movie.getPathNIO());
+    if (dataSource != null && !dataSource.equals(movie.getDataSource())) {
+      LOGGER.debug("Movie '{}' is now located in data source '{}' - updating the data source", movie.getTitle(), dataSource);
+      movie.setDataSource(dataSource);
+    }
   }
 
   public static void undoRename(Movie movie) {
@@ -735,6 +752,7 @@ public class MovieRenamer {
     // remove history
     movie.setRenameHistory(null);
 
+    updateDataSource(movie);
     movie.saveToDb();
 
     // cleanup old path
@@ -1138,6 +1156,19 @@ public class MovieRenamer {
           doubleExt.setFile(newMovieDir.resolve(newFilename));
         }
         newFiles.add(doubleExt);
+        break;
+
+      case SKIPTRO:
+        MediaFile skiptro = new MediaFile(mf);
+        if (movie.isDisc()) {
+          skiptro.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
+        }
+        else {
+          newFilename += getStackingString(mf, renamerProfile);
+          newFilename += ".skiptro.json";
+          skiptro.setFile(newMovieDir.resolve(newFilename));
+        }
+        newFiles.add(skiptro);
         break;
 
       case SUBTITLE:

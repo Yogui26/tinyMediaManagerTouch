@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -492,8 +491,14 @@ class MovieSetCommandTask extends TmmThreadPool {
         break;
     }
 
-    // filter out locked ones
-    return movieSetsToProcess.stream().filter(movieSet -> !movieSet.isLocked()).collect(Collectors.toList());
+    // filter out locked ones and remove duplicates
+    List<MovieSet> result = new ArrayList<>();
+    for (MovieSet movieSet : AbstractCommandHandler.distinctByIdentity(movieSetsToProcess)) {
+      if (!movieSet.isLocked()) {
+        result.add(movieSet);
+      }
+    }
+    return result;
   }
 
   private boolean getBoolArg(AbstractCommandHandler.Command command, String key, boolean defaultValue) {

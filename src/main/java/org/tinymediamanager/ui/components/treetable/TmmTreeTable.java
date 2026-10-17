@@ -81,6 +81,9 @@ public class TmmTreeTable extends TmmTable {
 
   private int[]                                    lastEditPosition;
 
+  /** the sorting of this table, set when the comparator chooser installs itself */
+  private TmmTreeTableComparatorChooser            comparatorChooser;
+
   /**
    * Constructs a new {@code TmmTreeTable} with the given data provider and table format.
    *
@@ -203,6 +206,30 @@ public class TmmTreeTable extends TmmTable {
     }
     else {
       return null;
+    }
+  }
+
+  /**
+   * Lets the comparator chooser of this table remember itself, so that freshly created columns can be decorated again.
+   *
+   * @param comparatorChooser
+   *          the chooser installed on this table
+   */
+  void setComparatorChooser(TmmTreeTableComparatorChooser comparatorChooser) {
+    this.comparatorChooser = comparatorChooser;
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * The recreated columns come along without the header decoration of the comparator chooser, so that gets applied here as well.
+   */
+  @Override
+  public void rebuildColumnsFromModel() {
+    super.rebuildColumnsFromModel();
+
+    if (comparatorChooser != null) {
+      comparatorChooser.refreshColumnHeaderRenderers();
     }
   }
 

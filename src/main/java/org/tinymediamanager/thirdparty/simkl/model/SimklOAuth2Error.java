@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.tinymediamanager.core.http;
-
-import java.util.List;
+package org.tinymediamanager.thirdparty.simkl.model;
 
 /**
- * the class {@link CommandHandler} is used to provide the same commands as the command line interface via HTTP
+ * The RFC 6749 section 5.2 error envelope of the Simkl AUTH V2 <code>/oauth2/*</code> endpoints. Branch on {@link #error} only,
+ * {@link #error_description} is human-readable and may change.
  *
  * @author Manuel Laggner
  */
-public class CommandHandler extends AbstractCommandHandler {
+public class SimklOAuth2Error {
+  /** The machine-readable error code, e.g. <code>authorization_pending</code>, <code>slow_down</code> or <code>expired_token</code> */
+  public String error;
 
-  @Override
-  protected TmmCommandResponse processCommands(List<Command> commands) {
-    return null;
-  }
+  /** The human-readable description - for logging and display, never for branching */
+  public String error_description;
 }
