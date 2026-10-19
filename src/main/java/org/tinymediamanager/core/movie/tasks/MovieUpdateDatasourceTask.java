@@ -1579,13 +1579,23 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           case AUDIO:
           case MEDIAINFO:
           case VSMETA:
-          case SKIPTRO:
-          case SCENEPASS:
           case THEME:
           case CHARACTERART:
           case DOUBLE_EXT:
           case BIF:
             movie.addToMediaFiles(mf);
+            break;
+
+          case SKIPTRO:
+            if (hasMatchingVideoForSidecar(movie, MediaFileHelper.getSkiptroBasename(mf.getFilename()))) {
+              movie.addToMediaFiles(mf);
+            }
+            break;
+
+          case SCENEPASS:
+            if (hasMatchingVideoForSidecar(movie, MediaFileHelper.getScenePassBasename(mf.getFilename()))) {
+              movie.addToMediaFiles(mf);
+            }
             break;
 
           case GRAPHIC:
@@ -1623,6 +1633,41 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         }
       }
     }
+  }
+
+  /**
+   * Checks whether a sidecar belongs to one of the movie's video files.
+   *
+   * @param movie
+   *          the movie to check
+   * @param sidecarBasename
+   *          the sidecar basename without its sidecar suffix
+   * @return {@code true} if the sidecar basename matches a video basename
+   */
+  private boolean hasMatchingVideoForSidecar(Movie movie, String sidecarBasename) {
+    if (StringUtils.isBlank(sidecarBasename)) {
+      return false;
+    }
+
+    String sidecarBasenameWithoutVideoExtension = "";
+    String extension = FilenameUtils.getExtension(sidecarBasename).toLowerCase(Locale.ROOT);
+    if (StringUtils.isNotBlank(extension) && Settings.getInstance().getVideoFileType().contains("." + extension)) {
+      // support the non-canonical "<video basename>.<video extension>.<sidecar suffix>" form
+      sidecarBasenameWithoutVideoExtension = FilenameUtils.getBaseName(sidecarBasename);
+    }
+
+    for (MediaFile video : movie.getMediaFiles(MediaFileType.VIDEO)) {
+      String videoBasename = FilenameUtils.getBaseName(video.getFilename());
+      if (isSameBasename(videoBasename, sidecarBasename) || isSameBasename(videoBasename, sidecarBasenameWithoutVideoExtension)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isSameBasename(String firstBasename, String secondBasename) {
+    return firstBasename.equalsIgnoreCase(secondBasename)
+        || Utils.cleanStackingMarkers(firstBasename).equalsIgnoreCase(Utils.cleanStackingMarkers(secondBasename));
   }
 
   private boolean hasInvalidBasename(MediaFile mainVideoFile, MediaFile toCheck, String suffix) {

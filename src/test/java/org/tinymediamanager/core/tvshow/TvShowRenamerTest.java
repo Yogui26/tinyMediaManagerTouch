@@ -315,6 +315,33 @@ public class TvShowRenamerTest extends BasicTvShowTest {
   }
 
   @Test
+  public void testGenerateFilenameForSkiptroSidecarWithStacking() {
+    Path seasonFolder = getWorkFolder().resolve("Skiptro Show").resolve("Season 01").toAbsolutePath();
+
+    TvShow show = new TvShow();
+    show.setTitle("Skiptro Show");
+    show.setPath(seasonFolder.getParent().toString());
+
+    TvShowEpisode episode = new TvShowEpisode();
+    episode.setTitle("Pilot");
+    episode.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 1));
+    episode.setPath(seasonFolder.toString());
+    episode.addToMediaFiles(new MediaFile(seasonFolder.resolve("Old Name CD1.mkv"), MediaFileType.VIDEO));
+    episode.addToMediaFiles(new MediaFile(seasonFolder.resolve("Old Name CD2.mkv"), MediaFileType.VIDEO));
+    MediaFile skiptro = new MediaFile(seasonFolder.resolve("Old Name CD1.skiptro.json"), MediaFileType.SKIPTRO);
+    episode.addToMediaFiles(skiptro);
+    episode.setTvShow(show);
+    show.addEpisode(episode);
+
+    episode.reEvaluateStacking();
+    List<MediaFile> renamed = TvShowRenamer.generateEpisodeFilenames("${showTitle} - S${seasonNr2}E${episodeNr2} - ${title}", show, skiptro, "",
+        new TvShowRenamerProfile());
+
+    assertThat(renamed).hasSize(1);
+    assertThat(renamed.get(0).getFilename()).isEqualTo("Skiptro Show - S01E01 - Pilot.CD1.skiptro.json");
+  }
+
+  @Test
   public void testMultiEpisodeRangeFallbackForNonContiguousEpisodes() {
     TvShowRenamerProfile renamerProfile = TvShowModuleManager.getInstance().getSettings().getDefaultRenamerProfile();
     renamerProfile.setRenamerMultiEpisodeStyle(TvShowMultiEpisodeStyle.RANGE);

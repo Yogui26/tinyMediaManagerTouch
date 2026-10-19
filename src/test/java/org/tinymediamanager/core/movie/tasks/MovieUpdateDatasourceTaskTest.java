@@ -303,6 +303,8 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Files.createDirectories(movieFolder);
     Files.createFile(movieFolder.resolve("testmovie.mkv"));
     Files.writeString(movieFolder.resolve("testmovie.skiptro.json"), "{ \"intro\": { \"start\": 0, \"end\": 87.5 } }");
+    Files.writeString(movieFolder.resolve("testmovie.mkv.skiptro.json"), "{ \"intro\": { \"start\": 0, \"end\": 87.5 } }");
+    Files.writeString(movieFolder.resolve("other.skiptro.json"), "{ \"intro\": { \"start\": 0, \"end\": 87.5 } }");
 
     MovieModuleManager.getInstance().getSettings().addMovieDataSources(skiptroDs.toString());
 
@@ -312,8 +314,8 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Movie movie = getMovieByFolder(skiptroDs, "Test Movie (2020)");
 
     List<MediaFile> skiptroFiles = movie.getMediaFiles(MediaFileType.SKIPTRO);
-    assertEqual("skiptro sidecar not associated to the movie", 1, skiptroFiles.size());
-    assertEqual("unexpected skiptro filename", "testmovie.skiptro.json", skiptroFiles.get(0).getFilename());
+    assertThat(skiptroFiles).hasSize(2);
+    assertThat(skiptroFiles).extracting(MediaFile::getFilename).containsExactlyInAnyOrder("testmovie.skiptro.json", "testmovie.mkv.skiptro.json");
   }
 
   /**
