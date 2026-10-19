@@ -29,7 +29,7 @@ test:jdk17:
   tags:
     - tmm # force running on own runners
   script:
-    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false clean test
+    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dtmm.consoleloglevel=INFO -Dmaven.test.failure.ignore=false clean test
   artifacts:
     expire_in: 1 days
 
@@ -47,7 +47,7 @@ test:jdk21:
   tags:
     - tmm # force running on own runners
   script:
-    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false clean test
+    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dtmm.consoleloglevel=INFO -Dmaven.test.failure.ignore=false clean test
   artifacts:
     expire_in: 1 days
 
@@ -66,7 +66,7 @@ test:jdk25:
   tags:
     - tmm # force running on own runners
   script:
-    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false clean test
+    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dtmm.consoleloglevel=INFO -Dmaven.test.failure.ignore=false clean test
   artifacts:
     expire_in: 1 days
 
@@ -89,7 +89,7 @@ test:jdk21-de_DE:
   tags:
     - tmm # force running on own runners
   script:
-    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false clean test
+    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dtmm.consoleloglevel=INFO -Dmaven.test.failure.ignore=false clean test
   artifacts:
     expire_in: 1 days
 
@@ -112,7 +112,7 @@ test:jdk25-de_DE:
   tags:
     - tmm # force running on own runners
   script:
-    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false clean test
+    - mvn $MAVEN_CLI_OPTS -U -DskipTests=false -DskipITs=true -Dtmm.consoleloglevel=INFO -Dmaven.test.failure.ignore=false clean test
   artifacts:
     expire_in: 1 days
 
