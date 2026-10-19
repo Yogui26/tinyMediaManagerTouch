@@ -62,6 +62,7 @@ public enum MediaFileType {
   VSMETA, // xxx.ext.vsmeta Synology
   THEME, // "theme" files for some skins, like theme.mp3 (or bg video)
   SKIPTRO, // "skiptro" intro timestamps (xxx.skiptro.json) for the Kodi addon service.skiptro
+  SCENEPASS, // intro/recap timestamps (xxx.sp.json, xxx.sp.hash.json) for the Kodi addon service.scenepass
   TEXT, // various text infos, like BDinfo.txt or others...
   DOUBLE_EXT, // the filename startsWith video filename (and added extension), so we keep them...
   UNKNOWN;

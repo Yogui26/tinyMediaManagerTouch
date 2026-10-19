@@ -1172,6 +1172,26 @@ public class MovieRenamer {
         newFiles.add(skiptro);
         break;
 
+      case SCENEPASS:
+        MediaFile scenePass = new MediaFile(mf);
+        if (movie.isDisc()) {
+          scenePass.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
+          newFiles.add(scenePass);
+        }
+        else {
+          String scenePassSuffix = MediaFileHelper.getScenePassSuffix(mf.getFilename());
+          if (StringUtils.isBlank(scenePassSuffix)) {
+            newFiles.add(defaultMF);
+          }
+          else {
+            newFilename += getStackingString(mf, renamerProfile);
+            newFilename += scenePassSuffix;
+            scenePass.setFile(newMovieDir.resolve(newFilename));
+            newFiles.add(scenePass);
+          }
+        }
+        break;
+
       case SUBTITLE:
         List<MediaFileSubtitle> subtitles = mf.getSubtitles();
         newFilename += getStackingString(mf, renamerProfile);

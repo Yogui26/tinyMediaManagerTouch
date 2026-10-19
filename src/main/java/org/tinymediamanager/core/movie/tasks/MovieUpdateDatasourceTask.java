@@ -1580,6 +1580,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           case MEDIAINFO:
           case VSMETA:
           case SKIPTRO:
+          case SCENEPASS:
           case THEME:
           case CHARACTERART:
           case DOUBLE_EXT:

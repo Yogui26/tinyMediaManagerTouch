@@ -9,12 +9,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.tinymediamanager.TmmOsUtils;
+import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
@@ -281,6 +283,35 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     TvShow single = createSingleTvShow();
     assertEqual("singleshow - S01E02 - singleEP",
         TvShowRenamer.createDestination("${showTitle} - S${seasonNr2}E${episodeNr2} - ${title}", single.getEpisodes(), renamerProfile));
+  }
+
+  @Test
+  public void testGenerateFilenameForScenePassSidecar() {
+    Path seasonFolder = getWorkFolder().resolve("ScenePass Show").resolve("Season 01").toAbsolutePath();
+
+    TvShow show = new TvShow();
+    show.setTitle("ScenePass Show");
+    show.setPath(seasonFolder.getParent().toString());
+
+    TvShowEpisode episode = new TvShowEpisode();
+    episode.setTitle("Pilot");
+    episode.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 1));
+    episode.setPath(seasonFolder.toString());
+    episode.addToMediaFiles(new MediaFile(seasonFolder.resolve("Old Name.mkv"), MediaFileType.VIDEO));
+    episode.setTvShow(show);
+    show.addEpisode(episode);
+
+    TvShowRenamerProfile profile = new TvShowRenamerProfile();
+    for (String filename : Arrays.asList("Old Name.sp.json", "Old Name.sp.hash.json")) {
+      MediaFile scenePass = new MediaFile(seasonFolder.resolve(filename), MediaFileType.SCENEPASS);
+      episode.addToMediaFiles(scenePass);
+
+      List<MediaFile> renamed = TvShowRenamer.generateEpisodeFilenames("${showTitle} - S${seasonNr2}E${episodeNr2} - ${title}", show, scenePass, "",
+          profile);
+
+      assertThat(renamed).hasSize(1);
+      assertThat(renamed.get(0).getFilename()).isEqualTo("ScenePass Show - S01E01 - Pilot" + MediaFileHelper.getScenePassSuffix(filename));
+    }
   }
 
   @Test

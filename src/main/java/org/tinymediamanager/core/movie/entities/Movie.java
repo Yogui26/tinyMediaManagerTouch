@@ -2389,7 +2389,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       // not always true - having a duplicated video with other extension - check explicitly
       boolean stacked = false;
       for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO, MediaFileType.AUDIO, MediaFileType.SUBTITLE, MediaFileType.MEDIAINFO,
-          MediaFileType.VSMETA, MediaFileType.SKIPTRO, MediaFileType.DOUBLE_EXT)) {
+          MediaFileType.VSMETA, MediaFileType.SKIPTRO, MediaFileType.SCENEPASS, MediaFileType.DOUBLE_EXT)) {
         mf.detectStackingInformation();
         if (mf.getStacking() > 0) {
           stacked = true;
@@ -2401,7 +2401,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       // only ONE video? remove any stacking markers from MFs
       this.setStacked(false);
       for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO, MediaFileType.AUDIO, MediaFileType.SUBTITLE, MediaFileType.MEDIAINFO,
-          MediaFileType.VSMETA, MediaFileType.SKIPTRO, MediaFileType.DOUBLE_EXT)) {
+          MediaFileType.VSMETA, MediaFileType.SKIPTRO, MediaFileType.SCENEPASS, MediaFileType.DOUBLE_EXT)) {
         mf.removeStackingInformation();
       }
     }

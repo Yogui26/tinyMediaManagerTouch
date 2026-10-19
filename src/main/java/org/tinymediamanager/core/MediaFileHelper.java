@@ -103,6 +103,9 @@ public class MediaFileHelper {
   // well known markers for subtitles for the hearing impaired in stream titles (similar to mkvtoolnix)
   private static final Pattern     SDH_TITLE_PATTERN  = Pattern.compile("(?i)\\b(sdh|cc|hearing[-\\s]?impaired)\\b");
 
+  // ScenePass sidecar suffixes, longest first
+  private static final List<String> SCENEPASS_SUFFIXES = List.of(".sp.hash.json", ".sp.json");
+
   public static final List<String> SUPPORTED_ARTWORK_FILETYPES;
   public static final List<String> DEFAULT_VIDEO_FILETYPES;
   public static final List<String> DEFAULT_AUDIO_FILETYPES;
@@ -368,6 +371,10 @@ public class MediaFileHelper {
       return MediaFileType.SKIPTRO;
     }
 
+    if (!getScenePassSuffix(filename).isEmpty()) {
+      return MediaFileType.SCENEPASS;
+    }
+
     if ((basename.endsWith("-mediainfo") || basename.endsWith(".mediainfo")) && "xml".equalsIgnoreCase(ext)) {
       return MediaFileType.MEDIAINFO;
     }
@@ -426,6 +433,57 @@ public class MediaFileHelper {
     }
 
     return MediaFileType.UNKNOWN;
+  }
+
+  /**
+   * Gets the ScenePass suffix of the given filename.
+   *
+   * @param filename
+   *          the filename to check
+   * @return the matching suffix with its original case, or an empty string if this is no ScenePass file
+   */
+  public static String getScenePassSuffix(String filename) {
+    if (StringUtils.isBlank(filename)) {
+      return "";
+    }
+
+    String lowerCaseFilename = filename.toLowerCase(Locale.ROOT);
+    for (String suffix : SCENEPASS_SUFFIXES) {
+      if (lowerCaseFilename.endsWith(suffix)) {
+        return filename.substring(filename.length() - suffix.length());
+      }
+    }
+    return "";
+  }
+
+  /**
+   * Gets the video basename of a ScenePass sidecar (without its ScenePass suffix).
+   *
+   * @param filename
+   *          the filename to check
+   * @return the video basename, or an empty string if this is no ScenePass file
+   */
+  public static String getScenePassBasename(String filename) {
+    String suffix = getScenePassSuffix(filename);
+    if (suffix.isEmpty()) {
+      return "";
+    }
+    return filename.substring(0, filename.length() - suffix.length());
+  }
+
+  /**
+   * Gets the video basename of a Skiptro sidecar (without its Skiptro suffix).
+   *
+   * @param filename
+   *          the filename to check
+   * @return the video basename, or an empty string if this is no Skiptro file
+   */
+  public static String getSkiptroBasename(String filename) {
+    String suffix = ".skiptro.json";
+    if (StringUtils.isBlank(filename) || !filename.toLowerCase(Locale.ROOT).endsWith(suffix)) {
+      return "";
+    }
+    return filename.substring(0, filename.length() - suffix.length());
   }
 
   /**
@@ -942,6 +1000,7 @@ public class MediaFileHelper {
       case MEDIAINFO:
       case VSMETA:
       case SKIPTRO:
+      case SCENEPASS:
       case UNKNOWN:
       case DOUBLE_EXT:
         // set container format to do not trigger it again

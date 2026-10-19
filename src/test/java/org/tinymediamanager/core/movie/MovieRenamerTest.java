@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.Test;
+import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -512,6 +513,33 @@ public class MovieRenamerTest extends BasicMovieTest {
 
     assertThat(renamed).hasSize(1);
     assertThat(renamed.get(0).getFilename()).isEqualTo("New Movie (2020).skiptro.json");
+  }
+
+  /**
+   * ScenePass sidecars must be renamed to "&lt;new video basename&gt;&lt;suffix&gt;" (without the video container extension) and keep their specific
+   * suffix type.
+   */
+  @Test
+  public void testGenerateFilenameForScenePassSidecar() {
+    Path movieDir = getWorkFolder().resolve("Old Movie");
+
+    Movie movie = new Movie();
+    movie.setDataSource(getWorkFolder().toString());
+    movie.setPath(movieDir.toString());
+    movie.setTitle("New Movie");
+    movie.setYear(2020);
+
+    for (String filename : List.of("oldmovie.sp.json", "oldmovie.sp.hash.json")) {
+      MediaFile scenePass = new MediaFile();
+      scenePass.setType(MediaFileType.SCENEPASS);
+      scenePass.setPath(movieDir.toString());
+      scenePass.setFilename(filename);
+
+      List<MediaFile> renamed = MovieRenamer.generateFilename(movie, scenePass, "New Movie (2020)", new MovieRenamerProfile());
+
+      assertThat(renamed).hasSize(1);
+      assertThat(renamed.get(0).getFilename()).isEqualTo("New Movie (2020)" + MediaFileHelper.getScenePassSuffix(filename));
+    }
   }
 
   private static class UdsMiRenamerExample {

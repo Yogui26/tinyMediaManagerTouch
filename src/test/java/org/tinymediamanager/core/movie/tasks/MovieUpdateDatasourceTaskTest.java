@@ -317,6 +317,32 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
   }
 
   /**
+   * ScenePass sidecars ("&lt;video basename&gt;.sp.json" and "&lt;video basename&gt;.sp.hash.json") must be detected and associated to the matching
+   * movie. Sidecars with a non-matching basename must not be attached.
+   */
+  @Test
+  public void udsScenePassSidecarsAreAttached() throws Exception {
+    Path scenePassDs = getWorkFolder().resolve("scenepassds").toAbsolutePath();
+    Path movieFolder = scenePassDs.resolve("Test Movie (2020)");
+    Files.createDirectories(movieFolder);
+    Files.createFile(movieFolder.resolve("testmovie.mkv"));
+    Files.writeString(movieFolder.resolve("testmovie.sp.json"), "{}");
+    Files.writeString(movieFolder.resolve("testmovie.sp.hash.json"), "{}");
+    Files.writeString(movieFolder.resolve("other.sp.json"), "{}");
+
+    MovieModuleManager.getInstance().getSettings().addMovieDataSources(scenePassDs.toString());
+
+    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    task.run();
+
+    Movie movie = getMovieByFolder(scenePassDs, "Test Movie (2020)");
+
+    List<MediaFile> scenePassFiles = movie.getMediaFiles(MediaFileType.SCENEPASS);
+    assertThat(scenePassFiles).hasSize(2);
+    assertThat(scenePassFiles).extracting(MediaFile::getFilename).containsExactlyInAnyOrder("testmovie.sp.json", "testmovie.sp.hash.json");
+  }
+
+  /**
    * Asserts that all expected media files from the folder have been associated to the movie.
    *
    * @param movie

@@ -1915,6 +1915,23 @@ public class TvShowRenamer {
         break;
 
       ////////////////////////////////////////////////////////////////////////
+      // SCENEPASS
+      ////////////////////////////////////////////////////////////////////////
+
+      case SCENEPASS:
+        MediaFile scenePass = new MediaFile(mf);
+        String scenePassSuffix = MediaFileHelper.getScenePassSuffix(mf.getFilename());
+        if (StringUtils.isBlank(scenePassSuffix)) {
+          scenePass.setFile(seasonFolder.resolve(mf.getFilename()));
+        }
+        else {
+          newFilename += getStackingString(mf, profile);
+          scenePass.setFile(seasonFolder.resolve(newFilename + scenePassSuffix));
+        }
+        newFiles.add(scenePass);
+        break;
+
+      ////////////////////////////////////////////////////////////////////////
       // VIDEO_EXTRA
       ////////////////////////////////////////////////////////////////////////
 

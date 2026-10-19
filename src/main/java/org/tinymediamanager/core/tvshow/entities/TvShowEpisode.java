@@ -2142,14 +2142,14 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     if (mfs.size() > 1 && !isDisc()) {
       // ok, more video files means stacking (if not a disc folder)
       this.setStacked(true);
-      for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO, MediaFileType.AUDIO, MediaFileType.SUBTITLE)) {
+      for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO, MediaFileType.AUDIO, MediaFileType.SUBTITLE, MediaFileType.SCENEPASS)) {
         mf.detectStackingInformation();
       }
     }
     else {
       // only ONE video? remove any stacking markers from MFs
       this.setStacked(false);
-      for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO, MediaFileType.AUDIO, MediaFileType.SUBTITLE)) {
+      for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO, MediaFileType.AUDIO, MediaFileType.SUBTITLE, MediaFileType.SCENEPASS)) {
         mf.removeStackingInformation();
       }
     }
