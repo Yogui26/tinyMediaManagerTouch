@@ -3,16 +3,28 @@
 
     <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
 
+    <condition class="ch.qos.logback.core.boolex.PropertyEqualityCondition">
+        <key>CI</key>
+        <value>true</value>
+    </condition>
+    <if>
+        <then>
+            <property name="test.log.level" value="WARN"/>
+        </then>
+        <else>
+            <property name="test.log.level" value="DEBUG"/>
+        </else>
+    </if>
+
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{ISO8601} %-5level [%thread] %logger{40}:%L - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <logger name="org.tinymediamanager" level="DEBUG"/>
-    <logger name="org.tinymediamanager.core.MediaFileHelper" level="INFO"/>
+    <logger name="org.tinymediamanager" level="${test.log.level}"/>
 
-    <root level="DEBUG">
+    <root level="${test.log.level}">
         <appender-ref ref="CONSOLE" />
     </root>
 
