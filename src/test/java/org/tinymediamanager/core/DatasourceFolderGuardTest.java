@@ -16,14 +16,17 @@ public class DatasourceFolderGuardTest {
   private static final List<String> WINDOWS_SYSTEM   = Arrays.asList("C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\ProgramData",
       "C:\\Users\\tmmuser\\AppData\\Roaming", "C:\\Users\\tmmuser\\AppData\\Local");
   private static final List<String> WINDOWS_TMM_DATA = Arrays.asList("D:\\tmm-data");
+  private static final List<String> WINDOWS_TEMP     = Arrays.asList("C:\\Users\\tmmuser\\AppData\\Local\\Temp", "C:\\Windows\\Temp");
 
   private static final String       LINUX_HOME       = "/home/tmmuser";
   private static final List<String> LINUX_SYSTEM     = List.of();
   private static final List<String> LINUX_TMM_DATA   = Arrays.asList("/data");
+  private static final List<String> LINUX_TEMP       = Arrays.asList("/tmp", "/var/tmp");
 
   private static final String       MAC_HOME         = "/Users/tmmuser";
   private static final List<String> MAC_SYSTEM       = Arrays.asList("/Users/tmmuser/Library");
   private static final List<String> MAC_TMM_DATA     = Arrays.asList("/data");
+  private static final List<String> MAC_TEMP         = Arrays.asList("/tmp", "/private/tmp", "/var/tmp", "/private/var/tmp");
 
   @Test
   public void testWindowsDangerousFolders() {
@@ -63,6 +66,44 @@ public class DatasourceFolderGuardTest {
     assertOk("D:\\TV Shows");
     assertOk("D:\\tmm-data\\movies");
     assertOk("\\\\nas\\share\\media");
+  }
+
+  @Test
+  public void testWindowsTempFoldersAreOk() {
+    assertThat(check("C:\\Users\\tmmuser\\AppData\\Local\\Temp\\maven-tests\\data", DatasourceFolderGuard.Os.WINDOWS, WINDOWS_HOME, WINDOWS_SYSTEM,
+        WINDOWS_TMM_DATA, WINDOWS_TEMP)).isEmpty();
+    assertThat(check("C:\\Windows\\Temp\\tmm", DatasourceFolderGuard.Os.WINDOWS, WINDOWS_HOME, WINDOWS_SYSTEM, WINDOWS_TMM_DATA, WINDOWS_TEMP))
+        .isEmpty();
+    // sibling folders below the protected roots must stay dangerous
+    assertThat(check("C:\\Users\\tmmuser\\AppData\\Local\\Other", DatasourceFolderGuard.Os.WINDOWS, WINDOWS_HOME, WINDOWS_SYSTEM, WINDOWS_TMM_DATA,
+        WINDOWS_TEMP)).isPresent();
+    assertThat(check("C:\\Windows\\System32", DatasourceFolderGuard.Os.WINDOWS, WINDOWS_HOME, WINDOWS_SYSTEM, WINDOWS_TMM_DATA, WINDOWS_TEMP))
+        .isPresent();
+  }
+
+  @Test
+  public void testLinuxTempFoldersAreOk() {
+    assertThat(check("/tmp", DatasourceFolderGuard.Os.LINUX, LINUX_HOME, LINUX_SYSTEM, LINUX_TMM_DATA, LINUX_TEMP)).isEmpty();
+    assertThat(check("/tmp/tmm-tests", DatasourceFolderGuard.Os.LINUX, LINUX_HOME, LINUX_SYSTEM, LINUX_TMM_DATA, LINUX_TEMP)).isEmpty();
+    assertThat(check("/var/tmp/tmm", DatasourceFolderGuard.Os.LINUX, LINUX_HOME, LINUX_SYSTEM, LINUX_TMM_DATA, LINUX_TEMP)).isEmpty();
+    assertThat(check("/dev", DatasourceFolderGuard.Os.LINUX, LINUX_HOME, LINUX_SYSTEM, LINUX_TMM_DATA, LINUX_TEMP)).isPresent();
+  }
+
+  @Test
+  public void testMacOsTempFoldersAreOk() {
+    assertThat(check("/tmp", DatasourceFolderGuard.Os.MAC_OS, MAC_HOME, MAC_SYSTEM, MAC_TMM_DATA, MAC_TEMP)).isEmpty();
+    assertThat(check("/private/var/tmp/tmm-tests", DatasourceFolderGuard.Os.MAC_OS, MAC_HOME, MAC_SYSTEM, MAC_TMM_DATA, MAC_TEMP)).isEmpty();
+    assertThat(check("/System", DatasourceFolderGuard.Os.MAC_OS, MAC_HOME, MAC_SYSTEM, MAC_TMM_DATA, MAC_TEMP)).isPresent();
+  }
+
+  @Test
+  public void testTempFoldersDoNotExemptRootsOrHome() {
+    // a misconfigured temp folder pointing to a drive root must not exempt the system drive
+    assertThat(check("C:\\", DatasourceFolderGuard.Os.WINDOWS, WINDOWS_HOME, WINDOWS_SYSTEM, WINDOWS_TMM_DATA, List.of("C:\\"))).isPresent();
+    // a temp folder equal to (or containing) the user home must not exempt the user home
+    assertThat(check("/home/tmmuser", DatasourceFolderGuard.Os.LINUX, LINUX_HOME, LINUX_SYSTEM, LINUX_TMM_DATA, List.of("/home/tmmuser")))
+        .isPresent();
+    assertThat(check("/home", DatasourceFolderGuard.Os.LINUX, LINUX_HOME, LINUX_SYSTEM, LINUX_TMM_DATA, List.of("/home"))).isPresent();
   }
 
   @Test
@@ -124,6 +165,11 @@ public class DatasourceFolderGuardTest {
 
   private static void assertOk(String path) {
     assertThat(check(path)).as("expect '" + path + "' to be ok").isEmpty();
+  }
+
+  private static java.util.Optional<String> check(String path, DatasourceFolderGuard.Os os, String home, List<String> systemFolders,
+      List<String> tmmDataFolders, List<String> tempFolders) {
+    return DatasourceFolderGuard.check(path, os, home, systemFolders, tmmDataFolders, tempFolders);
   }
 
   private static java.util.Optional<String> check(String path) {
