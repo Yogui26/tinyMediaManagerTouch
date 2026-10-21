@@ -251,6 +251,70 @@ public class UtilsMoveCopyTest extends BasicTest {
     assertThat(read(dest)).isEqualTo("copied content");
   }
 
+  @Test
+  public void streamCopyRegularFile() throws IOException {
+    Path src = writeFile(tmpFolder.getRoot().toPath().resolve("streamA.txt"), "streamed content");
+    Path dest = tmpFolder.getRoot().toPath().resolve("streamSub").resolve("streamB.txt");
+    Files.createDirectories(dest.getParent());
+    Utils.copyFileWithStream(src, dest);
+    assertThat(read(src)).isEqualTo("streamed content");
+    assertThat(read(dest)).isEqualTo("streamed content");
+  }
+
+  @Test
+  public void streamCopyOverwritesExistingTarget() throws IOException {
+    Path src = writeFile(tmpFolder.getRoot().toPath().resolve("streamSrc.txt"), "new content");
+    Path dest = writeFile(tmpFolder.getRoot().toPath().resolve("streamDest.txt"), "old content which is longer");
+    Utils.copyFileWithStream(src, dest);
+    assertThat(read(dest)).isEqualTo("new content");
+  }
+
+  @Test
+  public void streamCopyEmptyFile() throws IOException {
+    Path src = writeFile(tmpFolder.getRoot().toPath().resolve("streamEmptySrc.txt"), "");
+    Path dest = tmpFolder.getRoot().toPath().resolve("streamEmptyDest.txt");
+    Utils.copyFileWithStream(src, dest);
+    assertThat(Files.size(src)).isZero();
+    assertThat(Files.size(dest)).isZero();
+  }
+
+  @Test
+  public void streamCopyReplacesDestinationSymlinkWithoutChangingItsTarget() throws IOException {
+    Path src = writeFile(tmpFolder.getRoot().toPath().resolve("streamLinkSrc.txt"), "new content");
+    Path linkedTarget = writeFile(tmpFolder.getRoot().toPath().resolve("streamLinkTarget.txt"), "keep this content");
+    Path dest = tmpFolder.getRoot().toPath().resolve("streamLinkDest.txt");
+    try {
+      Files.createSymbolicLink(dest, linkedTarget);
+    }
+    catch (IOException | UnsupportedOperationException | SecurityException e) {
+      assumeTrue("symlinks not supported here", false);
+    }
+
+    Utils.copyFileWithStream(src, dest);
+
+    assertThat(Files.isSymbolicLink(dest)).isFalse();
+    assertThat(read(dest)).isEqualTo("new content");
+    assertThat(read(linkedTarget)).isEqualTo("keep this content");
+  }
+
+  @Test
+  public void streamCopySymlinkToSourceDoesNotTruncateSource() throws IOException {
+    Path src = writeFile(tmpFolder.getRoot().toPath().resolve("streamSelfSrc.txt"), "source content");
+    Path dest = tmpFolder.getRoot().toPath().resolve("streamSelfLink.txt");
+    try {
+      Files.createSymbolicLink(dest, src);
+    }
+    catch (IOException | UnsupportedOperationException | SecurityException e) {
+      assumeTrue("symlinks not supported here", false);
+    }
+
+    Utils.copyFileWithStream(src, dest);
+
+    assertThat(Files.isSymbolicLink(dest)).isFalse();
+    assertThat(read(src)).isEqualTo("source content");
+    assertThat(read(dest)).isEqualTo("source content");
+  }
+
   // =========================================================================
   // deleteFileWithBackup
   // =========================================================================

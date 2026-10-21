@@ -19,6 +19,7 @@ import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,6 +27,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -122,6 +124,12 @@ public class Utils {
 
   /** the file store type macOS reports for its native local volumes */
   private static final String       APFS_FILE_STORE_TYPE        = "apfs";
+
+  /** number of extra size checks after a copy if the destination size does not match the source size */
+  private static final int          COPY_SIZE_CHECK_ATTEMPTS    = 3;
+
+  /** delay between size checks, allowing remote file systems to update their metadata */
+  private static final long         COPY_SIZE_CHECK_DELAY_MS    = 150;
 
   /**
    * datasources whose trash folder has already been created/verified in this session; saves repeated (network) metadata round trips while deleting
@@ -898,7 +906,10 @@ public class Utils {
             }
             catch (Exception e) {
               // but if another filesystem is involved, we NEED to copy+delete
-              copyFileSafe(srcFile, destFile, true);
+              if (!copyFileSafe(srcFile, destFile, true)) {
+                // keep the source file if the copy did not succeed
+                return false;
+              }
               deleteFileSafely(srcFile);
             }
           }
@@ -1129,37 +1140,52 @@ public class Utils {
         }
       }
 
-      // rename folder; try 5 times and wait a sec
+      // copy the file; try 5 times and wait a sec
       boolean rename = false;
+      IOException lastError = null;
       for (int i = 0; i < 5; i++) {
         try {
           // replace existing for changing cASE
           Files.copy(srcFile, destFile, StandardCopyOption.REPLACE_EXISTING);
+          verifyCopiedFileSize(srcFile, destFile);
           fixDateAttributes(srcFile, destFile);
           rename = true;// no exception
         }
         catch (AccessDeniedException e) {
+          lastError = e;
           // propagate to UI by logging with error
           LOGGER.error("ACCESS DENIED (copy file) for '{}' to '{}' - '{}' [{}]", srcFile, destFile, e.getMessage(), e.getClass().getSimpleName());
         }
+        catch (CopySizeMismatchException e) {
+          lastError = e;
+          LOGGER.debug("Copy did not work: {} [{}]", e.getMessage(), e.getClass().getSimpleName());
+          break; // repeating the same copy will not help - use the stream fallback below
+        }
         catch (UnsupportedOperationException u) {
-          // maybe copy with attributes does not work here (across file systems), just try without file attributes
+          // Files.copy() is not supported here - use a stream copy instead
+          LOGGER.debug("Copy did not work for '{}' - trying stream copy [{}]", srcFile, u.getClass().getSimpleName());
           try {
-            // replace existing for changing cASE
-            Files.copy(srcFile, destFile, StandardCopyOption.REPLACE_EXISTING);
+            copyFileWithStream(srcFile, destFile);
             fixDateAttributes(srcFile, destFile);
             rename = true;// no exception
           }
           catch (AccessDeniedException e) {
+            lastError = e;
             // propagate to UI by logging with error
             LOGGER.error("ACCESS DENIED (copy file) for '{}' to '{}' - '{}' [{}]", srcFile, destFile, e.getMessage(), e.getClass().getSimpleName());
           }
           catch (IOException e) {
-            LOGGER.warn("Copy did not work (fallback) for '{}' - '{}' [{}]", srcFile, e.getMessage(), e.getClass().getSimpleName());
+            lastError = e;
+            LOGGER.debug("Stream copy did not work for '{}' - '{}' [{}]", srcFile, e.getMessage(), e.getClass().getSimpleName());
+          }
+          catch (UnsupportedOperationException e) {
+            lastError = new IOException("Stream copy is not supported", e);
+            LOGGER.debug("Stream copy is not supported for '{}' [{}]", srcFile, e.getClass().getSimpleName());
           }
         }
         catch (IOException e) {
-          LOGGER.warn("Copy did not work: {} [{}]", e.getMessage(), e.getClass().getSimpleName());
+          lastError = e;
+          LOGGER.debug("Copy did not work: {} [{}]", e.getMessage(), e.getClass().getSimpleName());
         }
 
         if (rename) {
@@ -1176,9 +1202,37 @@ public class Utils {
         }
       }
 
+      if (!rename && lastError != null && !(lastError instanceof AccessDeniedException)) {
+        // all regular copies failed - give the stream copy a final chance
+        LOGGER.debug("copy did not work - retrying with stream copy '{}' to '{}'", srcFile, destFile);
+        try {
+          copyFileWithStream(srcFile, destFile);
+          fixDateAttributes(srcFile, destFile);
+          rename = true;
+        }
+        catch (AccessDeniedException e) {
+          lastError = e;
+          // propagate to UI by logging with error
+          LOGGER.error("ACCESS DENIED (copy file) for '{}' to '{}' - '{}' [{}]", srcFile, destFile, e.getMessage(), e.getClass().getSimpleName());
+        }
+        catch (IOException e) {
+          e.addSuppressed(lastError);
+          lastError = e;
+          LOGGER.debug("Stream copy fallback did not work for '{}' - '{}' [{}]", srcFile, e.getMessage(), e.getClass().getSimpleName());
+        }
+        catch (UnsupportedOperationException e) {
+          lastError = new IOException("Stream copy is not supported", e);
+          LOGGER.debug("Stream copy is not supported for '{}' [{}]", srcFile, e.getClass().getSimpleName());
+        }
+      }
+
       if (!rename) {
-        LOGGER.error("Failed to copy file {} to {}", srcFile, destFile);
-        LOGGER.info("Copying aborted");
+        if (lastError != null) {
+          LOGGER.error("Failed to copy file {} to {} - {} [{}]", srcFile, destFile, lastError.getMessage(), lastError.getClass().getSimpleName());
+        }
+        else {
+          LOGGER.error("Failed to copy file {} to {}", srcFile, destFile);
+        }
         MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, srcFile, "message.renamer.failedrename")); // NOSONAR
         return false;
       }
@@ -1188,6 +1242,80 @@ public class Utils {
       }
     }
     return true; // files are equal
+  }
+
+  /**
+   * copies a file using buffered streams as a fallback for file systems where {@link Files#copy(Path, Path, java.nio.file.CopyOption...)} does not
+   * work.<br>
+   * the destination file is replaced and the copied size is verified afterwards
+   *
+   * @param srcFile
+   *          the file to be copied
+   * @param destFile
+   *          the target
+   * @throws IOException
+   *           if an I/O error occurs or the copied size does not match
+   */
+  static void copyFileWithStream(final Path srcFile, final Path destFile) throws IOException {
+    if (Files.isSymbolicLink(destFile)) {
+      // Files.copy(REPLACE_EXISTING) replaces the link itself, while opening the stream would follow and truncate its target
+      Files.deleteIfExists(destFile);
+    }
+    else if (Files.exists(destFile) && Files.isSameFile(srcFile, destFile)) {
+      // Files.copy() completes without copying when source and target are the same file
+      return;
+    }
+
+    try (InputStream inputStream = new BufferedInputStream(Files.newInputStream(srcFile));
+        OutputStream outputStream = new BufferedOutputStream(
+            Files.newOutputStream(destFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE))) {
+      inputStream.transferTo(outputStream);
+    }
+    verifyCopiedFileSize(srcFile, destFile);
+  }
+
+  /**
+   * verifies that the destination file has the same size as the source file
+   *
+   * @param srcFile
+   *          the source file
+   * @param destFile
+   *          the copied file
+   * @throws CopySizeMismatchException
+   *           if the copied file has a different size
+   * @throws IOException
+   *           if the sizes cannot be read
+   */
+  private static void verifyCopiedFileSize(final Path srcFile, final Path destFile) throws IOException {
+    long srcSize = Files.size(srcFile);
+    long destSize = Files.size(destFile);
+
+    // remote file systems may need a moment to update their metadata after the copy has been closed
+    for (int i = 0; i < COPY_SIZE_CHECK_ATTEMPTS && srcSize != destSize; i++) {
+      try {
+        Thread.sleep(COPY_SIZE_CHECK_DELAY_MS);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException("Interrupted while verifying copied file '" + destFile + "'", e);
+      }
+      destSize = Files.size(destFile);
+    }
+
+    if (srcSize != destSize) {
+      throw new CopySizeMismatchException("Copied file '" + destFile + "' has " + destSize + " bytes, expected " + srcSize);
+    }
+  }
+
+  /**
+   * exception thrown when a copy completed but the destination file has a different size than the source file
+   */
+  private static class CopySizeMismatchException extends IOException {
+    private static final long serialVersionUID = 1L;
+
+    private CopySizeMismatchException(String message) {
+      super(message);
+    }
   }
 
   /**
