@@ -1,9 +1,9 @@
 Version 5.3.5
 =======================
 + [Core] added a housekeeping action to remove abandoned entries from the database
-+ [Movies, TV shows] it is now possible to add a data source inside another data source
-+ [Movies, TV shows] added support for Kodi skiptro sidecar files (*.skiptro.json) #3384 - thx @nice42q
-+ [Movies, TV shows] added support for Kodi ScenePass sidecar files (*.sp.json, *.sp.hash.json) #3385
++ [Movies, TV Shows] it is now possible to add a data source inside another data source
++ [Movies, TV Shows] added support for Kodi skiptro sidecar files (*.skiptro.json) #3384 - thx @nice42q
++ [Movies, TV Shows] added support for Kodi ScenePass sidecar files (*.sp.json, *.sp.hash.json) #3385
 + [TV shows, Movie Sets] added an action to remove the missing episodes/movies from the selected TV shows/movie sets
 + [UI] added freely configurable columns to the movie/movie set/TV show table, which get their content from your own JMTE patterns
   You can add, rename and arrange these columns in settings, then enable them in the table
@@ -19,10 +19,11 @@ Version 5.3.5
 + [Template/Postprocessing] added a new "nfd" renderer to render values (e.g. file paths) in the Unicode NFD form needed for byte-accurate file systems on macOS
 ---
 x [Core] do not abort image cache upgrade tasks on URL parse error #3373
-x [Movies, TV shows] every data source which gets skipped during "update data sources" now shows up as a notification #3377
+x [Movies, TV Shows] every data source which gets skipped during "update data sources" now shows up as a notification #3377
+x [Movies, TV Shows] enhanced duplicate filter
 x [Movie Sets] fixed an application freeze when deleting movie sets #3378
 x [Movie Sets] fixed exporting of movie sets with file separators in their name #3369
-x [TV shows] fixed wrong media type detection of unsupported season poster namings
+x [TV Shows] fixed wrong media type detection of unsupported season poster namings
 x [UI] fixed some drawing issues in partially empty tables
 x [UI] the low memory indicator now scales its warning threshold to the heap size to avoid false alarms on large installations
 x [NFO] fixed importing of multiline user notes from NFO files
