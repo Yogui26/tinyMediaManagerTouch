@@ -37,6 +37,23 @@ public class TvShowEpisodeNfoParserTest extends BasicTvShowTest {
   }
 
   @Test
+  public void testMultilineFieldsPreserveLineBreaks() {
+    TvShowEpisodeNfoParser parser = TvShowEpisodeNfoParser.parseNfo("<episodedetails><title>foo</title>" //
+        + "<plot>plot line 1\nplot line 2</plot>" //
+        + "<outline>outline line 1\noutline line 2</outline>" //
+        + "<tagline>tagline line 1\ntagline line 2</tagline>" //
+        + "<user_note>note line 1\nnote line 2</user_note>" //
+        + "</episodedetails>");
+
+    assertThat(parser.episodes).hasSize(1);
+    TvShowEpisodeNfoParser.Episode episode = parser.episodes.get(0);
+    assertThat(episode.plot).isEqualTo("plot line 1\nplot line 2");
+    assertThat(episode.outline).isEqualTo("outline line 1\noutline line 2");
+    assertThat(episode.tagline).isEqualTo("tagline line 1\ntagline line 2");
+    assertThat(episode.userNote).isEqualTo("note line 1\nnote line 2");
+  }
+
+  @Test
   public void testKodi17_0() {
     // Kodi version 17.0
     try {

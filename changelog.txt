@@ -25,6 +25,7 @@ x [Movie Sets] fixed exporting of movie sets with file separators in their name 
 x [TV shows] fixed wrong media type detection of unsupported season poster namings
 x [UI] fixed some drawing issues in partially empty tables
 x [UI] the low memory indicator now scales its warning threshold to the heap size to avoid false alarms on large installations
+x [NFO] fixed importing of multiline user notes from NFO files
 x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling libmediainfo #3376
 x [macOS] use NFD form of file-/foldernames for non APFS volumes when running post-processing
 x [macOS] use NFD form of file-/foldernames for non APFS volumes when scaling artwork during export

@@ -33,6 +33,17 @@ public class TvShowSeasonNfoParserTest extends BasicTvShowTest {
   }
 
   @Test
+  public void testMultilineFieldsPreserveLineBreaks() {
+    TvShowSeasonNfoParser parser = TvShowSeasonNfoParser.parseNfo("<season><title>foo</title>" //
+        + "<plot>plot line 1\nplot line 2</plot>" //
+        + "<user_note>note line 1\nnote line 2</user_note>" //
+        + "</season>");
+
+    assertThat(parser.plot).isEqualTo("plot line 1\nplot line 2");
+    assertThat(parser.userNote).isEqualTo("note line 1\nnote line 2");
+  }
+
+  @Test
   public void testNfoParserEmby() {
     // Kodi version 14.2
     try {

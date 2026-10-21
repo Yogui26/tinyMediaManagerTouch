@@ -979,8 +979,8 @@ public class TvShowNfoParser {
     for (Element seasonplot : seasonplots) {
       try {
         int season = MetadataUtil.parseInt(seasonplot.attr("number"));
-        if (StringUtils.isNotBlank(seasonplot.ownText())) {
-          seasonPlot.put(season, seasonplot.ownText());
+        if (StringUtils.isNotBlank(seasonplot.wholeText())) {
+          seasonPlot.put(season, seasonplot.wholeText());
         }
       }
       catch (Exception e) {
@@ -1722,7 +1722,7 @@ public class TvShowNfoParser {
 
     Element element = getSingleElement(root, "user_note");
     if (element != null) {
-      userNote = element.ownText();
+      userNote = element.wholeText();
     }
     return null;
   }

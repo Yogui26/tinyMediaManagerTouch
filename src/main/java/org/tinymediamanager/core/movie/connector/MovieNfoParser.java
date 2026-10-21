@@ -503,14 +503,12 @@ public class MovieNfoParser {
 
           for (Element setChild : child.children()) {
             switch (setChild.tagName()) {
-              case "name":
-              case "setname":
+              case "name", "setname":
                 tmp.name = setChild.ownText();
                 break;
 
-              case "overview":
-              case "setdescription":
-                tmp.overview = setChild.ownText();
+              case "overview", "setdescription":
+                tmp.overview = setChild.wholeText();
                 break;
 
               default:
@@ -1658,7 +1656,7 @@ public class MovieNfoParser {
 
     Element element = getSingleElement(root, "user_note");
     if (element != null) {
-      userNote = element.ownText();
+      userNote = element.wholeText();
     }
     return null;
   }
