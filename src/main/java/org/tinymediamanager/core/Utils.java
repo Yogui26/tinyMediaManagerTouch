@@ -874,10 +874,21 @@ public class Utils {
 
       // rename folder; try 5 times and wait a sec
       boolean rename = false;
-      boolean atomicMoveSupported = srcFile.getFileSystem().provider() == destFile.getFileSystem().provider();
+
+      // different providers can never be moved by rename
+      boolean crossFileStore = srcFile.getFileSystem().provider() != destFile.getFileSystem().provider();
+      boolean atomicMoveSupported = !crossFileStore;
+
       for (int i = 0; i < 5; i++) {
         try {
-          if (atomicMoveSupported) {
+          if (crossFileStore) {
+            LOGGER.debug("moving file across file stores - copying '{}' to '{}'", srcFile, destFile);
+            if (!copyAndDelete(srcFile, destFile)) {
+              // keep the source file if the copy did not succeed
+              return false;
+            }
+          }
+          else if (atomicMoveSupported) {
             Files.move(srcFile, destFile, StandardCopyOption.ATOMIC_MOVE);
           }
           else {
@@ -906,11 +917,10 @@ public class Utils {
             }
             catch (Exception e) {
               // but if another filesystem is involved, we NEED to copy+delete
-              if (!copyFileSafe(srcFile, destFile, true)) {
+              if (!copyAndDelete(srcFile, destFile)) {
                 // keep the source file if the copy did not succeed
                 return false;
               }
-              deleteFileSafely(srcFile);
             }
           }
           rename = true;// no exception
@@ -920,7 +930,15 @@ public class Utils {
           LOGGER.error("ACCESS DENIED (move file) for '{}' to '{}' - '{}' [{}]", srcFile, destFile, e.getMessage(), e.getClass().getSimpleName());
         }
         catch (AtomicMoveNotSupportedException e) {
-          // next try without atomic move
+          // a non-atomic Files.move() would copy internally without verifying the result, so check the file stores first
+          try {
+            crossFileStore = !isSameFileStore(srcFile, destFile);
+          }
+          catch (IOException | UnsupportedOperationException ee) {
+            LOGGER.debug("could not determine the file stores of '{}' and '{}' - using the verified copy path [{}]", srcFile, destFile,
+                ee.getClass().getSimpleName());
+            crossFileStore = true;
+          }
           atomicMoveSupported = false;
           continue;
         }
@@ -953,6 +971,73 @@ public class Utils {
       }
     }
     return true; // files are equal
+  }
+
+  /**
+   * checks whether the source file and the destination are located on the same file store.<br>
+   * for a destination which does not exist yet, the nearest existing parent is used.
+   *
+   * @param srcFile
+   *          the source file
+   * @param destFile
+   *          the destination file
+   * @return true if both are located on the same file store
+   * @throws IOException
+   *           if the file stores cannot be determined
+   */
+  private static boolean isSameFileStore(final Path srcFile, final Path destFile) throws IOException {
+    // use the source parent, because the source itself may be a symlink to another file store
+    Path srcStorePath = srcFile.toAbsolutePath().getParent();
+    Path destStorePath = destFile.toAbsolutePath();
+    while (!Files.exists(destStorePath) && destStorePath.getParent() != null) {
+      destStorePath = destStorePath.getParent();
+    }
+    return Files.getFileStore(srcStorePath).equals(Files.getFileStore(destStorePath));
+  }
+
+  /**
+   * copies a file and deletes the source afterwards.<br>
+   * symlinks are copied as links to keep their original move semantics. A failed deletion of the source is only logged.
+   *
+   * @param srcFile
+   *          the source file
+   * @param destFile
+   *          the destination file
+   * @return true if the copy succeeded
+   * @throws IOException
+   *           if an I/O error occurs
+   */
+  private static boolean copyAndDelete(final Path srcFile, final Path destFile) throws IOException {
+    if (Files.isSymbolicLink(srcFile)) {
+      copySymbolicLinkSafe(srcFile, destFile);
+    }
+    else if (!copyFileSafe(srcFile, destFile, true)) {
+      return false;
+    }
+
+    if (!deleteFileSafely(srcFile)) {
+      LOGGER.warn("Could not delete source file '{}' after copying it to '{}'", srcFile, destFile);
+    }
+    return true;
+  }
+
+  /**
+   * copies a symbolic link and verifies that the copied link points to the same target.
+   *
+   * @param srcFile
+   *          the source link
+   * @param destFile
+   *          the destination link
+   * @throws IOException
+   *           if the link cannot be copied or points to another target
+   */
+  private static void copySymbolicLinkSafe(final Path srcFile, final Path destFile) throws IOException {
+    Files.copy(srcFile, destFile, LinkOption.NOFOLLOW_LINKS, StandardCopyOption.REPLACE_EXISTING);
+    Path srcTarget = Files.readSymbolicLink(srcFile);
+    Path destTarget = Files.readSymbolicLink(destFile);
+    if (!srcTarget.equals(destTarget)) {
+      throw new IOException("Copied symlink '" + destFile + "' points to '" + destTarget + "', expected '" + srcTarget + "'");
+    }
   }
 
   /**
