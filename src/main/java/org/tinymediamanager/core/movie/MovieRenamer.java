@@ -542,8 +542,6 @@ public class MovieRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
-    movie.removeAllMediaFiles();
-
     // ######################################################################
     // ## build up image cache
     // ######################################################################
@@ -556,7 +554,8 @@ public class MovieRenamer {
     // give the file system a bit to write the files
     ThreadUtils.sleep(250);
 
-    movie.addToMediaFiles(needed);
+    // replace the whole list at once, so no listener sees a movie without media files
+    movie.replaceAllMediaFiles(needed);
     movie.setPath(newPathname);
 
     movie.gatherMediaFileInformation(false);
@@ -732,8 +731,6 @@ public class MovieRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
-    movie.removeAllMediaFiles();
-
     // ######################################################################
     // ## build up image cache
     // ######################################################################
@@ -746,7 +743,8 @@ public class MovieRenamer {
     // give the file system a bit to write the files
     ThreadUtils.sleep(250);
 
-    movie.addToMediaFiles(needed);
+    // replace the whole list at once, so no listener sees a movie without media files
+    movie.replaceAllMediaFiles(needed);
     movie.setPath(movie.getRenameHistory().getOldPath());
     movie.gatherMediaFileInformation(false);
 

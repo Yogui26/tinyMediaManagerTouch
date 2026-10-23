@@ -336,6 +336,16 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   @Override
+  public void replaceAllMediaFiles(List<MediaFile> mediaFiles) {
+    super.replaceAllMediaFiles(mediaFiles);
+
+    // re-sync the local trailer list if a trailer has been replaced
+    if (mediaFiles != null && mediaFiles.stream().anyMatch(mediaFile -> mediaFile != null && mediaFile.getType() == MediaFileType.TRAILER)) {
+      mixinLocalTrailers();
+    }
+  }
+
+  @Override
   protected void mediaFilesChanged() {
     super.mediaFilesChanged();
 
