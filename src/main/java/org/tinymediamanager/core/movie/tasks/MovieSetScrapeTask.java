@@ -180,7 +180,7 @@ public class MovieSetScrapeTask extends TmmThreadPool {
       for (MediaMetadata item : info.getSubItems()) {
         // mix in the dummy movie
         MovieSet.MovieSetMovie movieSetMovie = new MovieSet.MovieSetMovie();
-        movieSetMovie.setMetadata(item, Arrays.asList(MovieScraperMetadataConfig.values()), true);
+        movieSetMovie.setMetadata(item, Arrays.asList(MovieScraperMetadataConfig.values()), true, false);
         movieSetMovie.setLastScraperId(scrapeOptions.getMetadataScraper().getId());
         movieSetMovie.setLastScrapeLanguage(scrapeOptions.getLanguage().name());
 

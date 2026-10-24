@@ -999,16 +999,25 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   }
 
   /**
-   * Sets the metadata.
-   * 
+   * Set the metadata of this episode.
+   *
    * @param metadata
-   *          the new metadata
+   *          the scraped metadata
+   * @param config
+   *          the fields to set
+   * @param overwriteExistingItems
+   *          should existing values be overwritten
+   * @param forceOverwrite
+   *          should empty scraped values also overwrite existing values (only effective together with overwriteExistingItems)
    */
-  public void setMetadata(MediaMetadata metadata, List<TvShowEpisodeScraperMetadataConfig> config, boolean overwriteExistingItems) {
+  public void setMetadata(MediaMetadata metadata, List<TvShowEpisodeScraperMetadataConfig> config, boolean overwriteExistingItems,
+      boolean forceOverwrite) {
     if (locked) {
       LOGGER.debug("episode locked, but setMetadata has been called!");
       return;
     }
+
+    boolean force = forceOverwrite && overwriteExistingItems;
 
     // check if metadata has at least an id (aka it is not empty)
     if (metadata == null) {
@@ -1057,7 +1066,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.TITLE) && (force || StringUtils.isNotBlank(metadata.getTitle()))
         && (overwriteExistingItems || newEntity || StringUtils.isBlank(getTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
@@ -1068,7 +1077,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.ORIGINAL_TITLE) && (force || StringUtils.isNotBlank(metadata.getOriginalTitle()))
         && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
@@ -1079,7 +1088,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.ENGLISH_TITLE) && (force || StringUtils.isNotBlank(metadata.getEnglishTitle()))
         && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
@@ -1090,7 +1099,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.PLOT) && (force || StringUtils.isNotBlank(metadata.getPlot()))
         && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
@@ -1144,19 +1153,20 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && metadata.getReleaseDate() != null
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && (force || metadata.getReleaseDate() != null)
         && (overwriteExistingItems || getFirstAired() == null)) {
       setFirstAired(metadata.getReleaseDate());
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.RUNTIME) && (force || metadata.getRuntime() > 0)
+        && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
     if (config.contains(TvShowEpisodeScraperMetadataConfig.RATING)) {
       Map<String, MediaRating> newRatings = new HashMap<>();
 
-      if (matchFound || !overwriteExistingItems) {
+      if (!force && (matchFound || !overwriteExistingItems)) {
 
         // only update new ratings, but let the old ones survive
         newRatings.putAll(getRatings());

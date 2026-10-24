@@ -431,6 +431,7 @@ class MovieCommandTask extends TmmThreadPool {
           MovieScrapeTask.MovieScrapeParams movieScrapeParams = new MovieScrapeTask.MovieScrapeParams(new ArrayList<>(moviesToScrape), options,
               config);
           movieScrapeParams.setOverwriteExistingItems(!settings.isDoNotOverwriteExistingData());
+          movieScrapeParams.setForceOverwrite(settings.isForceOverwrite());
           MovieScrapeTask task = new MovieScrapeTask(movieScrapeParams);
           task.setRunInBackground(true); // to avoid smart scrape dialog
 

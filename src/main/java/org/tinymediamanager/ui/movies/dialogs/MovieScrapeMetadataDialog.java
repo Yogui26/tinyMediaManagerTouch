@@ -60,6 +60,7 @@ public class MovieScrapeMetadataDialog extends TmmDialog {
   private final MediaScraperCheckComboBox                                      cbTrailerScraper;
   private final ScraperMetadataConfigCheckComboBox<MovieScraperMetadataConfig> cbScraperConfig;
   private final JCheckBox                                                      chckbxDoNotOverwrite;
+  private final JCheckBox                                                      chckbxForceOverwrite;
 
   private boolean                                                              startScrape = false;
 
@@ -146,7 +147,11 @@ public class MovieScrapeMetadataDialog extends TmmDialog {
       {
         chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
         chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-        panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 2");
+        panelScraperConfig.add(chckbxDoNotOverwrite, "flowx,cell 0 2");
+
+        chckbxForceOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+        chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+        panelScraperConfig.add(chckbxForceOverwrite, "cell 0 2");
       }
     }
     {
@@ -185,6 +190,17 @@ public class MovieScrapeMetadataDialog extends TmmDialog {
 
     cbScraperConfig.setSelectedItems(configs);
     chckbxDoNotOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+    chckbxForceOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isForceOverwrite());
+    chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+    updateForceOverwriteState();
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
+    }
   }
 
   /**
@@ -228,6 +244,15 @@ public class MovieScrapeMetadataDialog extends TmmDialog {
    */
   public boolean getOverwriteExistingItems() {
     return !chckbxDoNotOverwrite.isSelected();
+  }
+
+  /**
+   * should the scrape also overwrite existing items with empty values
+   *
+   * @return true/false
+   */
+  public boolean getForceOverwrite() {
+    return !chckbxDoNotOverwrite.isSelected() && chckbxForceOverwrite.isSelected();
   }
 
   /**

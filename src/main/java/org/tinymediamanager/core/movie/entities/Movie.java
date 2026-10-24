@@ -804,18 +804,24 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * Sets the metadata.
-   * 
+   * Set the metadata of this movie.
+   *
    * @param metadata
-   *          the new metadata
+   *          the scraped metadata
    * @param config
-   *          the config
+   *          the fields to set
+   * @param overwriteExistingItems
+   *          should existing values be overwritten
+   * @param forceOverwrite
+   *          should empty scraped values also overwrite existing values (only effective together with overwriteExistingItems)
    */
-  public void setMetadata(MediaMetadata metadata, List<MovieScraperMetadataConfig> config, boolean overwriteExistingItems) {
+  public void setMetadata(MediaMetadata metadata, List<MovieScraperMetadataConfig> config, boolean overwriteExistingItems, boolean forceOverwrite) {
     if (locked) {
       LOGGER.debug("movie locked, but setMetadata has been called!");
       return;
     }
+
+    boolean force = forceOverwrite && overwriteExistingItems;
 
     // check if metadata has at least an id (aka it is not empty)
     if (metadata == null || metadata.getIds().isEmpty()) {
@@ -877,7 +883,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     // set chosen metadata
-    if (config.contains(MovieScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())
+    if (config.contains(MovieScraperMetadataConfig.TITLE) && (force || StringUtils.isNotBlank(metadata.getTitle()))
         && (overwriteExistingItems || newEntity || StringUtils.isBlank(getTitle()))) {
       // Capitalize first letter of title if setting is set!
       if (settings.getCapitalWordsInTitles()) {
@@ -888,7 +894,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+    if (config.contains(MovieScraperMetadataConfig.ORIGINAL_TITLE) && (force || StringUtils.isNotBlank(metadata.getOriginalTitle()))
         && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (settings.getCapitalWordsInTitles()) {
@@ -899,7 +905,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+    if (config.contains(MovieScraperMetadataConfig.ENGLISH_TITLE) && (force || StringUtils.isNotBlank(metadata.getEnglishTitle()))
         && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (settings.getCapitalWordsInTitles()) {
@@ -910,21 +916,21 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.TAGLINE) && StringUtils.isNotBlank(metadata.getTagline())
+    if (config.contains(MovieScraperMetadataConfig.TAGLINE) && (force || StringUtils.isNotBlank(metadata.getTagline()))
         && (overwriteExistingItems || StringUtils.isBlank(getTagline()))) {
       setTagline(metadata.getTagline());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+    if (config.contains(MovieScraperMetadataConfig.PLOT) && (force || StringUtils.isNotBlank(metadata.getPlot()))
         && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.YEAR) && metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.YEAR) && (force || metadata.getYear() > 0) && (overwriteExistingItems || getYear() <= 0)) {
       setYear(metadata.getYear());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.RELEASE_DATE) && metadata.getReleaseDate() != null
+    if (config.contains(MovieScraperMetadataConfig.RELEASE_DATE) && (force || metadata.getReleaseDate() != null)
         && (overwriteExistingItems || getReleaseDate() == null)) {
       setReleaseDate(metadata.getReleaseDate());
     }
@@ -932,7 +938,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     if (config.contains(MovieScraperMetadataConfig.RATING)) {
       Map<String, MediaRating> newRatings = new HashMap<>();
 
-      if (matchFound || !overwriteExistingItems) {
+      if (!force && (matchFound || !overwriteExistingItems)) {
         // only update new ratings, but let the old ones survive
         newRatings.putAll(getRatings());
       }
@@ -949,22 +955,23 @@ public class Movie extends MediaEntity implements IMediaInformation {
       setRatings(newRatings);
     }
 
-    if (config.contains(MovieScraperMetadataConfig.TOP250) && metadata.getTop250() > 0
+    if (config.contains(MovieScraperMetadataConfig.TOP250) && (force || metadata.getTop250() > 0)
         && (overwriteExistingItems || getTop250() <= 0 || getTop250() > 250)) {
       setTop250(metadata.getTop250());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.RUNTIME) && (force || metadata.getRuntime() > 0)
+        && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.SPOKEN_LANGUAGES) && !metadata.getSpokenLanguages().isEmpty()
+    if (config.contains(MovieScraperMetadataConfig.SPOKEN_LANGUAGES) && (force || !metadata.getSpokenLanguages().isEmpty())
         && (overwriteExistingItems || StringUtils.isBlank(getSpokenLanguages()))) {
       setSpokenLanguages(StringUtils.join(metadata.getSpokenLanguages(), ", "));
     }
 
     // country
-    if (config.contains(MovieScraperMetadataConfig.COUNTRY) && !metadata.getCountries().isEmpty()
+    if (config.contains(MovieScraperMetadataConfig.COUNTRY) && (force || !metadata.getCountries().isEmpty())
         && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
       setCountry(StringUtils.join(metadata.getCountries(), ", "));
     }
@@ -972,7 +979,10 @@ public class Movie extends MediaEntity implements IMediaInformation {
     // certifications
     if (config.contains(MovieScraperMetadataConfig.CERTIFICATION)
         && (overwriteExistingItems || getCertification() == null || getCertification() == MediaCertification.UNKNOWN)) {
-      if (!metadata.getCertifications().isEmpty()) {
+      if (force && metadata.getCertifications().isEmpty()) {
+        setCertification(null);
+      }
+      else if (!metadata.getCertifications().isEmpty()) {
         if (metadata.getCertifications().size() > 1) {
           // US has 2 rating systems - MPAA, Parental TV guide - see tt0092644
           // try to find MPAA first...
@@ -997,7 +1007,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     // studio
-    if (config.contains(MovieScraperMetadataConfig.PRODUCTION_COMPANY) && !metadata.getProductionCompanies().isEmpty()
+    if (config.contains(MovieScraperMetadataConfig.PRODUCTION_COMPANY) && (force || !metadata.getProductionCompanies().isEmpty())
         && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
       setProductionCompany(StringUtils.join(metadata.getProductionCompanies(), ", "));
     }

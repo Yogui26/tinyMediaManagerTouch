@@ -70,12 +70,14 @@ public class TvShowSelectedScrapeMetadataAction extends TmmAction {
     List<TvShowScraperMetadataConfig> tvShowScraperMetadataConfig = dialog.getTvShowScraperMetadataConfig();
     List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = dialog.getTvShowEpisodeScraperMetadataConfig();
     boolean overwrite = dialog.getOverwriteExistingItems();
+    boolean forceOverwrite = dialog.getForceOverwrite();
 
     // scrape
     TmmThreadPool scrapeTask = new TvShowScrapeTask(
         new TvShowScrapeTask.TvShowScrapeParams(selectedTvShows, options, tvShowScraperMetadataConfig, episodeScraperMetadataConfig)
             .setDoSearch(false)
-            .setOverwriteExistingItems(overwrite));
+            .setOverwriteExistingItems(overwrite)
+            .setForceOverwrite(forceOverwrite));
     TmmTaskManager.getInstance().addMainTask(scrapeTask);
   }
 }

@@ -209,6 +209,7 @@ public final class TvShowSettings extends AbstractSettings {
   final List<TvShowScraperMetadataConfig>        tvShowScraperMetadataConfig    = new ArrayList<>();
   final List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig   = new ArrayList<>();
   boolean                                        doNotOverwriteExistingData;
+  boolean                                        forceOverwrite;
   boolean                                        fetchAllRatings;
   final List<RatingProvider.RatingSource>        fetchRatingSources             = new ArrayList<>();
 
@@ -348,6 +349,7 @@ public final class TvShowSettings extends AbstractSettings {
     setCertificationCountry(cc);
     setReleaseDateCountry(cc.getAlpha2());
     setDoNotOverwriteExistingData(false);
+    setForceOverwrite(false);
     setFetchAllRatings(false);
 
     // artwork scraper
@@ -2145,6 +2147,20 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = doNotOverwriteExistingData;
     doNotOverwriteExistingData = newValue;
     firePropertyChange("doNotOverwriteExistingData", oldValue, newValue);
+
+    if (newValue) {
+      setForceOverwrite(false);
+    }
+  }
+
+  public boolean isForceOverwrite() {
+    return forceOverwrite;
+  }
+
+  public void setForceOverwrite(boolean newValue) {
+    boolean oldValue = forceOverwrite;
+    forceOverwrite = newValue;
+    firePropertyChange("forceOverwrite", oldValue, newValue);
   }
 
   public boolean isFetchAllRatings() {

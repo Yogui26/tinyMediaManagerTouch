@@ -47,6 +47,24 @@ public class MovieSettingsTest extends BasicMovieTest {
   }
 
   @Test
+  public void testForceOverwriteSetting() {
+    MovieSettings settings = MovieSettings.getInstance();
+
+    settings.setForceOverwrite(true);
+    assertThat(settings.isForceOverwrite()).isTrue();
+
+    // force overwrite is only valid when overwriting is enabled
+    settings.setDoNotOverwriteExistingData(true);
+    assertThat(settings.isForceOverwrite()).isFalse();
+
+    settings.setDoNotOverwriteExistingData(false);
+    settings.setForceOverwrite(true);
+    assertThat(settings.isForceOverwrite()).isTrue();
+
+    settings.setForceOverwrite(false);
+  }
+
+  @Test
   public void testMovieSettingsLoading() throws Exception {
     copyResourceFolderToWorkFolder("settings/movie_renamer_loading");
 

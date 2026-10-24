@@ -194,6 +194,7 @@ class MovieCommand implements Runnable {
 
       MovieScrapeTask.MovieScrapeParams movieScrapeParams = new MovieScrapeTask.MovieScrapeParams(moviesToScrape, options, config);
       movieScrapeParams.setOverwriteExistingItems(!MovieModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+      movieScrapeParams.setForceOverwrite(MovieModuleManager.getInstance().getSettings().isForceOverwrite());
       MovieScrapeTask task = new MovieScrapeTask(movieScrapeParams);
       task.setRunInBackground(true); // to avoid smart scrape dialog
       task.run(); // blocking

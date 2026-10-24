@@ -43,6 +43,24 @@ public class TvShowSettingsTest extends BasicTvShowTest {
   }
 
   @Test
+  public void testForceOverwriteSetting() {
+    TvShowSettings settings = TvShowSettings.getInstance();
+
+    settings.setForceOverwrite(true);
+    assertThat(settings.isForceOverwrite()).isTrue();
+
+    // force overwrite is only valid when overwriting is enabled
+    settings.setDoNotOverwriteExistingData(true);
+    assertThat(settings.isForceOverwrite()).isFalse();
+
+    settings.setDoNotOverwriteExistingData(false);
+    settings.setForceOverwrite(true);
+    assertThat(settings.isForceOverwrite()).isTrue();
+
+    settings.setForceOverwrite(false);
+  }
+
+  @Test
   public void testTvShowSettingsLoading() throws Exception {
     copyResourceFolderToWorkFolder("settings/tvshow_renamer_loading");
 

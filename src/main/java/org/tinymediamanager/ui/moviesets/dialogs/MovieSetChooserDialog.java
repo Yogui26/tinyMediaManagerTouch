@@ -64,6 +64,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.MovieSetArtworkHelper;
 import org.tinymediamanager.core.movie.MovieSetScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSetSearchAndScrapeOptions;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -80,6 +81,7 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.combobox.ScraperMetadataConfigCheckComboBox;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -132,6 +134,8 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
   private final JButton                                                           btnOk;
   private final JTextPane                                                         tpPlot;
   private final ScraperMetadataConfigCheckComboBox<MovieSetScraperMetadataConfig> cbScraperConfig;
+  private final JCheckBox                                                         chckbxDoNotOverwrite;
+  private final JCheckBox                                                         chckbxForceOverwrite;
 
   private boolean                                                                 continueQueue  = true;
 
@@ -175,7 +179,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
     {
       JPanel panelContent = new JPanel();
       getContentPane().add(panelContent, BorderLayout.CENTER);
-      panelContent.setLayout(new MigLayout("", "[500lp:600lp,grow]", "[500,grow][shrink 0][][]"));
+      panelContent.setLayout(new MigLayout("", "[500lp:600lp,grow]", "[500,grow][shrink 0][][][]"));
 
       JSplitPane splitPane = new JSplitPane();
       splitPane.setName(getName() + ".splitPane");
@@ -241,6 +245,15 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
         cbScraperConfig.enableFilter(
             (movieScraperMetadataConfig, s) -> movieScraperMetadataConfig.getDescription().toLowerCase(ROOT).startsWith(s.toLowerCase(ROOT)));
         panelContent.add(cbScraperConfig, "cell 0 3,growx, wmin 0");
+      }
+      {
+        chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
+        chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
+        panelContent.add(chckbxDoNotOverwrite, "flowx,cell 0 4");
+
+        chckbxForceOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+        chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+        panelContent.add(chckbxForceOverwrite, "cell 0 4");
       }
     }
 
@@ -351,9 +364,21 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
     });
 
     cbScraperConfig.setSelectedItems(MovieSetScraperMetadataConfig.values());
+    chckbxDoNotOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+    chckbxForceOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isForceOverwrite());
+    chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+    updateForceOverwriteState();
 
     tfMovieSetName.setText(movieSet.getTitle());
     searchMovieSet();
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
+    }
   }
 
   private void setData(MovieSetChooserModel model) {
@@ -508,7 +533,9 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
 
           // set scraped metadata
           List<MovieSetScraperMetadataConfig> scraperConfig = cbScraperConfig.getSelectedItems();
-          movieSetToScrape.setMetadata(md, scraperConfig);
+          boolean overwrite = !chckbxDoNotOverwrite.isSelected();
+          boolean forceOverwrite = overwrite && chckbxForceOverwrite.isSelected();
+          movieSetToScrape.setMetadata(md, scraperConfig, overwrite, forceOverwrite);
           movieSetToScrape.setDummyMovies(model.getMovieSetMovies());
           movieSetToScrape.writeNFO();
           movieSetToScrape.saveToDb();
@@ -522,25 +549,32 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
           if (ScraperMetadataConfig.containsAnyArtwork(scraperConfig)) {
             // let the user choose the images
             if (!MovieModuleManager.getInstance().getSettings().isScrapeBestImageMovieSet()) {
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.POSTER)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.POSTER)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.POSTER))) {
                 chooseArtwork(MediaFileType.POSTER);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.FANART)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.FANART)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.FANART))) {
                 chooseArtwork(MediaFileType.FANART);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.BANNER)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.BANNER)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.BANNER))) {
                 chooseArtwork(MediaFileType.BANNER);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARLOGO)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARLOGO)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.CLEARLOGO))) {
                 chooseArtwork(MediaFileType.CLEARLOGO);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARART)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARART)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.CLEARART))) {
                 chooseArtwork(MediaFileType.CLEARART);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.DISCART)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.DISCART)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.DISC))) {
                 chooseArtwork(MediaFileType.DISC);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.THUMB)) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.THUMB)
+                  && (overwrite || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, MediaFileType.THUMB))) {
                 chooseArtwork(MediaFileType.THUMB);
               }
               // write artwork urls to the NFO as a background task
@@ -548,7 +582,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
             }
             else {
               // get artwork asynchronous via the queue
-              model.startArtworkScrapeTask(movieSetToScrape, scraperConfig);
+              model.startArtworkScrapeTask(movieSetToScrape, scraperConfig, overwrite);
             }
           }
 

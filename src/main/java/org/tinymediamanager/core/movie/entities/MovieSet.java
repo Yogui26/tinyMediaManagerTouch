@@ -596,6 +596,23 @@ public class MovieSet extends MediaEntity {
    *          the config
    */
   public void setMetadata(MediaMetadata metadata, List<MovieSetScraperMetadataConfig> config) {
+    setMetadata(metadata, config, true, false);
+  }
+
+  /**
+   * Sets the metadata.
+   *
+   * @param metadata
+   *          the new metadata
+   * @param config
+   *          the config
+   * @param overwriteExistingItems
+   *          should existing values be overwritten
+   * @param forceOverwrite
+   *          should empty scraped values also overwrite existing values (only effective together with overwriteExistingItems)
+   */
+  public void setMetadata(MediaMetadata metadata, List<MovieSetScraperMetadataConfig> config, boolean overwriteExistingItems,
+      boolean forceOverwrite) {
     if (locked) {
       LOGGER.debug("movie set locked, but setMetadata has been called!");
       return;
@@ -606,6 +623,8 @@ public class MovieSet extends MediaEntity {
       LOGGER.warn("Wanted to save empty metadata for '{}'", getTitle());
       return;
     }
+
+    boolean force = forceOverwrite && overwriteExistingItems;
 
     // populate ids
 
@@ -623,15 +642,25 @@ public class MovieSet extends MediaEntity {
       }
     }
 
-    if (!matchFound) {
+    if (!matchFound && overwriteExistingItems) {
       // clear the old ids/tags to set only the new ones
       ids.clear();
     }
 
-    setIds(metadata.getIds());
+    if (overwriteExistingItems) {
+      setIds(metadata.getIds());
+    }
+    else {
+      for (Map.Entry<String, Object> entry : metadata.getIds().entrySet()) {
+        if (!ids.containsKey(entry.getKey())) {
+          setId(entry.getKey(), entry.getValue());
+        }
+      }
+    }
 
     // set chosen metadata
-    if (config.contains(MovieSetScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())) {
+    if (config.contains(MovieSetScraperMetadataConfig.TITLE) && (force || StringUtils.isNotBlank(metadata.getTitle()))
+        && (overwriteExistingItems || StringUtils.isBlank(getTitle()))) {
       // Capitalize first letter of title if setting is set!
       if (MovieModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setTitle(StrgUtils.capitalize(metadata.getTitle()));
@@ -641,7 +670,8 @@ public class MovieSet extends MediaEntity {
       }
     }
 
-    if (config.contains(MovieSetScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())) {
+    if (config.contains(MovieSetScraperMetadataConfig.ENGLISH_TITLE) && (force || StringUtils.isNotBlank(metadata.getEnglishTitle()))
+        && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (MovieModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
@@ -651,7 +681,8 @@ public class MovieSet extends MediaEntity {
       }
     }
 
-    if (config.contains(MovieSetScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())) {
+    if (config.contains(MovieSetScraperMetadataConfig.PLOT) && (force || StringUtils.isNotBlank(metadata.getPlot()))
+        && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
@@ -858,11 +889,11 @@ public class MovieSet extends MediaEntity {
     }
 
     @Override
-    public void setMetadata(MediaMetadata metadata, List<MovieScraperMetadataConfig> config, boolean overwriteExistingItems) {
+    public void setMetadata(MediaMetadata metadata, List<MovieScraperMetadataConfig> config, boolean overwriteExistingItems, boolean forceOverwrite) {
       // do not set movie set assignment since that could create new movie sets in the DB
       List<MovieScraperMetadataConfig> newConfig = new ArrayList<>(config);
       newConfig.remove(MovieScraperMetadataConfig.COLLECTION);
-      super.setMetadata(metadata, newConfig, overwriteExistingItems);
+      super.setMetadata(metadata, newConfig, overwriteExistingItems, forceOverwrite);
     }
 
     @Override

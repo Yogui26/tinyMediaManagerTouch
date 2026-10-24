@@ -60,12 +60,15 @@ public class MovieSelectedScrapeMetadataAction extends TmmAction {
     MovieSearchAndScrapeOptions options = dialog.getMovieSearchAndScrapeOptions();
     List<MovieScraperMetadataConfig> config = dialog.getMovieScraperMetadataConfig();
     boolean overwrite = dialog.getOverwriteExistingItems();
+    boolean forceOverwrite = dialog.getForceOverwrite();
 
     // do we want to scrape?
     if (dialog.shouldStartScrape()) {
       // scrape
       TmmThreadPool scrapeTask = new MovieScrapeTask(
-          new MovieScrapeTask.MovieScrapeParams(selectedMovies, options, config).setDoSearch(false).setOverwriteExistingItems(overwrite));
+          new MovieScrapeTask.MovieScrapeParams(selectedMovies, options, config).setDoSearch(false)
+              .setOverwriteExistingItems(overwrite)
+              .setForceOverwrite(forceOverwrite));
       TmmTaskManager.getInstance().addMainTask(scrapeTask);
     }
   }
