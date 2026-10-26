@@ -1002,6 +1002,49 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   }
 
   /**
+   * Replaces all media files of this entity in one batch. In contrast to {@link #removeAllMediaFiles()} followed by {@link #addToMediaFiles(List)},
+   * listeners never see an intermediate state without any media files.
+   *
+   * @param newMediaFiles
+   *          the new media files
+   */
+  public void replaceAllMediaFiles(List<MediaFile> newMediaFiles) {
+    List<MediaFile> oldMediaFiles;
+    List<MediaFile> updatedMediaFiles = new ArrayList<>();
+
+    for (MediaFile mediaFile : ListUtils.nullSafe(newMediaFiles)) {
+      if (mediaFile != null && !updatedMediaFiles.contains(mediaFile)) {
+        updatedMediaFiles.add(mediaFile);
+      }
+    }
+
+    try {
+      readWriteLock.writeLock().lock();
+      oldMediaFiles = new ArrayList<>(mediaFiles);
+      mediaFiles.clear();
+      mediaFiles.addAll(updatedMediaFiles);
+      sortMediaFiles();
+    }
+    finally {
+      readWriteLock.writeLock().unlock();
+    }
+
+    // notify listeners only after the complete list has been installed
+    mediaFilesChanged();
+
+    for (MediaFile oldMediaFile : oldMediaFiles) {
+      if (!updatedMediaFiles.contains(oldMediaFile)) {
+        fireRemoveEventForMediaFile(oldMediaFile);
+      }
+    }
+    for (MediaFile newMediaFile : updatedMediaFiles) {
+      if (!oldMediaFiles.contains(newMediaFile)) {
+        fireAddedEventForMediaFile(newMediaFile);
+      }
+    }
+  }
+
+  /**
    * fire an add event for the given {@link MediaFile}
    *
    * @param mediaFile

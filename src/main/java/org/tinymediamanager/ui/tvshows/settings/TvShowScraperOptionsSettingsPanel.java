@@ -59,6 +59,7 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
   private JComboBox<CountryItem>    cbReleaseCountry;
   private JCheckBox                 chckbxCapitalizeWords;
   private JCheckBox                 chckbxDoNotOverwrite;
+  private JCheckBox                 chckbxForceOverwrite;
   private JCheckBox                 chckbxFetchAllRatings;
   private JCheckBox                 chckbxRatingImdb;
   private JCheckBox                 chckbxRatingRtTomatometer;
@@ -80,6 +81,8 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     initDataBindings();
 
     loadRatings();
+    chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+    updateForceOverwriteState();
     ItemListener checkBoxListener = e -> checkChanges();
 
     // data init
@@ -102,6 +105,14 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     chckbxRatingLetterboxd.addItemListener(checkBoxListener);
     chckbxRatingMyAnimeList.addItemListener(checkBoxListener);
     chckbxRatingRogerEbert.addItemListener(checkBoxListener);
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
+    }
   }
 
   private void initComponents() {
@@ -186,7 +197,11 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
 
       chckbxDoNotOverwrite = new JCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-      panelDefaults.add(chckbxDoNotOverwrite, "cell 1 1 2 1");
+      panelDefaults.add(chckbxDoNotOverwrite, "flowx,cell 1 1 2 1");
+
+      chckbxForceOverwrite = new JCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+      chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+      panelDefaults.add(chckbxForceOverwrite, "cell 1 1 2 1");
     }
   }
 
@@ -297,6 +312,11 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty, chckbxDoNotOverwrite,
         jCheckBoxBeanProperty);
     autoBinding_1.bind();
+    //
+    Property tvShowSettingsBeanProperty_force = BeanProperty.create("forceOverwrite");
+    AutoBinding autoBinding_force = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_force,
+        chckbxForceOverwrite, jCheckBoxBeanProperty);
+    autoBinding_force.bind();
     //
     Property tvShowSettingsBeanProperty_1 = BeanProperty.create("fetchAllRatings");
     AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_1, chckbxFetchAllRatings,

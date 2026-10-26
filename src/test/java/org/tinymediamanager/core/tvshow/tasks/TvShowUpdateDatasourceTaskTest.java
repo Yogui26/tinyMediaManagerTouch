@@ -234,6 +234,48 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
   }
 
   @Test
+  public void udsScenePassSidecarsAreAttached() throws Exception {
+    Path scenePassDs = getWorkFolder().resolve("scenepassds").toAbsolutePath();
+    Path showFolder = scenePassDs.resolve("ScenePass Show");
+    Path seasonFolder = showFolder.resolve("Season 01");
+    Files.createDirectories(seasonFolder);
+    Files.createFile(seasonFolder.resolve("ScenePass Show - S01E01 - Pilot.mkv"));
+    Files.writeString(seasonFolder.resolve("ScenePass Show - S01E01 - Pilot.sp.json"), "{}");
+    Files.writeString(seasonFolder.resolve("ScenePass Show - S01E01 - Pilot.sp.hash.json"), "{}");
+
+    TvShowModuleManager.getInstance().getSettings().addTvShowDataSources(scenePassDs.toString());
+    new TvShowUpdateDatasourceTask().run();
+
+    TvShow show = TvShowModuleManager.getInstance().getTvShowList().getTvShowByPath(showFolder);
+    assertThat(show).isNotNull();
+    assertThat(show.getEpisodes()).hasSize(1);
+
+    TvShowEpisode episode = show.getEpisodes().get(0);
+    assertThat(episode.getMediaFiles(MediaFileType.SCENEPASS)).hasSize(2);
+  }
+
+  @Test
+  public void udsSkiptroSidecarIsAttached() throws Exception {
+    Path skiptroDs = getWorkFolder().resolve("skiptrods").toAbsolutePath();
+    Path showFolder = skiptroDs.resolve("Skiptro Show");
+    Path seasonFolder = showFolder.resolve("Season 01");
+    Files.createDirectories(seasonFolder);
+    Files.createFile(seasonFolder.resolve("Skiptro Show - S01E01 - Pilot.mkv"));
+    Files.writeString(seasonFolder.resolve("Skiptro Show - S01E01 - Pilot.skiptro.json"), "{}");
+    Files.writeString(seasonFolder.resolve("Skiptro Show - S01E01 - Pilot.mkv.skiptro.json"), "{}");
+
+    TvShowModuleManager.getInstance().getSettings().addTvShowDataSources(skiptroDs.toString());
+    new TvShowUpdateDatasourceTask().run();
+
+    TvShow show = TvShowModuleManager.getInstance().getTvShowList().getTvShowByPath(showFolder);
+    assertThat(show).isNotNull();
+    assertThat(show.getEpisodes()).hasSize(1);
+
+    TvShowEpisode episode = show.getEpisodes().get(0);
+    assertThat(episode.getMediaFiles(MediaFileType.SKIPTRO)).hasSize(2);
+  }
+
+  @Test
   public void udsXmlDateAdded() throws Exception {
     TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask(List.of(getWorkFolder().resolve("testtvshows").resolve("XmlDateAdded")));
     task.run();

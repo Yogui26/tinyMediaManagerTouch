@@ -1666,15 +1666,20 @@ public final class MovieList extends AbstractModelObject {
       for (var entry : ids.entrySet()) {
         // only do the duplicate check on well known IDs (to prevent false positives from facebook, twitter, ... IDs)
         switch (entry.getKey().toLowerCase(Locale.ROOT)) {
-          case MediaMetadata.TMDB:
-          case MediaMetadata.IMDB:
-          case MediaMetadata.TVDB:
-          case MediaMetadata.TRAKT_TV:
-          case MediaMetadata.WIKIDATA:
-            break;
+          // MovieSet IDs - ignore
+          case "tmdbcol":
+          case "tmdbset":
+            // Social "IDs" (mostly urls), as they usually have the same value for a whole movie series
+          case "facebook":
+          case "instagram":
+          case "twitter":
+          case "tiktok":
+            // case "youtube":
+            continue;
 
           default:
-            continue;
+            // all other IDs are fine to check for duplicates
+            break;
         }
 
         if (entry.getValue() == null || StringUtils.isBlank(entry.getValue().toString()) || entry.getValue().toString().equals("0")) {

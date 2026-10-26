@@ -64,6 +64,7 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
   private final List<TvShowEpisodeScraperMetadataConfig> config   = new ArrayList<>();
   private final TvShowEpisodeSearchAndScrapeOptions      scrapeOptions;
   private final boolean                                  overwrite;
+  private final boolean                                  forceOverwrite;
 
   /**
    * Instantiates a new tv show episode scrape task.
@@ -75,11 +76,31 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
    */
   public TvShowEpisodeScrapeTask(List<TvShowEpisode> episodes, TvShowEpisodeSearchAndScrapeOptions options,
       List<TvShowEpisodeScraperMetadataConfig> config, boolean overwrite) {
+    this(episodes, options, config, overwrite, false);
+  }
+
+  /**
+   * Instantiates a new TV show episode scrape task.
+   *
+   * @param episodes
+   *          the episodes to scrape
+   * @param options
+   *          the scraper options to use
+   * @param config
+   *          the fields to scrape
+   * @param overwrite
+   *          should existing values be overwritten
+   * @param forceOverwrite
+   *          should empty scraped values also overwrite existing values
+   */
+  public TvShowEpisodeScrapeTask(List<TvShowEpisode> episodes, TvShowEpisodeSearchAndScrapeOptions options,
+      List<TvShowEpisodeScraperMetadataConfig> config, boolean overwrite, boolean forceOverwrite) {
     super(TmmResourceBundle.getString("tvshow.scraping"), episodes.size(), TaskType.BACKGROUND_TASK);
     this.episodes.addAll(episodes);
     this.config.addAll(config);
     this.scrapeOptions = options;
     this.overwrite = overwrite;
+    this.forceOverwrite = forceOverwrite;
   }
 
   @Override
@@ -153,8 +174,9 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
 
         metadata.removeId(MediaMetadata.TVSHOW_IDS);
 
-        if (StringUtils.isNotBlank(metadata.getTitle())) {
-          episode.setMetadata(metadata, config, overwrite);
+        // a valid result may have no title (e.g. when only other fields are available), but should at least carry a title or an ID
+        if (StringUtils.isNotBlank(metadata.getTitle()) || !metadata.getIds().isEmpty()) {
+          episode.setMetadata(metadata, config, overwrite, forceOverwrite);
           episode.setLastScraperId(scrapeOptions.getMetadataScraper().getId());
           episode.setLastScrapeLanguage(scrapeOptions.getLanguage().name());
           episode.saveToDb();

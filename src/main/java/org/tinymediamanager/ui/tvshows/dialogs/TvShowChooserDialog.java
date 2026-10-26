@@ -187,6 +187,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
   private final ScraperMetadataConfigCheckComboBox<TvShowScraperMetadataConfig>        cbTvShowScraperConfig;
   private final ScraperMetadataConfigCheckComboBox<TvShowEpisodeScraperMetadataConfig> cbEpisodeScraperConfig;
   private final JCheckBox                                                              chckbxDoNotOverwrite;
+  private final JCheckBox                                                              chckbxForceOverwrite;
 
   private JTextField                                                                   textFieldSearchString;
 
@@ -394,7 +395,11 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       {
         chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
         chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-        panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 3 2 1");
+        panelScraperConfig.add(chckbxDoNotOverwrite, "flowx,cell 0 3 2 1");
+
+        chckbxForceOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+        chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+        panelScraperConfig.add(chckbxForceOverwrite, "cell 0 3 2 1");
       }
     }
     {
@@ -550,11 +555,22 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       cbTvShowScraperConfig.setSelectedItems(TvShowModuleManager.getInstance().getSettings().getTvShowScraperMetadataConfig());
       cbEpisodeScraperConfig.setSelectedItems(TvShowModuleManager.getInstance().getSettings().getEpisodeScraperMetadataConfig());
       chckbxDoNotOverwrite.setSelected(TvShowModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+      chckbxForceOverwrite.setSelected(TvShowModuleManager.getInstance().getSettings().isForceOverwrite());
+      chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+      updateForceOverwriteState();
 
       lblPath.setText(tvShowToScrape.getPathNIO().toString());
       textFieldSearchString.setText(tvShowToScrape.getTitle());
       // initial search with IDs
       searchTvShow(textFieldSearchString.getText(), true);
+    }
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
     }
   }
 
@@ -574,6 +590,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           List<TvShowScraperMetadataConfig> tvShowScraperMetadataConfig = cbTvShowScraperConfig.getSelectedItems();
           List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = cbEpisodeScraperConfig.getSelectedItems();
           boolean overwrite = !chckbxDoNotOverwrite.isSelected();
+          boolean forceOverwrite = overwrite && chckbxForceOverwrite.isSelected();
 
           MediaMetadata md = model.getMetadata();
 
@@ -648,13 +665,14 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
                     ratingMediaMetadata.addRating(rating);
                   }
                 }
-                tvShowToScrape.setMetadata(ratingMediaMetadata, Collections.singletonList(TvShowScraperMetadataConfig.RATING), overwrite);
+                tvShowToScrape.setMetadata(ratingMediaMetadata, Collections.singletonList(TvShowScraperMetadataConfig.RATING), overwrite,
+                    forceOverwrite);
               }
             });
           }
 
           // set scraped metadata
-          tvShowToScrape.setMetadata(md, tvShowScraperMetadataConfig, overwrite);
+          tvShowToScrape.setMetadata(md, tvShowScraperMetadataConfig, overwrite, forceOverwrite);
           tvShowToScrape.setLastScraperId(model.getMediaScraper().getId());
           tvShowToScrape.setLastScrapeLanguage(model.getLanguage().name());
 
@@ -696,7 +714,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
               scrapeOptions.setLanguage(model.getLanguage());
               scrapeOptions.setEpisodeGroup(desiredEpisodeGroup);
 
-              model.addTask(new TvShowEpisodeScrapeTask(episodesToScrape, scrapeOptions, episodeScraperMetadataConfig, overwrite));
+              model.addTask(new TvShowEpisodeScrapeTask(episodesToScrape, scrapeOptions, episodeScraperMetadataConfig, overwrite, forceOverwrite));
             }
           }
 

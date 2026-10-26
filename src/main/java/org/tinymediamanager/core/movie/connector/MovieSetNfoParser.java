@@ -323,7 +323,7 @@ public class MovieSetNfoParser {
 
     Element element = getSingleElement(root, "user_note");
     if (element != null) {
-      userNote = element.ownText();
+      userNote = element.wholeText();
     }
     return null;
   }

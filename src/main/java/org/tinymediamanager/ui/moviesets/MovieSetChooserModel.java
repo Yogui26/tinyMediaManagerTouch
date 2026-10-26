@@ -34,6 +34,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
+import org.tinymediamanager.core.movie.MovieSetArtworkHelper;
 import org.tinymediamanager.core.movie.MovieSetScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSetSearchAndScrapeOptions;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -252,7 +253,7 @@ public class MovieSetChooserModel extends AbstractModelObject {
 
             // mix in the dummy movie
             MovieSet.MovieSetMovie movieSetMovie = new MovieSet.MovieSetMovie();
-            movieSetMovie.setMetadata(item, new ArrayList<>(Arrays.asList(MovieScraperMetadataConfig.values())), true);
+            movieSetMovie.setMetadata(item, new ArrayList<>(Arrays.asList(MovieScraperMetadataConfig.values())), true, false);
             movieSetMovie.setLastScraperId(scraper.getMediaProvider().getId());
             movieSetMovie.setLastScrapeLanguage(options.getLanguage().name());
 
@@ -299,7 +300,11 @@ public class MovieSetChooserModel extends AbstractModelObject {
   }
 
   public void startArtworkScrapeTask(MovieSet movieSet, List<MovieSetScraperMetadataConfig> config) {
-    addTask(new ArtworkScrapeTask(movieSet, config));
+    startArtworkScrapeTask(movieSet, config, true);
+  }
+
+  public void startArtworkScrapeTask(MovieSet movieSet, List<MovieSetScraperMetadataConfig> config, boolean overwrite) {
+    addTask(new ArtworkScrapeTask(movieSet, config, overwrite));
   }
 
   /**
@@ -363,11 +368,13 @@ public class MovieSetChooserModel extends AbstractModelObject {
   private class ArtworkScrapeTask extends TmmTask {
     private final MovieSet                            movieSetToScrape;
     private final List<MovieSetScraperMetadataConfig> config;
+    private final boolean                             overwrite;
 
-    public ArtworkScrapeTask(MovieSet movieSet, List<MovieSetScraperMetadataConfig> config) {
+    public ArtworkScrapeTask(MovieSet movieSet, List<MovieSetScraperMetadataConfig> config, boolean overwrite) {
       super(TmmResourceBundle.getString("message.scrape.artwork") + " " + movieSet.getTitle(), 0, TaskType.BACKGROUND_TASK);
       this.movieSetToScrape = movieSet;
       this.config = config;
+      this.overwrite = overwrite;
     }
 
     @Override
@@ -422,7 +429,33 @@ public class MovieSetChooserModel extends AbstractModelObject {
         artwork.add(ma);
       }
 
-      movieSetToScrape.setArtwork(artwork, config);
+      movieSetToScrape.setArtwork(artwork, getArtworkConfigToSet());
+    }
+
+    private List<MovieSetScraperMetadataConfig> getArtworkConfigToSet() {
+      if (overwrite) {
+        return config;
+      }
+
+      List<MovieSetScraperMetadataConfig> filteredConfig = new ArrayList<>();
+      for (MovieSetScraperMetadataConfig metadataConfig : config) {
+        MediaFileType type = switch (metadataConfig) {
+          case POSTER -> MediaFileType.POSTER;
+          case FANART -> MediaFileType.FANART;
+          case BANNER -> MediaFileType.BANNER;
+          case CLEARLOGO -> MediaFileType.CLEARLOGO;
+          case CLEARART -> MediaFileType.CLEARART;
+          case DISCART -> MediaFileType.DISC;
+          case THUMB -> MediaFileType.THUMB;
+          default -> null;
+        };
+
+        if (type == null || !MovieSetArtworkHelper.hasArtwork(movieSetToScrape, type)) {
+          filteredConfig.add(metadataConfig);
+        }
+      }
+
+      return filteredConfig;
     }
   }
 

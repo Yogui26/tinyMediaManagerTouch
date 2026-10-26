@@ -61,6 +61,7 @@ import org.tinymediamanager.core.jmte.NamedDateRenderer;
 import org.tinymediamanager.core.jmte.NamedFilesizeRenderer;
 import org.tinymediamanager.core.jmte.NamedFramerateRenderer;
 import org.tinymediamanager.core.jmte.NamedLowerCaseRenderer;
+import org.tinymediamanager.core.jmte.NamedNfdRenderer;
 import org.tinymediamanager.core.jmte.NamedNumberRenderer;
 import org.tinymediamanager.core.jmte.NamedReplacementRenderer;
 import org.tinymediamanager.core.jmte.NamedSplitRenderer;
@@ -541,8 +542,6 @@ public class MovieRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
-    movie.removeAllMediaFiles();
-
     // ######################################################################
     // ## build up image cache
     // ######################################################################
@@ -555,7 +554,8 @@ public class MovieRenamer {
     // give the file system a bit to write the files
     ThreadUtils.sleep(250);
 
-    movie.addToMediaFiles(needed);
+    // replace the whole list at once, so no listener sees a movie without media files
+    movie.replaceAllMediaFiles(needed);
     movie.setPath(newPathname);
 
     movie.gatherMediaFileInformation(false);
@@ -731,8 +731,6 @@ public class MovieRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
-    movie.removeAllMediaFiles();
-
     // ######################################################################
     // ## build up image cache
     // ######################################################################
@@ -745,7 +743,8 @@ public class MovieRenamer {
     // give the file system a bit to write the files
     ThreadUtils.sleep(250);
 
-    movie.addToMediaFiles(needed);
+    // replace the whole list at once, so no listener sees a movie without media files
+    movie.replaceAllMediaFiles(needed);
     movie.setPath(movie.getRenameHistory().getOldPath());
     movie.gatherMediaFileInformation(false);
 
@@ -1171,6 +1170,26 @@ public class MovieRenamer {
         newFiles.add(skiptro);
         break;
 
+      case SCENEPASS:
+        MediaFile scenePass = new MediaFile(mf);
+        if (movie.isDisc()) {
+          scenePass.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
+          newFiles.add(scenePass);
+        }
+        else {
+          String scenePassSuffix = MediaFileHelper.getScenePassSuffix(mf.getFilename());
+          if (StringUtils.isBlank(scenePassSuffix)) {
+            newFiles.add(defaultMF);
+          }
+          else {
+            newFilename += getStackingString(mf, renamerProfile);
+            newFilename += scenePassSuffix;
+            scenePass.setFile(newMovieDir.resolve(newFilename));
+            newFiles.add(scenePass);
+          }
+        }
+        break;
+
       case SUBTITLE:
         List<MediaFileSubtitle> subtitles = mf.getSubtitles();
         newFilename += getStackingString(mf, renamerProfile);
@@ -1593,6 +1612,7 @@ public class MovieRenamer {
     engine.registerNamedRenderer(new NamedFilesizeRenderer());
     engine.registerNamedRenderer(new NamedFramerateRenderer());
     engine.registerNamedRenderer(new NamedLowerCaseRenderer());
+    engine.registerNamedRenderer(new NamedNfdRenderer());
     engine.registerNamedRenderer(new NamedNumberRenderer());
     engine.registerNamedRenderer(new NamedReplacementRenderer());
     engine.registerNamedRenderer(new NamedSplitRenderer());

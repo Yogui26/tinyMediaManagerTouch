@@ -261,13 +261,16 @@ public class ImageUtils {
   }
 
   public static BufferedImage createImage(Path file) throws IOException {
+    // AWT/ImageIO open the file via java.io, which is not covered by the JBR NFD patch
+    // (jdk.nio.path.useNormalizationFormD only affects sun.nio.fs), so adapt the path for native access
+    Path nativePath = Utils.adaptForNativeAccess(file);
     try {
       // try to read with the fast implementation
-      return createImage(Toolkit.getDefaultToolkit().createImage(file.toFile().getAbsolutePath()));
+      return createImage(Toolkit.getDefaultToolkit().createImage(nativePath.toFile().getAbsolutePath()));
     }
     catch (Exception e) {
       // did not work? try with ImageIO
-      return ImageIO.read(file.toFile());
+      return ImageIO.read(nativePath.toFile());
     }
   }
 

@@ -136,10 +136,11 @@ public class TvShowScrapeNewItemsAction extends TmmAction {
       TvShowEpisodeSearchAndScrapeOptions options = dialog.getTvShowEpisodeSearchAndScrapeOptions();
       List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = dialog.getTvShowEpisodeScraperMetadataConfig();
       boolean overwrite = dialog.getOverwriteExistingItems();
+      boolean forceOverwrite = dialog.getForceOverwrite();
 
       // scrape
       QueueTask queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scraping"));
-      queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite));
+      queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite, forceOverwrite));
 
       if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
         TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(entry.getKey()));

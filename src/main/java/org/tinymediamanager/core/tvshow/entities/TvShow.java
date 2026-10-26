@@ -1131,18 +1131,24 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * Sets the metadata.
+   * Set the metadata of this TV show.
    *
    * @param metadata
-   *          the new metadata
+   *          the scraped metadata
    * @param config
-   *          the config
+   *          the fields to set
+   * @param overwriteExistingItems
+   *          should existing values be overwritten
+   * @param forceOverwrite
+   *          should empty scraped values also overwrite existing values (only effective together with overwriteExistingItems)
    */
-  public void setMetadata(MediaMetadata metadata, List<TvShowScraperMetadataConfig> config, boolean overwriteExistingItems) {
+  public void setMetadata(MediaMetadata metadata, List<TvShowScraperMetadataConfig> config, boolean overwriteExistingItems, boolean forceOverwrite) {
     if (locked) {
       LOGGER.debug("TV show locked, but setMetadata has been called!");
       return;
     }
+
+    boolean force = forceOverwrite && overwriteExistingItems;
 
     // check if metadata has at least an id (aka it is not empty)
     if (metadata == null || metadata.getIds().isEmpty()) {
@@ -1202,7 +1208,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())
+    if (config.contains(TvShowScraperMetadataConfig.TITLE) && (force || StringUtils.isNotBlank(metadata.getTitle()))
         && (overwriteExistingItems || newEntity || StringUtils.isBlank(getTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
@@ -1213,7 +1219,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+    if (config.contains(TvShowScraperMetadataConfig.ORIGINAL_TITLE) && (force || StringUtils.isNotBlank(metadata.getOriginalTitle()))
         && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
@@ -1224,7 +1230,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+    if (config.contains(TvShowScraperMetadataConfig.ENGLISH_TITLE) && (force || StringUtils.isNotBlank(metadata.getEnglishTitle()))
         && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
@@ -1235,18 +1241,18 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+    if (config.contains(TvShowScraperMetadataConfig.PLOT) && (force || StringUtils.isNotBlank(metadata.getPlot()))
         && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.TAGLINE) && StringUtils.isNotBlank(metadata.getTagline())
+    if (config.contains(TvShowScraperMetadataConfig.TAGLINE) && (force || StringUtils.isNotBlank(metadata.getTagline()))
         && (overwriteExistingItems || StringUtils.isBlank(getTagline()))) {
       setTagline(metadata.getTagline());
     }
 
     if (config.contains(TvShowScraperMetadataConfig.YEAR)) {
-      if (metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
+      if ((force || metadata.getYear() > 0) && (overwriteExistingItems || getYear() <= 0)) {
         setYear(metadata.getYear());
         // if we set the year, we also ALWAYS set yearEnd
         setYearEnd(metadata.getYearEnd());
@@ -1256,7 +1262,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     if (config.contains(TvShowScraperMetadataConfig.RATING)) {
       Map<String, MediaRating> newRatings = new HashMap<>();
 
-      if (matchFound || !overwriteExistingItems) {
+      if (!force && (matchFound || !overwriteExistingItems)) {
         // only update new ratings, but let the old ones survive
         newRatings.putAll(getRatings());
       }
@@ -1273,38 +1279,42 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       setRatings(newRatings);
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.AIRED) && metadata.getReleaseDate() != null
+    if (config.contains(TvShowScraperMetadataConfig.AIRED) && (force || metadata.getReleaseDate() != null)
         && (overwriteExistingItems || getFirstAired() == null)) {
       setFirstAired(metadata.getReleaseDate());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.TOP250) && metadata.getTop250() > 0
+    if (config.contains(TvShowScraperMetadataConfig.TOP250) && (force || metadata.getTop250() > 0)
         && (overwriteExistingItems || getTop250() <= 0 || getTop250() > 250)) {
       setTop250(metadata.getTop250());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.STATUS) && metadata.getStatus() != MediaAiredStatus.UNKNOWN
+    if (config.contains(TvShowScraperMetadataConfig.STATUS) && (force || metadata.getStatus() != MediaAiredStatus.UNKNOWN)
         && (overwriteExistingItems || getStatus() == null || getStatus() == MediaAiredStatus.UNKNOWN)) {
       setStatus(metadata.getStatus());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(TvShowScraperMetadataConfig.RUNTIME) && (force || metadata.getRuntime() > 0)
+        && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.COUNTRY) && !metadata.getCountries().isEmpty()
+    if (config.contains(TvShowScraperMetadataConfig.COUNTRY) && (force || !metadata.getCountries().isEmpty())
         && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
       setCountry(StringUtils.join(metadata.getCountries(), ", "));
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.STUDIO) && !metadata.getProductionCompanies().isEmpty()
+    if (config.contains(TvShowScraperMetadataConfig.STUDIO) && (force || !metadata.getProductionCompanies().isEmpty())
         && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
       setProductionCompany(StringUtils.join(metadata.getProductionCompanies(), ", "));
     }
 
     if (config.contains(TvShowScraperMetadataConfig.CERTIFICATION)
         && (overwriteExistingItems || getCertification() == null || getCertification() == MediaCertification.UNKNOWN)) {
-      if (!metadata.getCertifications().isEmpty()) {
+      if (force && metadata.getCertifications().isEmpty()) {
+        setCertification(null);
+      }
+      else if (!metadata.getCertifications().isEmpty()) {
         if (metadata.getCertifications().size() > 1) {
           // US has 2 rating systems - MPAA, Parental TV guide - see tt0092644
           // we take the MPAA for movies.

@@ -92,6 +92,24 @@ public class MovieNfoParserTest extends BasicMovieTest {
   }
 
   @Test
+  public void testMultilineFieldsPreserveLineBreaks() {
+    MovieNfoParser parser = MovieNfoParser.parseNfo("<movie><title>foo</title>" //
+        + "<plot>plot line 1\nplot line 2</plot>" //
+        + "<outline>outline line 1\noutline line 2</outline>" //
+        + "<tagline>tagline line 1\ntagline line 2</tagline>" //
+        + "<set><name>set</name><overview>overview line 1\noverview line 2</overview></set>" //
+        + "<user_note>note line 1\nnote line 2</user_note>" //
+        + "</movie>");
+
+    assertThat(parser.plot).isEqualTo("plot line 1\nplot line 2");
+    assertThat(parser.outline).isEqualTo("outline line 1\noutline line 2");
+    assertThat(parser.tagline).isEqualTo("tagline line 1\ntagline line 2");
+    assertThat(parser.sets).hasSize(1);
+    assertThat(parser.sets.get(0).overview).isEqualTo("overview line 1\noverview line 2");
+    assertThat(parser.userNote).isEqualTo("note line 1\nnote line 2");
+  }
+
+  @Test
   public void testKodi17_0() throws Exception {
     // Kodi version 17.0
     MovieNfoParser parser = MovieNfoParser.parseNfo(getWorkFolder().resolve("movie_nfo").resolve("kodi17.0.nfo"));

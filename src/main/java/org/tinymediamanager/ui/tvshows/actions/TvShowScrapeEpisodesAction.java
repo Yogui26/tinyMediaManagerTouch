@@ -70,6 +70,7 @@ public class TvShowScrapeEpisodesAction extends TmmAction {
     TvShowEpisodeSearchAndScrapeOptions options = dialog.getTvShowEpisodeSearchAndScrapeOptions();
     List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = dialog.getTvShowEpisodeScraperMetadataConfig();
     boolean overwrite = dialog.getOverwriteExistingItems();
+    boolean forceOverwrite = dialog.getForceOverwrite();
 
     // re-group the episodes. If there is a "last used" scraper set for the show also take this into account for the episode
     Map<TvShow, List<TvShowEpisode>> newEpisodes = new HashMap<>();
@@ -81,7 +82,7 @@ public class TvShowScrapeEpisodesAction extends TmmAction {
     // scrape
     for (Map.Entry<TvShow, List<TvShowEpisode>> entry : newEpisodes.entrySet()) {
       QueueTask queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scraping"));
-      queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite));
+      queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite, forceOverwrite));
 
       if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
         TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(entry.getKey()));

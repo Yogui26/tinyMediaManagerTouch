@@ -1612,6 +1612,20 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
      * @return the comparable basename for matching
      */
     private String getComparableEpisodeBasename(MediaFile mediaFile) {
+      if (mediaFile.getType() == MediaFileType.SCENEPASS) {
+        return Utils.cleanStackingMarkers(MediaFileHelper.getScenePassBasename(mediaFile.getFilename()));
+      }
+
+      if (mediaFile.getType() == MediaFileType.SKIPTRO) {
+        String basename = MediaFileHelper.getSkiptroBasename(mediaFile.getFilename());
+        String extension = FilenameUtils.getExtension(basename).toLowerCase(Locale.ROOT);
+        if (StringUtils.isNotBlank(extension) && Settings.getInstance().getVideoFileType().contains("." + extension)) {
+          // also support the non-canonical "<video basename>.<video extension>.skiptro.json"
+          basename = FilenameUtils.getBaseName(basename);
+        }
+        return Utils.cleanStackingMarkers(basename);
+      }
+
       if (isEpisodeMetadataSidecar(mediaFile)) {
         return FilenameUtils.getBaseName(Utils.cleanStackingMarkers(mediaFile.getFilename()));
       }

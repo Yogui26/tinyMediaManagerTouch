@@ -157,6 +157,10 @@ public abstract class BasicTest {
   }
 
   protected void setTraceLogging() {
+    if ("true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")))) {
+      return;
+    }
+
     LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
     lc.getLogger("org.tinymediamanager").setLevel(Level.TRACE);
   }

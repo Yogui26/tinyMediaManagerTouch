@@ -62,6 +62,7 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
   private final MediaScraperCheckComboBox                                              cbArtworkScraper;
   private final ScraperMetadataConfigCheckComboBox<TvShowEpisodeScraperMetadataConfig> cbEpisodeScraperConfig;
   private final JCheckBox                                                              chckbxDoNotOverwrite;
+  private final JCheckBox                                                              chckbxForceOverwrite;
 
   private MediaScraperComboBox                                                         cbMetadataScraper;
   private MediaScraperCheckComboBox                                                    cbTrailerScraper;
@@ -166,9 +167,13 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
     chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
     chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
 
-    // only show "do not overwrite" when scraping metadata
+    chckbxForceOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+    chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+
+    // only show "do not overwrite"/"force overwrite" when scraping metadata
     if (!artworkOnly) {
-      panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 3 2 1");
+      panelScraperConfig.add(chckbxDoNotOverwrite, "flowx,cell 0 3 2 1");
+      panelScraperConfig.add(chckbxForceOverwrite, "cell 0 3 2 1");
     }
 
     {
@@ -241,6 +246,17 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
       cbEpisodeScraperConfig.setSelectedItems(config);
     }
     chckbxDoNotOverwrite.setSelected(TvShowModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+    chckbxForceOverwrite.setSelected(TvShowModuleManager.getInstance().getSettings().isForceOverwrite());
+    chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+    updateForceOverwriteState();
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
+    }
   }
 
   public void setMetadataScraper(MediaScraper metadataScraper) {
@@ -329,6 +345,15 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
    */
   public boolean getOverwriteExistingItems() {
     return !chckbxDoNotOverwrite.isSelected();
+  }
+
+  /**
+   * should the scrape also overwrite existing items with empty values
+   *
+   * @return true/false
+   */
+  public boolean getForceOverwrite() {
+    return !chckbxDoNotOverwrite.isSelected() && chckbxForceOverwrite.isSelected();
   }
 
   /**

@@ -177,6 +177,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
   private final TmmTable                                                       tableCastMembers;
   private final ScraperMetadataConfigCheckComboBox<MovieScraperMetadataConfig> cbScraperConfig;
   private final JCheckBox                                                      chckbxDoNotOverwrite;
+  private final JCheckBox                                                      chckbxForceOverwrite;
 
   private JTextField                                                           textFieldSearchString;
 
@@ -359,7 +360,11 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     {
       chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-      contentPanel.add(chckbxDoNotOverwrite, "cell 0 6");
+      contentPanel.add(chckbxDoNotOverwrite, "flowx,cell 0 6");
+
+      chckbxForceOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+      chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+      contentPanel.add(chckbxForceOverwrite, "cell 0 6");
     }
     {
       {
@@ -498,11 +503,22 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       progressBar.setVisible(false);
       cbScraperConfig.setSelectedItems(MovieModuleManager.getInstance().getSettings().getScraperMetadataConfig());
       chckbxDoNotOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+      chckbxForceOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isForceOverwrite());
+      chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+      updateForceOverwriteState();
 
       textFieldSearchString.setText(movieToScrape.getTitle());
       lblPath.setText(movieToScrape.getPathNIO().resolve(movieToScrape.getMainFile().getFilename()).toString());
       // initial search with IDs
       searchMovie(textFieldSearchString.getText(), true);
+    }
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
     }
   }
 
@@ -536,6 +552,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           // set scraped metadata
           List<MovieScraperMetadataConfig> scraperConfig = cbScraperConfig.getSelectedItems();
           boolean overwrite = !chckbxDoNotOverwrite.isSelected();
+          boolean forceOverwrite = overwrite && chckbxForceOverwrite.isSelected();
 
           // get other ratings too?
           if (scraperConfig.contains(MovieScraperMetadataConfig.RATING) && MovieModuleManager.getInstance().getSettings().isFetchAllRatings()) {
@@ -558,7 +575,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
                     ratingMediaMetadata.addRating(rating);
                   }
                 }
-                movieToScrape.setMetadata(ratingMediaMetadata, Collections.singletonList(MovieScraperMetadataConfig.RATING), overwrite);
+                movieToScrape.setMetadata(ratingMediaMetadata, Collections.singletonList(MovieScraperMetadataConfig.RATING), overwrite,
+                    forceOverwrite);
               }
             });
           }
@@ -568,7 +586,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             md.removeId(MediaMetadata.TMDB_SET);
           }
 
-          movieToScrape.setMetadata(md, scraperConfig, overwrite);
+          movieToScrape.setMetadata(md, scraperConfig, overwrite, forceOverwrite);
           movieToScrape.setLastScraperId(model.getMetadataProvider().getId());
           movieToScrape.setLastScrapeLanguage(model.getLanguage().name());
 

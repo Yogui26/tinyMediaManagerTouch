@@ -572,6 +572,7 @@ public class TvShowJmteExplorerDialog extends TmmDialog {
     rendererExampleList.add(new RendererExample("--- string renderers ---"));
     rendererExampleList.add(new RendererExample("${tvShow.title;upper}"));
     rendererExampleList.add(new RendererExample("${tvShow.title;lower}"));
+    rendererExampleList.add(new RendererExample("${tvShow.title;nfd}"));
     rendererExampleList.add(new RendererExample("${tvShow.title;first}"));
     rendererExampleList.add(new RendererExample("${episode.title;upper}"));
     rendererExampleList.add(new RendererExample("${episode.title;lower}"));

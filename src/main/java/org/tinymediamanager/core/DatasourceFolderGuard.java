@@ -105,11 +105,42 @@ public final class DatasourceFolderGuard {
       systemFolders.add(home + "/Library");
     }
 
+    List<String> tempFolders = new ArrayList<>();
+    // the temp folder actually used by the JVM (usually the user temp folder)
+    addIfNotBlank(tempFolders, System.getProperty("java.io.tmpdir"));
+    addIfNotBlank(tempFolders, System.getenv("TMPDIR"));
+    addIfNotBlank(tempFolders, System.getenv("XDG_RUNTIME_DIR"));
+    addIfNotBlank(tempFolders, System.getenv("TEMP"));
+    addIfNotBlank(tempFolders, System.getenv("TMP"));
+    if (os == Os.WINDOWS) {
+      String systemRoot = System.getenv("SystemRoot");
+      if (StringUtils.isNotBlank(systemRoot)) {
+        tempFolders.add(systemRoot + "\\Temp");
+      }
+      String localAppData = System.getenv("LOCALAPPDATA");
+      if (StringUtils.isNotBlank(localAppData)) {
+        tempFolders.add(localAppData + "\\Temp");
+      }
+      if (StringUtils.isNotBlank(home)) {
+        tempFolders.add(home + "\\AppData\\Local\\Temp");
+      }
+    }
+    else if (os == Os.MAC_OS) {
+      tempFolders.add("/tmp");
+      tempFolders.add("/private/tmp");
+      tempFolders.add("/var/tmp");
+      tempFolders.add("/private/var/tmp");
+    }
+    else {
+      tempFolders.add("/tmp");
+      tempFolders.add("/var/tmp");
+    }
+
     List<String> tmmDataFolders = new ArrayList<>();
     tmmDataFolders.add(Globals.DATA_FOLDER);
     tmmDataFolders.add(TmmOsUtils.getUserDir().toString());
 
-    return check(folder.toString(), os, home, systemFolders, tmmDataFolders);
+    return check(folder.toString(), os, home, systemFolders, tmmDataFolders, tempFolders);
   }
 
   private static void addIfNotBlank(List<String> list, String value) {
@@ -134,6 +165,28 @@ public final class DatasourceFolderGuard {
    * @return the reason why the folder is dangerous, or empty if it can be used as a data source
    */
   static Optional<String> check(String rawPath, Os os, String home, Collection<String> systemFolders, Collection<String> tmmDataFolders) {
+    return check(rawPath, os, home, systemFolders, tmmDataFolders, List.of());
+  }
+
+  /**
+   * The actual (pure) check, decoupled from the running OS to be unit-testable on any platform.
+   *
+   * @param rawPath
+   *          the absolute path to check (may contain the separators of the given OS)
+   * @param os
+   *          the OS family to evaluate against
+   * @param home
+   *          the user home folder (may be blank)
+   * @param systemFolders
+   *          system folders which are protected completely (the folder itself and everything below it)
+   * @param tmmDataFolders
+   *          tinyMediaManager data folders which are protected (the folder itself and all its ancestors, but NOT their children)
+   * @param tempFolders
+   *          temp folders which are always allowed (the folder itself and everything below it)
+   * @return the reason why the folder is dangerous, or empty if it can be used as a data source
+   */
+  static Optional<String> check(String rawPath, Os os, String home, Collection<String> systemFolders, Collection<String> tmmDataFolders,
+      Collection<String> tempFolders) {
     if (StringUtils.isBlank(rawPath)) {
       return Optional.of("empty path");
     }
@@ -168,10 +221,6 @@ public final class DatasourceFolderGuard {
         }
       }
     }
-    else if (parts.size() <= 1) {
-      // the root itself or a direct child of it (e.g. /dev, /var, /mnt, /Volumes, /Library, ...)
-      return Optional.of("system folder at top level");
-    }
 
     if (!homeParts.isEmpty()) {
       if (parts.equals(homeParts)) {
@@ -196,18 +245,7 @@ public final class DatasourceFolderGuard {
       }
     }
 
-    for (String systemFolder : systemFolders) {
-      List<String> systemParts = splitPath(unify(systemFolder, caseInsensitive));
-      if (systemParts.isEmpty()) {
-        continue;
-      }
-
-      if (startsWith(parts, systemParts) || startsWith(systemParts, parts)) {
-        // inside a protected system folder (e.g. C:\Windows, ~/Library) or an ancestor of it (e.g. C:\Users\<name>\AppData)
-        return Optional.of("protected system folder");
-      }
-    }
-
+    // the tinyMediaManager data folder itself (and its ancestors) must stay protected even if it lives inside a temp folder
     for (String tmmDataFolder : tmmDataFolders) {
       List<String> dataParts = splitPath(unify(tmmDataFolder, caseInsensitive));
       if (dataParts.isEmpty()) {
@@ -217,6 +255,41 @@ public final class DatasourceFolderGuard {
       if (startsWith(dataParts, parts)) {
         // the tinyMediaManager data folder itself or one of its ancestors
         return Optional.of("the tinyMediaManager data folder (or an ancestor of it)");
+      }
+    }
+
+    // temp folders (and everything below them) are always allowed (e.g. unit test data)
+    for (String tempFolder : tempFolders) {
+      List<String> tempParts = splitPath(unify(tempFolder, caseInsensitive));
+      if (tempParts.isEmpty() || (os == Os.WINDOWS && tempParts.size() == 1)) {
+        // never let a misconfigured root temp folder (e.g. "/" or "D:\") exempt a whole drive
+        continue;
+      }
+
+      if (!homeParts.isEmpty() && startsWith(homeParts, tempParts)) {
+        // never let a temp folder which contains the user home exempt the user home
+        continue;
+      }
+
+      if (startsWith(parts, tempParts)) {
+        return Optional.empty();
+      }
+    }
+
+    if (os != Os.WINDOWS && parts.size() <= 1) {
+      // the root itself or a direct child of it (e.g. /dev, /var, /mnt, /Volumes, /Library, ...)
+      return Optional.of("system folder at top level");
+    }
+
+    for (String systemFolder : systemFolders) {
+      List<String> systemParts = splitPath(unify(systemFolder, caseInsensitive));
+      if (systemParts.isEmpty()) {
+        continue;
+      }
+
+      if (startsWith(parts, systemParts) || startsWith(systemParts, parts)) {
+        // inside a protected system folder (e.g. C:\Windows, ~/Library) or an ancestor of it (e.g. C:\Users\<name>\AppData)
+        return Optional.of("protected system folder");
       }
     }
 

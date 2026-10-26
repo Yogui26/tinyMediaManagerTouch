@@ -242,7 +242,8 @@ public class TvShowScrapeTask extends TmmThreadPool {
               }
             }
 
-            tvShow.setMetadata(md, tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
+            tvShow.setMetadata(md, tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems,
+                tvShowScrapeParams.forceOverwrite);
             tvShow.setLastScraperId(tvShowScrapeParams.scrapeOptions.getMetadataScraper().getId());
             tvShow.setLastScrapeLanguage(tvShowScrapeParams.scrapeOptions.getLanguage().name());
 
@@ -359,7 +360,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
               }
 
               TvShowEpisodeScrapeTask task = new TvShowEpisodeScrapeTask(Collections.singletonList(episode), options1,
-                  tvShowScrapeParams.episodeScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
+                  tvShowScrapeParams.episodeScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems, tvShowScrapeParams.forceOverwrite);
               // start this task embedded (to the abortable)
               task.run();
             }
@@ -507,6 +508,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
     private boolean                                        doSearch;
     private boolean                                        overwriteExistingItems;
+    private boolean                                        forceOverwrite;
 
     public TvShowScrapeParams(List<TvShow> tvShowsToScrape, TvShowSearchAndScrapeOptions scrapeOptions,
         List<TvShowScraperMetadataConfig> tvShowScraperMetadataConfig, List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig) {
@@ -517,6 +519,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
       this.doSearch = true;
       this.overwriteExistingItems = true;
+      this.forceOverwrite = false;
     }
 
     public TvShowScrapeParams setDoSearch(boolean doSearch) {
@@ -526,6 +529,11 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
     public TvShowScrapeParams setOverwriteExistingItems(boolean overwriteExistingItems) {
       this.overwriteExistingItems = overwriteExistingItems;
+      return this;
+    }
+
+    public TvShowScrapeParams setForceOverwrite(boolean forceOverwrite) {
+      this.forceOverwrite = forceOverwrite;
       return this;
     }
   }

@@ -146,6 +146,29 @@ public class MediaFileTest extends BasicTest {
   }
 
   @Test
+  public void testMediaFileTypeScenePass() {
+    // naming convention of the Kodi addon service.scenepass: "<video basename>.sp.json" / "<video basename>.sp.hash.json"
+    checkMediaFileType("Episode 01.sp.json", MediaFileType.SCENEPASS);
+    checkMediaFileType("Episode 01.sp.hash.json", MediaFileType.SCENEPASS);
+    checkMediaFileType("Movie (2020).cd2.sp.hash.json", MediaFileType.SCENEPASS);
+    checkMediaFileType("Episode 01.SP.Hash.JSON", MediaFileType.SCENEPASS);
+
+    assertEqual(".sp.json", MediaFileHelper.getScenePassSuffix("Episode 01.sp.json"));
+    assertEqual(".sp.hash.json", MediaFileHelper.getScenePassSuffix("Episode 01.sp.hash.json"));
+    assertEqual("Episode 01", MediaFileHelper.getScenePassBasename("Episode 01.sp.json"));
+    assertEqual("Episode 01", MediaFileHelper.getScenePassBasename("Episode 01.sp.hash.json"));
+    assertEqual("Episode 01", MediaFileHelper.getSkiptroBasename("Episode 01.skiptro.json"));
+    assertEqual("Episode 01.mkv", MediaFileHelper.getSkiptroBasename("Episode 01.mkv.skiptro.json"));
+
+    // plain JSON and near-misses must not be detected as ScenePass
+    checkMediaFileType("movie.json", MediaFileType.UNKNOWN);
+    checkMediaFileType("movie.sp.txt", MediaFileType.TEXT);
+    checkMediaFileType("movie.sp.jsonx", MediaFileType.UNKNOWN);
+    checkMediaFileType("movie.sp.hash.jsonx", MediaFileType.UNKNOWN);
+    checkMediaFileType("movie.hash.json", MediaFileType.UNKNOWN);
+  }
+
+  @Test
   public void testMediaFileTypeTheme() {
     checkMediaFileType("movie-theme.mp3", MediaFileType.THEME);
     checkMediaFileType("movie.theme1.aac", MediaFileType.THEME);

@@ -18,6 +18,7 @@ package org.tinymediamanager.core;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -150,15 +151,16 @@ public abstract class PostProcessExecutor extends TmmTask {
     }
     else {
       // Linux & Mac
-      pb = new ProcessBuilder("/bin/sh", "-c", postProcess.getPath() + " " + String.join(" ", cmdline));
+      pb = new ProcessBuilder("/bin/sh", "-c", adaptProgramPath(postProcess.getPath()) + " " + String.join(" ", cmdline));
     }
 
     pb.redirectErrorStream(true);
 
     Path entityPath = mediaEntity.getPathNIO();
     if (entityPath != null) {
-      // set the workdir to the entity folder
-      pb.directory(entityPath.toFile());
+      // set the workdir to the entity folder; ProcessBuilder/java.io is not covered by the JBR NFD patch
+      // (jdk.nio.path.useNormalizationFormD only affects sun.nio.fs), so adapt the path for native access
+      pb.directory(Utils.adaptForNativeAccess(entityPath).toFile());
     }
     else {
       // fallback: set to the content folder (to avoid writing to the signed tmm folder)
@@ -199,6 +201,36 @@ public abstract class PostProcessExecutor extends TmmTask {
       // Process must be destroyed before closing streams, can't use try-with-resources,
       // as resources are closing when leaving try block, before finally
       IOUtils.close(process.getErrorStream());
+    }
+  }
+
+  /**
+   * Adapts the program path of a post process for native file access on macOS.<br>
+   * Blank paths (scripting mode) stay blank and relative paths stay relative - they are resolved by the shell against the (already adapted) working
+   * directory.
+   *
+   * @param program
+   *          the program path of the post process
+   * @return the program path in the form the local file system needs, or the unmodified path
+   */
+  static String adaptProgramPath(String program) {
+    if (!SystemUtils.IS_OS_MAC || StringUtils.isBlank(program)) {
+      return program;
+    }
+
+    try {
+      Path programPath = Paths.get(program);
+      if (!programPath.isAbsolute()) {
+        // relative paths are resolved by the shell against the working directory set below
+        return program;
+      }
+
+      // java.io/ProcessBuilder is not covered by the JBR NFD patch - adapt the program path for native access
+      return Utils.adaptForNativeAccess(programPath).toString();
+    }
+    catch (InvalidPathException e) {
+      LOGGER.debug("could not adapt program path '{}' - '{}'", program, e.getMessage());
+      return program;
     }
   }
 }

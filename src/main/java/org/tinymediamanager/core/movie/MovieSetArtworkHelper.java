@@ -814,6 +814,19 @@ public class MovieSetArtworkHelper {
   }
 
   /**
+   * Check if the movie set already has artwork of the given type, either as a downloaded file or as a stored artwork URL.
+   *
+   * @param movieSet
+   *          the movie set to check
+   * @param type
+   *          the artwork type
+   * @return true if artwork is already available
+   */
+  public static boolean hasArtwork(MovieSet movieSet, MediaFileType type) {
+    return StringUtils.isNotBlank(movieSet.getArtworkUrl(type)) || StringUtils.isNotBlank(movieSet.getArtworkFilename(type));
+  }
+
+  /**
    * Manage downloading of the chosen artwork type
    *
    * @param movieSet

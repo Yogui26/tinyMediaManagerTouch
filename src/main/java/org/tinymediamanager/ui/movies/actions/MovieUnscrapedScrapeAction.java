@@ -63,12 +63,14 @@ public class MovieUnscrapedScrapeAction extends TmmAction {
       MovieSearchAndScrapeOptions options = dialog.getMovieSearchAndScrapeOptions();
       List<MovieScraperMetadataConfig> config = dialog.getMovieScraperMetadataConfig();
       boolean overwrite = dialog.getOverwriteExistingItems();
+      boolean forceOverwrite = dialog.getForceOverwrite();
 
       // do we want to scrape?
       if (dialog.shouldStartScrape()) {
         // scrape
         TmmThreadPool scrapeTask = new MovieScrapeTask(
-            new MovieScrapeTask.MovieScrapeParams(unscrapedMovies, options, config).setOverwriteExistingItems(overwrite));
+            new MovieScrapeTask.MovieScrapeParams(unscrapedMovies, options, config).setOverwriteExistingItems(overwrite)
+                .setForceOverwrite(forceOverwrite));
         TmmTaskManager.getInstance().addMainTask(scrapeTask);
       }
     }

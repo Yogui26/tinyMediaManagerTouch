@@ -255,7 +255,8 @@ public class MovieScrapeTask extends TmmThreadPool {
 
           if (md != null && (ScraperMetadataConfig.containsAnyMetadata(movieScrapeParams.scraperMetadataConfig)
               || ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig))) {
-            movie.setMetadata(md, movieScrapeParams.scraperMetadataConfig, movieScrapeParams.overwriteExistingItems);
+            movie.setMetadata(md, movieScrapeParams.scraperMetadataConfig, movieScrapeParams.overwriteExistingItems,
+                movieScrapeParams.forceOverwrite);
             movie.setLastScraperId(movieScrapeParams.searchAndScrapeOptions.getMetadataScraper().getId());
             movie.setLastScrapeLanguage(movieScrapeParams.searchAndScrapeOptions.getLanguage().name());
 
@@ -437,6 +438,7 @@ public class MovieScrapeTask extends TmmThreadPool {
 
     private boolean                                doSearch;
     private boolean                                overwriteExistingItems;
+    private boolean                                forceOverwrite;
 
     public MovieScrapeParams(final List<Movie> moviesToScrape, final MovieSearchAndScrapeOptions searchAndScrapeOptions,
         final List<MovieScraperMetadataConfig> scraperMetadataConfig) {
@@ -446,6 +448,7 @@ public class MovieScrapeTask extends TmmThreadPool {
 
       this.doSearch = true;
       this.overwriteExistingItems = true;
+      this.forceOverwrite = false;
     }
 
     public MovieScrapeParams setDoSearch(boolean doSearch) {
@@ -455,6 +458,11 @@ public class MovieScrapeTask extends TmmThreadPool {
 
     public MovieScrapeParams setOverwriteExistingItems(boolean overwriteExistingItems) {
       this.overwriteExistingItems = overwriteExistingItems;
+      return this;
+    }
+
+    public MovieScrapeParams setForceOverwrite(boolean forceOverwrite) {
+      this.forceOverwrite = forceOverwrite;
       return this;
     }
   }

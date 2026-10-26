@@ -554,6 +554,7 @@ public class MovieJmteExplorerDialog extends TmmDialog {
     rendererExampleList.add(new RendererExample("--- string renderers ---"));
     rendererExampleList.add(new RendererExample("${movie.title;upper}"));
     rendererExampleList.add(new RendererExample("${movie.title;lower}"));
+    rendererExampleList.add(new RendererExample("${movie.title;nfd}"));
     rendererExampleList.add(new RendererExample("${movie.title;first}"));
     rendererExampleList.add(new RendererExample("${movie.genresAsString;split(0,2)}"));
     rendererExampleList.add(new RendererExample("${movie.title;replace(a,XX)}"));

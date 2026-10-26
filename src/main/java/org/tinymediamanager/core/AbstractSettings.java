@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -261,7 +262,23 @@ public abstract class AbstractSettings extends AbstractModelObject {
 
     validateSettingsAccess(cfgFolder, cfgFile);
 
-    // unmarshall the JSON
+    // create a new instance if the config file does not exist
+    if (!Files.exists(cfgFile)) {
+      try {
+        instance = clazz.getDeclaredConstructor().newInstance();
+        instance.settingsFolder = folder;
+        instance.newConfig = true;
+        instance.dirty = true;
+        instance.writeDefaultSettings();
+      }
+      catch (Throwable e) {
+        LOGGER.debug("getInstance", e);
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.loadsettingserror"));
+      }
+      return instance;
+    }
+
+    // unmarshall the existing config JSON
     try {
       LOGGER.debug("Loading settings ({}) from {}", filename, folder);
       String settingsAsJson;
@@ -283,11 +300,13 @@ public abstract class AbstractSettings extends AbstractModelObject {
       instance.dirty = false;
     }
     catch (Exception e) {
-      if (!(e instanceof FileNotFoundException)) {
-        // log only if there are other Exceptions than the FileNotFoundException
-        LOGGER.error("Failed loading settings - '{}'", e.getMessage());
+      if (e instanceof FileNotFoundException || e instanceof NoSuchFileException) {
+        LOGGER.info("Settings file '{}' not found - creating default one...", filename);
       }
-      LOGGER.warn("Could not load settings - creating default ones...");
+      else {
+        // log only if there are other Exceptions than the FileNotFoundException
+        LOGGER.error("Failed loading settings '{}' - creating new one...", e.getMessage());
+      }
 
       try {
         instance = clazz.getDeclaredConstructor().newInstance();

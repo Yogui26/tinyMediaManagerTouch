@@ -68,6 +68,18 @@ public class MoviePostProcessExecutorTest extends BasicMovieTest {
     assertThat(executor.getState()).isEqualTo(TaskState.FINISHED);
   }
 
+  @Test
+  public void scriptingModeWithoutProgramPathRunsInEntityFolder() throws Exception {
+    List<Movie> movies = createMovies(1);
+    Movie movie = movies.get(0);
+
+    MoviePostProcessExecutor executor = new MoviePostProcessExecutor(createPostProcess("touch postprocess-marker.txt", true), movies);
+    executor.run();
+
+    assertThat(movie.getPathNIO().resolve("postprocess-marker.txt")).exists();
+    assertThat(executor.getState()).isEqualTo(TaskState.FINISHED);
+  }
+
   private PostProcess createPostProcess(String command, boolean abortOnFailure) {
     PostProcess postProcess = new PostProcess();
     postProcess.setName("test post process");

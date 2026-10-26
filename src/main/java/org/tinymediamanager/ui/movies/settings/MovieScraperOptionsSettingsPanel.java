@@ -68,6 +68,7 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxScraperFallback;
   private JCheckBox                 chckbxCapitalizeWords;
   private JCheckBox                 chckbxDoNotOverwrite;
+  private JCheckBox                 chckbxForceOverwrite;
   private JCheckBox                 chckbxFetchAllRatings;
   private JCheckBox                 chckbxRatingImdb;
   private JCheckBox                 chckbxRatingRtTomatometer;
@@ -89,6 +90,8 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
     initDataBindings();
 
     loadRatings();
+    chckbxDoNotOverwrite.addItemListener(e -> updateForceOverwriteState());
+    updateForceOverwriteState();
     ItemListener checkBoxListener = e -> checkChanges();
 
     // data init
@@ -122,6 +125,14 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
     sliderThreshold.setLabelTable(labelTable);
     sliderThreshold.setValue((int) (settings.getScraperThreshold() * 100));
     sliderThreshold.addChangeListener(arg0 -> settings.setScraperThreshold(sliderThreshold.getValue() / 100.0));
+  }
+
+  private void updateForceOverwriteState() {
+    boolean doNotOverwrite = chckbxDoNotOverwrite.isSelected();
+    chckbxForceOverwrite.setEnabled(!doNotOverwrite);
+    if (doNotOverwrite) {
+      chckbxForceOverwrite.setSelected(false);
+    }
   }
 
   private void initComponents() {
@@ -209,7 +220,11 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
 
       chckbxDoNotOverwrite = new JCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-      panelDefaults.add(chckbxDoNotOverwrite, "cell 1 1 2 1");
+      panelDefaults.add(chckbxDoNotOverwrite, "flowx,cell 1 1 2 1");
+
+      chckbxForceOverwrite = new JCheckBox(TmmResourceBundle.getString("message.scrape.forceoverwrite"));
+      chckbxForceOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.forceoverwrite.desc"));
+      panelDefaults.add(chckbxForceOverwrite, "cell 1 1 2 1");
     }
     {
       JPanel panelAutomaticScrape = new JPanel(new MigLayout("hidemode 1, insets 0", "[20lp!][][300lp][200lp]", ""));
@@ -350,6 +365,11 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty, chckbxDoNotOverwrite,
         jCheckBoxBeanProperty);
     autoBinding_3.bind();
+    //
+    Property movieSettingsBeanProperty_force = BeanProperty.create("forceOverwrite");
+    AutoBinding autoBinding_force = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_force,
+        chckbxForceOverwrite, jCheckBoxBeanProperty);
+    autoBinding_force.bind();
     //
     Property movieSettingsBeanProperty_1 = BeanProperty.create("fetchAllRatings");
     AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_1, chckbxFetchAllRatings,

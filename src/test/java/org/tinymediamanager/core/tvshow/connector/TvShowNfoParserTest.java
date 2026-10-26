@@ -45,6 +45,23 @@ public class TvShowNfoParserTest extends BasicTvShowTest {
   }
 
   @Test
+  public void testMultilineFieldsPreserveLineBreaks() {
+    TvShowNfoParser parser = TvShowNfoParser.parseNfo("<tvshow><title>foo</title>" //
+        + "<plot>plot line 1\nplot line 2</plot>" //
+        + "<outline>outline line 1\noutline line 2</outline>" //
+        + "<tagline>tagline line 1\ntagline line 2</tagline>" //
+        + "<seasonplot number=\"1\">season plot line 1\nseason plot line 2</seasonplot>" //
+        + "<user_note>note line 1\nnote line 2</user_note>" //
+        + "</tvshow>");
+
+    assertThat(parser.plot).isEqualTo("plot line 1\nplot line 2");
+    assertThat(parser.outline).isEqualTo("outline line 1\noutline line 2");
+    assertThat(parser.tagline).isEqualTo("tagline line 1\ntagline line 2");
+    assertThat(parser.seasonPlot.get(1)).isEqualTo("season plot line 1\nseason plot line 2");
+    assertThat(parser.userNote).isEqualTo("note line 1\nnote line 2");
+  }
+
+  @Test
   public void testNfoParserKodi142() {
     testKodi14_2();
   }

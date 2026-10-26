@@ -198,6 +198,7 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   scraperFallback;
   final List<MovieScraperMetadataConfig>    scraperMetadataConfig          = new ArrayList<>();
   boolean                                   doNotOverwriteExistingData;
+  boolean                                   forceOverwrite;
   boolean                                   capitalWordsInTitles;
   boolean                                   fetchAllRatings;
   final List<RatingProvider.RatingSource>   fetchRatingSources             = new ArrayList<>();
@@ -360,6 +361,7 @@ public final class MovieSettings extends AbstractSettings {
     setScraperThreshold(0.75);
     setScraperFallback(false);
     setDoNotOverwriteExistingData(false);
+    setForceOverwrite(false);
     setCapitalWordsInTitles(false);
     setFetchAllRatings(true);
     setFetchRatingSources(List.of(RatingProvider.RatingSource.IMDB));
@@ -1999,6 +2001,20 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.doNotOverwriteExistingData;
     this.doNotOverwriteExistingData = newValue;
     firePropertyChange("doNotOverwriteExistingData", oldValue, newValue);
+
+    if (newValue) {
+      setForceOverwrite(false);
+    }
+  }
+
+  public boolean isForceOverwrite() {
+    return forceOverwrite;
+  }
+
+  public void setForceOverwrite(boolean newValue) {
+    boolean oldValue = this.forceOverwrite;
+    this.forceOverwrite = newValue;
+    firePropertyChange("forceOverwrite", oldValue, newValue);
   }
 
   public MovieSetConnectors getMovieSetConnector() {

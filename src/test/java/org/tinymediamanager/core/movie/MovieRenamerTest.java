@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.Test;
+import org.tinymediamanager.core.Constants;
+import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -399,8 +401,18 @@ public class MovieRenamerTest extends BasicMovieTest {
     assertThat(mainVideoFile.getVideoFormat()).isEqualTo(example.videoFormat);
     assertThat(mainVideoFile.getVideoCodec()).isEqualTo(example.videoCodec);
 
+    // the main video must never disappear from the movie while the media files are being replaced
+    Movie movieToRename = movie;
+    List<MediaFile> mainVideoFilesDuringRename = new ArrayList<>();
+    movieToRename.addPropertyChangeListener(evt -> {
+      if (Constants.MEDIA_FILES.equals(evt.getPropertyName())) {
+        mainVideoFilesDuringRename.add(movieToRename.getMainVideoFile());
+      }
+    });
+
     // rename the movie
     MovieRenamer.renameMovie(movie, defaultRenamerProfile);
+    assertThat(mainVideoFilesDuringRename).isNotEmpty().noneMatch(mediaFile -> mediaFile == MediaFile.EMPTY_MEDIAFILE);
     moviePath = datasource.resolve(example.newFolder);
     assertThat(movie.getPathNIO()).isEqualTo(moviePath);
     checkFiles(moviePath, example.newFiles);
@@ -512,6 +524,33 @@ public class MovieRenamerTest extends BasicMovieTest {
 
     assertThat(renamed).hasSize(1);
     assertThat(renamed.get(0).getFilename()).isEqualTo("New Movie (2020).skiptro.json");
+  }
+
+  /**
+   * ScenePass sidecars must be renamed to "&lt;new video basename&gt;&lt;suffix&gt;" (without the video container extension) and keep their specific
+   * suffix type.
+   */
+  @Test
+  public void testGenerateFilenameForScenePassSidecar() {
+    Path movieDir = getWorkFolder().resolve("Old Movie");
+
+    Movie movie = new Movie();
+    movie.setDataSource(getWorkFolder().toString());
+    movie.setPath(movieDir.toString());
+    movie.setTitle("New Movie");
+    movie.setYear(2020);
+
+    for (String filename : List.of("oldmovie.sp.json", "oldmovie.sp.hash.json")) {
+      MediaFile scenePass = new MediaFile();
+      scenePass.setType(MediaFileType.SCENEPASS);
+      scenePass.setPath(movieDir.toString());
+      scenePass.setFilename(filename);
+
+      List<MediaFile> renamed = MovieRenamer.generateFilename(movie, scenePass, "New Movie (2020)", new MovieRenamerProfile());
+
+      assertThat(renamed).hasSize(1);
+      assertThat(renamed.get(0).getFilename()).isEqualTo("New Movie (2020)" + MediaFileHelper.getScenePassSuffix(filename));
+    }
   }
 
   private static class UdsMiRenamerExample {
