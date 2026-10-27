@@ -205,6 +205,31 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:6 E:3", detectEpisode("S06E03 - 33 Kugeln.mkv"));
     assertEqual("S:1 E:1", detectEpisode("Detective Conan Season 1 E001-E201.mkv")); // range too big, just take the first found EP
 
+    // FIX (#3290): PREPEND3 number-prefix title bug
+    assertEqual("S:1 E:48", detectEpisode("Show - S01E48 - 100 vs 1 [01234567].mkv"));
+    assertEqual("S:1 E:5",  detectEpisode("Show - S01E05 - 31 Flavors [01234567].mkv"));
+    assertEqual("S:2 E:4",  detectEpisode("Show.S02E04.99.Problems.[01234567].mkv"));
+    assertEqual("S:1 E:10", detectEpisode("Show_S01E10_42_Things_[01234567].mkv"));
+    assertEqual("S:1 E:11", detectEpisode("Vampire Diaries - S01E11 - 162 Candles [01234567].mkv"));
+    assertEqual("S:7 E:1",  detectEpisode("Parks and Recreation - S07E01 - 2017 [01234567].mkv"));
+    assertEqual("S:1 E:27", detectEpisode("Soul Eater - S01E27 - 800 Years of Bloodlust [01234567].mkv"));
+    assertEqual("S:1 E:32", detectEpisode("EDENS ZERO - S01E32 - 4 VS 4 [01234567].mkv"));
+
+    // FIX (#3290): PREPEND3 multi-episode capture
+    assertEqual("S:1 E:5 E:6",     detectEpisode("Show - S01E05E06 - Title [01234567].mkv"));
+    assertEqual("S:1 E:5 E:6",     detectEpisode("Show - S01E05 E06 - Title [01234567].mkv"));
+    assertEqual("S:2 E:22 E:23",   detectEpisode("Dr. Quinn - S02E22-E23 - The Abduction [01234567].avi"));
+    assertEqual("S:3 E:1 E:2 E:3", detectEpisode("Johnny Bravo - S03E01-E03 - A & B & C [01234567].mkv"));
+
+    // FIX (#3290): year-as-season shows (e.g. theatrical shorts on TheTVDB). The anime SEASON group
+    // was capped at 3 digits, so "S1938E09" resolved to season 193. Only triggered when the name
+    // ends in a CRC32 hash, which routes it through the anime patterns.
+    assertEqual("S:1938 E:9", detectEpisode("Popeye the Sailor - S1938E09 - Mutiny Ain't Nice [AE3491CC].mkv"));
+    assertEqual("S:1933 E:1", detectEpisode("Popeye the Sailor - S1933E01 - Popeye the Sailor [12345678].mkv"));
+    assertEqual("S:1938 E:9", detectEpisode("Season 1938/Popeye the Sailor - S1938E09 - Mutiny Ain't Nice [AE3491CC].mkv"));
+    // unchanged behaviour for 1-3 digit seasons
+    assertEqual("S:19 E:9",   detectEpisode("Popeye the Sailor - S19E09 - Mutiny Ain't Nice [AE3491CC].mkv"));
+
     // ANIME - https://kodi.wiki/view/Anime
     // PREPEND
     assertEqual("S:3 E:7", detectEpisode("[SubsPlease] Enen no Shouboutai S3 - 07 (1080p) [FC649DBB].mkv"));
