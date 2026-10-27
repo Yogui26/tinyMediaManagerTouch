@@ -15,18 +15,6 @@
  */
 package org.tinymediamanager.core.tvshow;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -39,6 +27,18 @@ import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * The Class TvShowEpisodeAndSeasonParser.
@@ -103,7 +103,7 @@ public class TvShowEpisodeAndSeasonParser {
   // (e.g. "S01E48 - 100 vs 1" or "S01E10_42_Things") are not consumed.
   // group(1)=season, group(2)=first episode, group(3)=multi-episode continuation block.
   private static final Pattern ANIME_PREPEND3     = Pattern.compile(
-      "[-._ ]+S(?:eason ?)?(\\d{1,4})[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?((?:[ _.-]*[eExX]p?[ .]?\\d{1,4}(?:[_ ]?v\\d+)?)*)(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+          "[-._ ]+S(?:eason ?)?(\\d{1,4})[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?((?:[ _.-]*[eExX]p?[ .]?\\d{1,4}(?:[_ ]?v\\d+)?|-[0-9]{1,4})*)(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND4     = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
@@ -118,7 +118,7 @@ public class TvShowEpisodeAndSeasonParser {
       Pattern.CASE_INSENSITIVE);
   // FIX (#3290): same structural fix as ANIME_PREPEND3, applied to the no-hash variant.
   private static final Pattern ANIME_APPEND3      = Pattern.compile(
-      "[-._ ]+S(?:eason ?)?(\\d{1,4})[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?((?:[ _.-]*[eExX]p?[ .]?\\d{1,4}(?:[_ ]?v\\d+)?)*)(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+          "[-._ ]+S(?:eason ?)?(\\d{1,4})[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?((?:[ _.-]*[eExX]p?[ .]?\\d{1,4}(?:[_ ]?v\\d+)?|-[0-9]{1,4})*)(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_APPEND4      = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
