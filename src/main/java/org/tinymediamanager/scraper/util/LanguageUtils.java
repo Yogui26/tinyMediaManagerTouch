@@ -28,6 +28,14 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.TmmStore;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * This is a helper class for language related tasks
@@ -36,17 +44,27 @@ import org.apache.commons.lang3.StringUtils;
  * @since 2.0
  */
 public class LanguageUtils {
+  private static final Logger              LOGGER          = LoggerFactory.getLogger(LanguageUtils.class);
+
   // Map of all known English/UserLocalized String to base locale, key is LOWERCASE
   public static final Map<String, Locale>  KEY_TO_LOCALE_MAP;
   public static final Map<String, Locale>  KEY_TO_COUNTRY_LOCALE_MAP;
   public static final Map<String, Integer> MONTH_REGIONAL_TO_NUM;
   private static final Map<Locale, String> ISO_639_2B_EXCEPTIONS;
 
+  // building these maps costs several seconds under CLDR (tens of thousands of localized-name lookups), so the result is persisted in the
+  // TmmStore and reused. The content only depends on the JRE (CLDR data) and the default locale (used for the no-arg getDisplay*() calls);
+  // both are stored along with the data - if either has changed, the maps are rebuilt and the store entry gets overwritten.
+  private static final String              CACHE_KEY       = "tmm.languageutils.cache.v1";
+  private static final String              CACHE_JRE       = System.getProperty("java.version", "");
+  private static final String              CACHE_LOCALE    = Locale.getDefault().toLanguageTag();
+
   static {
     ISO_639_2B_EXCEPTIONS = createIso6392BExceptions();
-    KEY_TO_LOCALE_MAP = generateLanguageArray();
-    KEY_TO_COUNTRY_LOCALE_MAP = generateCountryArray();
-    MONTH_REGIONAL_TO_NUM = generateMonthNameArray();
+    MapHolder maps = loadOrGenerateMaps();
+    KEY_TO_LOCALE_MAP = maps.languages;
+    KEY_TO_COUNTRY_LOCALE_MAP = maps.countries;
+    MONTH_REGIONAL_TO_NUM = maps.months;
   }
 
   private LanguageUtils() {
@@ -58,6 +76,133 @@ public class LanguageUtils {
    */
   public static void init() {
     // just to be called to initialize the class
+  }
+
+  /**
+   * the three generated maps, either loaded from the cache or freshly generated
+   */
+  static final class MapHolder {
+    final LinkedHashMap<String, Locale>  languages;
+    final LinkedHashMap<String, Locale>  countries;
+    final LinkedHashMap<String, Integer> months;
+
+    MapHolder(LinkedHashMap<String, Locale> languages, LinkedHashMap<String, Locale> countries, LinkedHashMap<String, Integer> months) {
+      this.languages = languages;
+      this.countries = countries;
+      this.months = months;
+    }
+  }
+
+  private static MapHolder loadOrGenerateMaps() {
+    MapHolder cached = readFromCache();
+    if (cached != null) {
+      return cached;
+    }
+
+    long start = System.nanoTime();
+    MapHolder maps = new MapHolder(generateLanguageArray(), generateCountryArray(), generateMonthNameArray());
+    LOGGER.debug("generated language maps in {} ms", (System.nanoTime() - start) / 1_000_000);
+    writeToCache(maps);
+    return maps;
+  }
+
+  private static MapHolder readFromCache() {
+    try {
+      String json = TmmStore.getInstance().get(CACHE_KEY);
+      if (StringUtils.isBlank(json)) {
+        return null;
+      }
+
+      long start = System.nanoTime();
+      MapHolder maps = mapsFromJson(json);
+      if (maps == null) {
+        return null;
+      }
+      LOGGER.debug("loaded language maps from the store in {} ms", (System.nanoTime() - start) / 1_000_000);
+      return maps;
+    }
+    catch (Exception e) {
+      LOGGER.debug("could not read the language cache - '{}'", e.getMessage());
+      return null;
+    }
+  }
+
+  private static void writeToCache(MapHolder maps) {
+    try {
+      TmmStore.getInstance().put(CACHE_KEY, mapsToJson(maps));
+    }
+    catch (Exception e) {
+      LOGGER.debug("could not write the language cache - '{}'", e.getMessage());
+    }
+  }
+
+  /**
+   * serialize the maps into a JSON string; the entry order is preserved because {@link #findLanguageInString(String)} relies on the longest keys
+   * coming first
+   */
+  static String mapsToJson(MapHolder maps) throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode root = mapper.createObjectNode();
+    root.put("jre", CACHE_JRE);
+    root.put("locale", CACHE_LOCALE);
+
+    ArrayNode languages = root.putArray("languages");
+    for (Map.Entry<String, Locale> entry : maps.languages.entrySet()) {
+      languages.add(toArray(mapper, entry.getKey(), entry.getValue()));
+    }
+
+    ArrayNode countries = root.putArray("countries");
+    for (Map.Entry<String, Locale> entry : maps.countries.entrySet()) {
+      countries.add(toArray(mapper, entry.getKey(), entry.getValue()));
+    }
+
+    ArrayNode months = root.putArray("months");
+    for (Map.Entry<String, Integer> entry : maps.months.entrySet()) {
+      months.add(mapper.createArrayNode().add(entry.getKey()).add(entry.getValue()));
+    }
+
+    return mapper.writeValueAsString(root);
+  }
+
+  /**
+   * deserialize the maps from a JSON string
+   *
+   * @return the maps, or null if the payload was built by another JRE / for another default locale or is not usable
+   */
+  static MapHolder mapsFromJson(String json) throws Exception {
+    JsonNode root = new ObjectMapper().readTree(json);
+    if (!CACHE_JRE.equals(root.path("jre").asText()) || !CACHE_LOCALE.equals(root.path("locale").asText())) {
+      return null;
+    }
+
+    LinkedHashMap<String, Locale> languages = new LinkedHashMap<>();
+    for (JsonNode entry : root.path("languages")) {
+      languages.put(entry.get(0).asText(), toLocale(entry));
+    }
+
+    LinkedHashMap<String, Locale> countries = new LinkedHashMap<>();
+    for (JsonNode entry : root.path("countries")) {
+      countries.put(entry.get(0).asText(), toLocale(entry));
+    }
+
+    LinkedHashMap<String, Integer> months = new LinkedHashMap<>();
+    for (JsonNode entry : root.path("months")) {
+      months.put(entry.get(0).asText(), entry.get(1).asInt());
+    }
+
+    if (languages.isEmpty() || countries.isEmpty() || months.isEmpty()) {
+      return null;
+    }
+
+    return new MapHolder(languages, countries, months);
+  }
+
+  private static ArrayNode toArray(ObjectMapper mapper, String key, Locale locale) {
+    return mapper.createArrayNode().add(key).add(locale.getLanguage()).add(locale.getCountry()).add(locale.getVariant());
+  }
+
+  private static Locale toLocale(JsonNode entry) {
+    return new Locale(entry.get(1).asText(), entry.get(2).asText(), entry.get(3).asText());
   }
 
   private static Map<Locale, String> createIso6392BExceptions() {
@@ -211,13 +356,14 @@ public class LanguageUtils {
   // since some names have a dot appended (when using MMM pattern)
   // we cannot rely on parsing by our regexes
   // so this map can be used to replace textual month to numeral.
-  private static Map<String, Integer> generateMonthNameArray() {
-    Map<String, Integer> months = new HashMap<>();
+  private static LinkedHashMap<String, Integer> generateMonthNameArray() {
+    LinkedHashMap<String, Integer> months = new LinkedHashMap<>();
     Calendar cal = Calendar.getInstance();
     for (Locale loc : Locale.getAvailableLocales()) {
       DateFormat df = new SimpleDateFormat("MMM", loc);
       DateFormat df2 = new SimpleDateFormat("MMMM", loc);
       for (int i = 0; i < 12; i++) {
+        cal.set(Calendar.DAY_OF_MONTH, 1); // avoid rolling over into the next month when the current day does not exist in it
         cal.set(Calendar.MONTH, i);
         String monthShort = df.format(cal.getTime());
         months.put(monthShort, i + 1);
