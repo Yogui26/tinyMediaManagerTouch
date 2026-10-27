@@ -15,8 +15,6 @@
  */
 package org.tinymediamanager.core.tvshow;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.apache.commons.io.FilenameUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +26,8 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The Class TvShowTest.
@@ -218,6 +218,7 @@ public class TvShowTest extends BasicTvShowTest {
     // FIX (#3290): PREPEND3 multi-episode capture
     assertEqual("S:1 E:5 E:6",     detectEpisode("Show - S01E05E06 - Title [01234567].mkv"));
     assertEqual("S:1 E:5 E:6",     detectEpisode("Show - S01E05 E06 - Title [01234567].mkv"));
+      assertEqual("S:1 E:5 E:6 E:7", detectEpisode("Show - S01E05-07 - Title [01234567].mkv"));
     assertEqual("S:2 E:22 E:23",   detectEpisode("Dr. Quinn - S02E22-E23 - The Abduction [01234567].avi"));
     assertEqual("S:3 E:1 E:2 E:3", detectEpisode("Johnny Bravo - S03E01-E03 - A & B & C [01234567].mkv"));
 
