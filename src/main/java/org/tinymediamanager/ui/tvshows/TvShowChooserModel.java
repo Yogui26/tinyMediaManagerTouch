@@ -274,6 +274,7 @@ public class TvShowChooserModel extends AbstractModelObject {
       LOGGER.debug("{}", options);
       LOGGER.debug("=====================================================");
       metadata = ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getMetadata(options);
+      options.setMetadata(metadata); // we have the show metadata, we can profit in EP list call from it...
       episodeList = ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getEpisodeList(options);
 
       // also inject other ids

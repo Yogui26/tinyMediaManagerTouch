@@ -34,7 +34,7 @@ public class ImdbEpisodeList extends BaseJsonEntity {
         int s = MetadataUtil.parseInt(ep.season, -1);
         int e = MetadataUtil.parseInt(ep.episode, -1);
         if (e < 0 || s < 0) {
-          continue;
+          // continue; // YES - let em pass. IMDB has many episodes w/o a valid number...
         }
         md.setEpisodeNumber(new MediaEpisodeNumber(eg, s, e));
 

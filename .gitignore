@@ -72,6 +72,7 @@ launcher-extra.yml
 /native/addons/
 /native/*/addons/**
 /update/
+/AppBundler/windows_installer
 
 /src/test/resources/tmm_build_license
 /dependency-reduced-pom.xml
