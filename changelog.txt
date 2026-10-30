@@ -25,12 +25,11 @@ x [Movies, TV Shows] enhanced duplicate filter
 x [Movie Sets] fixed an application freeze when deleting movie sets #3378
 x [Movie Sets] fixed exporting of movie sets with file separators in their name #3369
 x [TV Shows] fixed wrong media type detection of unsupported season poster namings
+x [TV Shows] improved S/E detection for Anime (thx @shadypayload)
 x [UI] fixed some drawing issues in partially empty tables
 x [UI] the low memory indicator now scales its warning threshold to the heap size to avoid false alarms on large installations
 x [NFO] fixed importing of multiline user notes from NFO files
-x [macOS] use NFD form of file-/foldernames for non APFS volumes when calling libmediainfo #3376
-x [macOS] use NFD form of file-/foldernames for non APFS volumes when running post-processing
-x [macOS] use NFD form of file-/foldernames for non APFS volumes when scaling artwork during export
+x [macOS] use NFD form of file-/foldernames for non APFS volumes when for libmediainfo/post-processing/export #3376
 x [Performance] only load actor images if the cast panel is visible
 x [Library] upgraded libmediainfo to 26.10 (https://mediaarea.net/MediaInfo/ChangeLog)
 x [Mediainfo] enhanced detection of channel layout for audio streams

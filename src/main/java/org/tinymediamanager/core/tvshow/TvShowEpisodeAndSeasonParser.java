@@ -15,18 +15,6 @@
  */
 package org.tinymediamanager.core.tvshow;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -39,6 +27,18 @@ import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * The Class TvShowEpisodeAndSeasonParser.
@@ -83,6 +83,8 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern SEASON_MULTI_EP_2  = Pattern.compile("(\\d{1,4})(?=x)((?:([epx]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
   // matches patterns like S01E05-07 (interval where second ep is greater than first)
   private static final Pattern SEASON_EP_RANGE    = Pattern.compile("s(\\d{1,4})[ _]?[eE](\\d{1,4})-[eE]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  // sanity cap on multi-ep range expansion (real-world multi-eps top out around 4-6).
+  private static final int     SEASON_EP_RANGE_MAX_SPAN = 5;
   private static final Pattern NUMBERS_2_PATTERN  = Pattern.compile("([0-9]{2})", Pattern.CASE_INSENSITIVE);
   private static final Pattern NUMBERS_3_PATTERN  = Pattern.compile("([0-9])([0-9]{2})", Pattern.CASE_INSENSITIVE);
 
@@ -90,11 +92,18 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern ANIME_PREPEND1     = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
+  // FIX (#3290): the SEASON group in the anime patterns was capped at 3 digits, so a show that
+  // uses the release year as the season (e.g. "Season 1938" / "S1938E09") matched only the last
+  // three digits and resolved to season 193. The non-anime patterns already allow 4 digits.
   private static final Pattern ANIME_PREPEND2     = Pattern.compile(
-      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,4})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
+  // FIX (#3290): split first episode from continuation episodes. Continuation MUST start with
+  // an alpha episode marker (e/E/x/X) so number-only words inside the episode title
+  // (e.g. "S01E48 - 100 vs 1" or "S01E10_42_Things") are not consumed.
+  // group(1)=season, group(2)=first episode, group(3)=multi-episode continuation block.
   private static final Pattern ANIME_PREPEND3     = Pattern.compile(
-      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+          "[-._ ]+S(?:eason ?)?(\\d{1,4})[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?((?:[ _.-]*[eExX]p?[ .]?\\d{1,4}(?:[_ ]?v\\d+)?|-[0-9]{1,4})*)(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND4     = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
@@ -105,10 +114,11 @@ public class TvShowEpisodeAndSeasonParser {
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_APPEND2      = Pattern.compile(
-      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,4})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
+  // FIX (#3290): same structural fix as ANIME_PREPEND3, applied to the no-hash variant.
   private static final Pattern ANIME_APPEND3      = Pattern.compile(
-      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+          "[-._ ]+S(?:eason ?)?(\\d{1,4})[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?((?:[ _.-]*[eExX]p?[ .]?\\d{1,4}(?:[_ ]?v\\d+)?|-[0-9]{1,4})*)(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_APPEND4      = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
@@ -725,8 +735,8 @@ public class TvShowEpisodeAndSeasonParser {
         int endEp = Integer.parseInt(m.group(3));
         // only treat as interval when end > start (strictly higher)
         if (endEp > startEp) {
-          // ignore more than 5 EPs in a range - this is mostly invalid!
-          if (endEp - startEp > 5) {
+          // ignore more than SEASON_EP_RANGE_MAX_SPAN EPs in a range - this is mostly invalid!
+          if (endEp - startEp > SEASON_EP_RANGE_MAX_SPAN) {
             LOGGER.trace("not adding range of found EPs - way too much '{}'(range)", endEp - startEp);
             continue; // or break; completely?
           }
@@ -830,8 +840,17 @@ public class TvShowEpisodeAndSeasonParser {
         LOGGER.debug("parsed as Anime PREPEND2 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
+          int season = Integer.parseInt(m.group(1));
+          // FIX (#3290): when the filename has an explicit SxxExx marker, prefer it over the
+          // title-embedded number we just captured (e.g. "S01E31 - The 520 Cens Promise" must
+          // resolve to E31, not E520).
+          Matcher sxxexx = Pattern.compile("(?i)s(\\d{1,4})e(\\d{1,4})").matcher(FilenameUtils.getName(name));
+          if (sxxexx.find()) {
+            season = Integer.parseInt(sxxexx.group(1));
+            ep = Integer.parseInt(sxxexx.group(2));
+          }
           result.episodes.add(ep);
-          result.season = Integer.parseInt(m.group(1));
+          result.season = season;
         }
         catch (NumberFormatException nfe) {
         }
@@ -844,9 +863,33 @@ public class TvShowEpisodeAndSeasonParser {
       if (m.find()) {
         LOGGER.debug("parsed as Anime PREPEND3 '{}'", name);
         try {
-          int ep = Integer.parseInt(m.group(2));
-          result.episodes.add(ep);
           result.season = Integer.parseInt(m.group(1));
+          int firstEp = Integer.parseInt(m.group(2));
+          result.episodes.add(firstEp);
+          // FIX (#3290): handle multi-ep (S01E05E06) and range (S01E05-E07) in the continuation block.
+          String multi = m.group(3);
+          if (multi != null && !multi.isEmpty()) {
+            String stripped = multi.replaceAll("(?i)v\\d+", "");
+            Matcher rangeM = Pattern.compile("^-[eExX]?(\\d{1,4})$", Pattern.CASE_INSENSITIVE).matcher(stripped);
+            if (rangeM.matches()) {
+              int endEp = Integer.parseInt(rangeM.group(1));
+              if (endEp > firstEp && (endEp - firstEp) <= SEASON_EP_RANGE_MAX_SPAN) {
+                for (int ep = firstEp + 1; ep <= endEp; ep++) {
+                  result.episodes.add(ep);
+                }
+              }
+            }
+            else {
+              Matcher mEp = Pattern.compile("(\\d{1,4})").matcher(stripped);
+              while (mEp.find()) {
+                int ep = Integer.parseInt(mEp.group(1));
+                if (!result.episodes.contains(ep)) {
+                  result.episodes.add(ep);
+                }
+              }
+            }
+            Collections.sort(result.episodes);
+          }
         }
         catch (NumberFormatException nfe) {
         }
@@ -912,10 +955,17 @@ public class TvShowEpisodeAndSeasonParser {
         LOGGER.debug("parsed as Anime APPEND2 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
+          int season = Integer.parseInt(m.group(1));
+          // FIX (#3290): same SxxExx preference as PREPEND2.
+          Matcher sxxexx = Pattern.compile("(?i)s(\\d{1,4})e(\\d{1,4})").matcher(FilenameUtils.getName(name));
+          if (sxxexx.find()) {
+            season = Integer.parseInt(sxxexx.group(1));
+            ep = Integer.parseInt(sxxexx.group(2));
+          }
           if (!result.episodes.contains(ep)) {
             result.episodes.add(ep);
           }
-          result.season = Integer.parseInt(m.group(1));
+          result.season = season;
         }
         catch (NumberFormatException nfe) {
         }
@@ -928,11 +978,37 @@ public class TvShowEpisodeAndSeasonParser {
       if (m.find()) {
         LOGGER.debug("parsed as Anime APPEND3 '{}'", name);
         try {
-          int ep = Integer.parseInt(m.group(2));
-          if (!result.episodes.contains(ep)) {
-            result.episodes.add(ep);
-          }
           result.season = Integer.parseInt(m.group(1));
+          int firstEp = Integer.parseInt(m.group(2));
+          if (!result.episodes.contains(firstEp)) {
+            result.episodes.add(firstEp);
+          }
+          // FIX (#3290): same multi-ep + range handling as PREPEND3.
+          String multi = m.group(3);
+          if (multi != null && !multi.isEmpty()) {
+            String stripped = multi.replaceAll("(?i)v\\d+", "");
+            Matcher rangeM = Pattern.compile("^-[eExX]?(\\d{1,4})$", Pattern.CASE_INSENSITIVE).matcher(stripped);
+            if (rangeM.matches()) {
+              int endEp = Integer.parseInt(rangeM.group(1));
+              if (endEp > firstEp && (endEp - firstEp) <= SEASON_EP_RANGE_MAX_SPAN) {
+                for (int ep = firstEp + 1; ep <= endEp; ep++) {
+                  if (!result.episodes.contains(ep)) {
+                    result.episodes.add(ep);
+                  }
+                }
+              }
+            }
+            else {
+              Matcher mEp = Pattern.compile("(\\d{1,4})").matcher(stripped);
+              while (mEp.find()) {
+                int ep = Integer.parseInt(mEp.group(1));
+                if (!result.episodes.contains(ep)) {
+                  result.episodes.add(ep);
+                }
+              }
+            }
+            Collections.sort(result.episodes);
+          }
         }
         catch (NumberFormatException nfe) {
         }
