@@ -2,6 +2,8 @@ package org.tinymediamanager.scraper.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -100,5 +102,36 @@ public class LanguageUtilsTest extends BasicTest {
     assertEqual("Tamil", LanguageUtils.getEnglishLanguageNameFromLocalizedString("tam"));
     assertEqual("Telugu", LanguageUtils.getLocalizedLanguageNameFromLocalizedString(Locale.GERMAN, "tel"));
     // ??? assertEqual("Tsongaisch", LanguageUtils.getLocalizedLanguageNameFromLocalizedString(Locale.GERMAN, "tam"));
+  }
+
+  @Test
+  public void mapsSurviveCacheRoundTrip() throws Exception {
+    LanguageUtils.MapHolder maps = new LanguageUtils.MapHolder(new LinkedHashMap<>(LanguageUtils.KEY_TO_LOCALE_MAP),
+        new LinkedHashMap<>(LanguageUtils.KEY_TO_COUNTRY_LOCALE_MAP), new LinkedHashMap<>(LanguageUtils.MONTH_REGIONAL_TO_NUM));
+
+    LanguageUtils.MapHolder restored = LanguageUtils.mapsFromJson(LanguageUtils.mapsToJson(maps));
+
+    assertThat(restored).isNotNull();
+    assertThat(restored.languages).isEqualTo(maps.languages);
+    assertThat(restored.countries).isEqualTo(maps.countries);
+    assertThat(restored.months).isEqualTo(maps.months);
+
+    // order must be preserved - findLanguageInString() relies on the longest keys coming first
+    assertThat(new ArrayList<>(restored.languages.keySet())).isEqualTo(new ArrayList<>(maps.languages.keySet()));
+
+    // spot checks for codes which do not depend on the default locale
+    assertThat(restored.languages.get("german")).isEqualTo(Locale.forLanguageTag("de"));
+    assertThat(restored.languages.get("deu")).isEqualTo(Locale.forLanguageTag("de"));
+  }
+
+  @Test
+  public void cachePayloadOfAnotherJreIsRejected() throws Exception {
+    LanguageUtils.MapHolder maps = new LanguageUtils.MapHolder(new LinkedHashMap<>(LanguageUtils.KEY_TO_LOCALE_MAP),
+        new LinkedHashMap<>(LanguageUtils.KEY_TO_COUNTRY_LOCALE_MAP), new LinkedHashMap<>(LanguageUtils.MONTH_REGIONAL_TO_NUM));
+    String json = LanguageUtils.mapsToJson(maps);
+
+    String otherJre = json.replace("\"jre\":\"" + System.getProperty("java.version") + "\"", "\"jre\":\"0.0.0\"");
+    assertThat(otherJre).isNotEqualTo(json);
+    assertThat(LanguageUtils.mapsFromJson(otherJre)).isNull();
   }
 }
