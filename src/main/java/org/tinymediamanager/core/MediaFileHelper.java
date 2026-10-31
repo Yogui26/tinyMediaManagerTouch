@@ -16,37 +16,10 @@
 
 package org.tinymediamanager.core;
 
-import static org.tinymediamanager.scraper.util.LanguageUtils.parseLanguageFromString;
-
-import java.awt.Dimension;
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileEntry;
+import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileSystem;
+import com.github.stephenc.javaisotools.loopfs.udf.UDFFileEntry;
+import com.github.stephenc.javaisotools.loopfs.udf.UDFFileSystem;
 import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -79,10 +52,36 @@ import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.thirdparty.MediaInfo;
 import org.tinymediamanager.thirdparty.MediaInfoTimeoutWrapper;
 
-import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileEntry;
-import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileSystem;
-import com.github.stephenc.javaisotools.loopfs.udf.UDFFileEntry;
-import com.github.stephenc.javaisotools.loopfs.udf.UDFFileSystem;
+import java.awt.Dimension;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.tinymediamanager.scraper.util.LanguageUtils.parseLanguageFromString;
 
 /**
  * the class {@link MediaFileHelper} is used to extract all unneeded logic/variables from the media file (for lower memory consumption)
@@ -761,6 +760,8 @@ public class MediaFileHelper {
       return VIDEO_FORMAT_2160P;
     }
     else if (w <= blur(3996) && h <= blur(2160)) { // DCI 4K (flat cropped)
+      return VIDEO_FORMAT_2160P;
+    } else if (w <= blur(4096) && h <= blur(2880)) { // 4K 4:3 (3840x2880)
       return VIDEO_FORMAT_2160P;
     }
 

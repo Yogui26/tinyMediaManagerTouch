@@ -1,6 +1,7 @@
 Version 5.3.6
 =======================
 x [Core] only create backups once a day #3396
+x [Core] enhanced detection of 4K 4:3 video files #3392 - thx @sfncat
 x [Movies] enhanced the update datasource logic to cover more edge cases #3391
 
 
