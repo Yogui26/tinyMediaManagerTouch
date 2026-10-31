@@ -15,18 +15,6 @@
  */
 package org.tinymediamanager.core.movie.http;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -78,6 +66,18 @@ import org.tinymediamanager.thirdparty.FFprobe;
 import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.thirdparty.simkl.MovieSyncSimklTask;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * the class {@link MovieCommandTask} handles movie related API calls
@@ -144,20 +144,22 @@ class MovieCommandTask extends TmmThreadPool {
   }
 
   private void updateDataSources() {
-    Set<Path> dataSources = new TreeSet<>();
+      Set<Path> targets = new TreeSet<>();
+      boolean hasPathScope = false;
     List<Movie> existingMovies = new ArrayList<>(movieList.getMovies());
 
     for (AbstractCommandHandler.Command command : commands) {
       if ("update".equals(command.action)) {
-        dataSources.addAll(getDataSourcesForScope(command.scope));
+          targets.addAll(getDataSourcesForScope(command.scope));
+          hasPathScope |= command.scope != null && "path".equals(command.scope.name);
       }
     }
 
-    if (!dataSources.isEmpty()) {
+      if (!targets.isEmpty()) {
       setTaskName(TmmResourceBundle.getString("update.datasource"));
       publishState(TmmResourceBundle.getString("update.datasource"), getProgressDone());
 
-      activeTask = new MovieUpdateDatasourceTask(dataSources);
+          activeTask = hasPathScope ? MovieUpdateDatasourceTask.forPaths(targets) : MovieUpdateDatasourceTask.forDataSources(targets);
       activeTask.run(); // blocking
 
       // done

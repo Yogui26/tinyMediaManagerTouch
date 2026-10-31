@@ -15,19 +15,18 @@
  */
 package org.tinymediamanager.ui.movies.actions;
 
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
-
-import javax.swing.KeyStroke;
-
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.actions.TmmAction;
+
+import javax.swing.KeyStroke;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 
 /**
  * MovieUpdateDatasourceAction - update all movies from all datasources
@@ -46,7 +45,7 @@ public class MovieUpdateDatasourceAction extends TmmAction {
 
   @Override
   protected void processAction(ActionEvent e) {
-    TmmThreadPool task = new MovieUpdateDatasourceTask();
+      TmmThreadPool task = MovieUpdateDatasourceTask.forAllDataSources();
     TmmTaskManager.getInstance().addMainTask(task);
   }
 }

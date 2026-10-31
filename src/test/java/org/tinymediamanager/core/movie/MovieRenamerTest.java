@@ -1,15 +1,5 @@
 package org.tinymediamanager.core.movie;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.junit.Test;
 import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.MediaFileHelper;
@@ -20,6 +10,16 @@ import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MoviePosterNaming;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class MovieRenamerTest extends BasicMovieTest {
 
@@ -34,7 +34,7 @@ public class MovieRenamerTest extends BasicMovieTest {
     MovieModuleManager.getInstance().getSettings().addMovieDataSources(datasource.toString());
 
     // read all movies via UDS - all needed infos are embedded in NFO
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+      MovieUpdateDatasourceTask task = MovieUpdateDatasourceTask.forDataSources(List.of(datasource));
     task.run();
 
     MovieList movieList = MovieList.getInstance();

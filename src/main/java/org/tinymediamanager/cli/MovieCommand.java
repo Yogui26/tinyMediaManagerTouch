@@ -15,12 +15,6 @@
  */
 package org.tinymediamanager.cli;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.ExportTemplate;
@@ -43,8 +37,13 @@ import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.util.ListUtils;
-
 import picocli.CommandLine;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 // @formatter:off
 @CommandLine.Command(
@@ -72,31 +71,31 @@ class MovieCommand implements Runnable {
   private static final Logger LOGGER = LoggerFactory.getLogger(MovieCommand.class);
 
   @CommandLine.ArgGroup
-  Datasource                  datasource;
+  Datasource datasource;
 
   @CommandLine.ArgGroup
-  Scrape                      scrape;
+  Scrape scrape;
 
-  @CommandLine.Option(names = { "-t", "--downloadTrailer" }, description = "Download missing trailers")
-  boolean                     downloadTrailer;
+  @CommandLine.Option(names = {"-t", "--downloadTrailer"}, description = "Download missing trailers")
+  boolean downloadTrailer;
 
   @CommandLine.ArgGroup(exclusive = false)
-  Subtitle                    subtitle;
+  Subtitle subtitle;
 
   @CommandLine.ArgGroup
-  Rename                      rename;
+  Rename rename;
 
   @CommandLine.ArgGroup(exclusive = false)
-  Export                      export;
+  Export export;
 
-  @CommandLine.Option(names = { "-w", "--rewriteNFO" }, description = "Rewrite NFO files of all movies")
-  boolean                     rewriteNFO;
-
-  @CommandLine.ArgGroup
-  AspectRatioDetect           ard;
+  @CommandLine.Option(names = {"-w", "--rewriteNFO"}, description = "Rewrite NFO files of all movies")
+  boolean rewriteNFO;
 
   @CommandLine.ArgGroup
-  MediaInfo                   mediaInfo;
+  AspectRatioDetect ard;
+
+  @CommandLine.ArgGroup
+  MediaInfo mediaInfo;
 
   @Override
   public void run() {
@@ -149,15 +148,15 @@ class MovieCommand implements Runnable {
   private void updateDataSources() {
     LOGGER.info("updating movie data sources...");
     if (datasource.updateAll) {
-      Runnable task = new MovieUpdateDatasourceTask();
+      Runnable task = MovieUpdateDatasourceTask.forAllDataSources();
       task.run(); // blocking
-    }
-    else {
+    } else {
       List<String> dataSources = new ArrayList<>(MovieModuleManager.getInstance().getSettings().getMovieDataSource());
-      if (ListUtils.isNotEmpty(dataSources)) {
+
+      if (ListUtils.isNotEmpty(dataSources) && datasource.indices != null) {
         for (Integer i : datasource.indices) {
           if (dataSources.size() >= i - 1) {
-            Runnable task = new MovieUpdateDatasourceTask(dataSources.get(i - 1));
+            Runnable task = MovieUpdateDatasourceTask.forDataSources(List.of(Paths.get(dataSources.get(i - 1))));
             task.run(); // blocking
           }
         }
@@ -173,12 +172,10 @@ class MovieCommand implements Runnable {
     if (scrape.scrapeAll) {
       LOGGER.info("scraping ALL movies...");
       movies.addAll(MovieModuleManager.getInstance().getMovieList().getMovies());
-    }
-    else if (scrape.scrapeNew) {
+    } else if (scrape.scrapeNew) {
       LOGGER.info("scraping NEW movies...");
       movies.addAll(MovieModuleManager.getInstance().getMovieList().getNewMovies());
-    }
-    else if (scrape.scrapeUnscraped) {
+    } else if (scrape.scrapeUnscraped) {
       LOGGER.info("scraping UNSCRAPED movies...");
       movies.addAll(MovieModuleManager.getInstance().getMovieList().getUnscrapedMovies());
     }
@@ -203,8 +200,7 @@ class MovieCommand implements Runnable {
       while (TmmTaskManager.getInstance().isPoolRunning()) {
         try {
           Thread.sleep(2000);
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
       }
@@ -215,8 +211,7 @@ class MovieCommand implements Runnable {
     List<Movie> moviesToDetect = new ArrayList<>();
     if (ard.ardAll) {
       moviesToDetect = MovieModuleManager.getInstance().getMovieList().getMovies();
-    }
-    else if (ard.ardNew) {
+    } else if (ard.ardNew) {
       moviesToDetect = MovieModuleManager.getInstance().getMovieList().getNewMovies();
     }
 
@@ -231,11 +226,11 @@ class MovieCommand implements Runnable {
 
   private void gatherMediaInfo() {
     List<Movie> movies = MovieModuleManager.getInstance()
-        .getMovieList()
-        .getMovies()
-        .stream()
-        .filter(movie -> !movie.isLocked())
-        .collect(Collectors.toList());
+            .getMovieList()
+            .getMovies()
+            .stream()
+            .filter(movie -> !movie.isLocked())
+            .collect(Collectors.toList());
 
     if (!movies.isEmpty()) {
       TmmTask task = new MovieReloadMediaInformationTask(movies);
@@ -246,12 +241,12 @@ class MovieCommand implements Runnable {
   private void downloadTrailer() {
     LOGGER.info("downloading missing trailers...");
     List<Movie> moviesWithoutTrailer = MovieModuleManager.getInstance()
-        .getMovieList()
-        .getMovies()
-        .stream()
-        .filter(movie -> !movie.isLocked())
-        .filter(movie -> movie.getMediaFiles(MediaFileType.TRAILER).isEmpty())
-        .toList();
+            .getMovieList()
+            .getMovies()
+            .stream()
+            .filter(movie -> !movie.isLocked())
+            .filter(movie -> movie.getMediaFiles(MediaFileType.TRAILER).isEmpty())
+            .toList();
 
     for (Movie movie : moviesWithoutTrailer) {
       TmmTask task = new MovieTrailerDownloadTask(movie);
@@ -272,19 +267,18 @@ class MovieCommand implements Runnable {
           languages.add(mediaLanguage);
         }
       }
-    }
-    else {
+    } else {
       // download in "main" language
       languages.add(MovieModuleManager.getInstance().getSettings().getSubtitleScraperLanguage());
     }
 
     List<Movie> moviesWithoutSubtitle = MovieModuleManager.getInstance()
-        .getMovieList()
-        .getMovies()
-        .stream()
-        .filter(movie -> !movie.isLocked())
-        .filter(movie -> !movie.getHasSubtitles())
-        .collect(Collectors.toList());
+            .getMovieList()
+            .getMovies()
+            .stream()
+            .filter(movie -> !movie.isLocked())
+            .filter(movie -> !movie.getHasSubtitles())
+            .collect(Collectors.toList());
 
     for (MediaLanguages language : languages) {
       Runnable task = new MovieSubtitleSearchAndDownloadTask(moviesWithoutSubtitle, language);
@@ -297,8 +291,7 @@ class MovieCommand implements Runnable {
     if (rename.renameNew) {
       LOGGER.info("renaming NEW/RECENTLY SCRAPED movies...");
       moviesToRename.addAll(moviesToScrape);
-    }
-    else if (rename.renameAll) {
+    } else if (rename.renameAll) {
       LOGGER.info("renaming ALL movies...");
       moviesToRename.addAll(MovieModuleManager.getInstance().getMovieList().getMovies());
     }
@@ -325,8 +318,7 @@ class MovieCommand implements Runnable {
           List<Movie> movies = MovieModuleManager.getInstance().getMovieList().getMovies();
           movies.sort(new MovieComparator());
           ex.export(movies, export.path);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
           LOGGER.error("Could not export movies - '{}'", e.getMessage());
         }
 
@@ -354,66 +346,66 @@ class MovieCommand implements Runnable {
    * helper classes for managing nested options
    */
   static class Datasource {
-    @CommandLine.Option(names = { "-u", "--updateAll" }, required = true, description = "Scan all data sources for new content")
+    @CommandLine.Option(names = {"-u", "--updateAll"}, required = true, description = "Scan all data sources for new content")
     boolean updateAll;
 
     @CommandLine.Option(names = {
-        "--updateX" }, required = true, paramLabel = "<index>", description = "Scan the given data sources for new content. The indices are in the same order as in the UI/settings")
-    int[]   indices;
+            "--updateX"}, required = true, paramLabel = "<index>", description = "Scan the given data sources for new content. The indices are in the same order as in the UI/settings")
+    int[] indices;
   }
 
   static class Scrape {
-    @CommandLine.Option(names = { "-n", "--scrapeNew", }, description = "Scrape new movies (found with the update options)")
+    @CommandLine.Option(names = {"-n", "--scrapeNew",}, description = "Scrape new movies (found with the update options)")
     boolean scrapeNew;
 
-    @CommandLine.Option(names = { "--scrapeUnscraped", }, description = "Scrape all unscraped movies")
+    @CommandLine.Option(names = {"--scrapeUnscraped",}, description = "Scrape all unscraped movies")
     boolean scrapeUnscraped;
 
-    @CommandLine.Option(names = { "--scrapeAll", }, description = "Scrape all movies")
+    @CommandLine.Option(names = {"--scrapeAll",}, description = "Scrape all movies")
     boolean scrapeAll;
   }
 
   static class AspectRatioDetect {
-    @CommandLine.Option(names = { "-d", "--ardNew", }, description = "Detect aspect ratio of new movies (found with the update options)")
+    @CommandLine.Option(names = {"-d", "--ardNew",}, description = "Detect aspect ratio of new movies (found with the update options)")
     boolean ardNew;
 
-    @CommandLine.Option(names = { "-dA", "--ardAll", }, description = "Detect aspect ratio of all movies")
+    @CommandLine.Option(names = {"-dA", "--ardAll",}, description = "Detect aspect ratio of all movies")
     boolean ardAll;
   }
 
   static class Subtitle {
-    @CommandLine.Option(names = { "-s", "--downloadSubtitles" }, required = true, description = "Download missing subtitles")
-    boolean  download;
+    @CommandLine.Option(names = {"-s", "--downloadSubtitles"}, required = true, description = "Download missing subtitles")
+    boolean download;
 
-    @CommandLine.Option(names = { "-sL", "--subtitleLanguage" }, paramLabel = "<language>", description = "Desired subtitle language(s) (optional)")
+    @CommandLine.Option(names = {"-sL", "--subtitleLanguage"}, paramLabel = "<language>", description = "Desired subtitle language(s) (optional)")
     String[] languages;
   }
 
   static class Rename {
-    @CommandLine.Option(names = { "-r", "--renameNew", }, required = true, description = "Rename & cleanup all movies from former scrape command")
+    @CommandLine.Option(names = {"-r", "--renameNew",}, required = true, description = "Rename & cleanup all movies from former scrape command")
     boolean renameNew;
 
-    @CommandLine.Option(names = { "--renameAll", }, required = true, description = "Rename & cleanup all movies")
+    @CommandLine.Option(names = {"--renameAll",}, required = true, description = "Rename & cleanup all movies")
     boolean renameAll;
   }
 
   static class Export {
-    @CommandLine.Option(names = { "-e", "--export" }, required = true, description = "Export your movie list using a specified template")
+    @CommandLine.Option(names = {"-e", "--export"}, required = true, description = "Export your movie list using a specified template")
     boolean export;
 
-    @CommandLine.Option(names = { "-eT",
-        "--exportTemplate" }, required = true, description = "The export template to use. Use the folder name from the templates folder")
-    String  template;
+    @CommandLine.Option(names = {"-eT",
+            "--exportTemplate"}, required = true, description = "The export template to use. Use the folder name from the templates folder")
+    String template;
 
-    @CommandLine.Option(names = { "-eP", "--exportPath" }, required = true, description = "The path to export your movie list to")
-    Path    path;
+    @CommandLine.Option(names = {"-eP", "--exportPath"}, required = true, description = "The path to export your movie list to")
+    Path path;
   }
 
   static class MediaInfo {
-    @CommandLine.Option(names = { "-mi", "--mediainfo" }, description = "Update mediainfo")
+    @CommandLine.Option(names = {"-mi", "--mediainfo"}, description = "Update mediainfo")
     boolean medainfo;
 
-    @CommandLine.Option(names = { "-mix", "--mediainfoXml" }, description = "Update medianifo - ignore XML")
+    @CommandLine.Option(names = {"-mix", "--mediainfoXml"}, description = "Update medianifo - ignore XML")
     boolean mediainfoXml;
   }
 }

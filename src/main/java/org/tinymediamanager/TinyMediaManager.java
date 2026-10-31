@@ -16,35 +16,7 @@
 
 package org.tinymediamanager;
 
-import static java.awt.Desktop.getDesktop;
-import static org.tinymediamanager.ui.TmmUIHelper.setLookAndFeel;
-
-import java.awt.Container;
-import java.awt.Desktop;
-import java.awt.GraphicsEnvironment;
-import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Date;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.logging.LogManager;
-
-import javax.swing.JComponent;
-import javax.swing.JDialog;
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
-
-import org.apache.commons.lang3.StringUtils;
+import ch.qos.logback.classic.LoggerContext;
 import org.h2.mvstore.MVStoreException;
 import org.jdesktop.beansbinding.ELProperty;
 import org.slf4j.Logger;
@@ -98,7 +70,32 @@ import org.tinymediamanager.ui.images.LogoCircle;
 import org.tinymediamanager.ui.wizard.TinyMediaManagerWizard;
 import org.tinymediamanager.updater.MacAppUpdater;
 
-import ch.qos.logback.classic.LoggerContext;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import java.awt.Container;
+import java.awt.Desktop;
+import java.awt.GraphicsEnvironment;
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.logging.LogManager;
+
+import static java.awt.Desktop.getDesktop;
+import static org.tinymediamanager.ui.TmmUIHelper.setLookAndFeel;
 
 /**
  * The class {@link TinyMediaManager} is the main entry point to this application.
@@ -233,18 +230,11 @@ public final class TinyMediaManager {
                 // start UDS if the wizard has been run
                 if (wizardRun) {
                   if (!MovieModuleManager.getInstance().getSettings().getMovieDataSource().isEmpty()) {
-                    TmmThreadPool task = new MovieUpdateDatasourceTask();
-                    TmmTaskManager.getInstance().addMainTask(task);
+                    TmmThreadPool movieTask = MovieUpdateDatasourceTask.forAllDataSources();
+                    TmmTaskManager.getInstance().addMainTask(movieTask);
                   }
                   if (!TvShowModuleManager.getInstance().getSettings().getTvShowDataSource().isEmpty()) {
-                    List<Path> foldersToUpdate = new ArrayList<>();
-                    for (String ds : TvShowModuleManager.getInstance().getSettings().getTvShowDataSource()) {
-                      if (StringUtils.isNotBlank(ds)) {
-                        foldersToUpdate.add(Paths.get(ds));
-                      }
-                    }
-
-                    TmmThreadPool task = new TvShowUpdateDatasourceTask(foldersToUpdate);
+                    TmmThreadPool task = TvShowUpdateDatasourceTask.forAllDataSources();
                     TmmTaskManager.getInstance().addMainTask(task);
                   }
                 }
@@ -266,13 +256,13 @@ public final class TinyMediaManager {
 
                 // If auto update on start for movies data sources is enable, execute it
                 if (MovieModuleManager.getInstance().getSettings().isUpdateOnStart()) {
-                  TmmThreadPool task = new MovieUpdateDatasourceTask();
+                  TmmThreadPool task = MovieUpdateDatasourceTask.forAllDataSources();
                   TmmTaskManager.getInstance().addMainTask(task);
                 }
 
                 // If auto update on start for TV shows data sources is enable, execute it
                 if (TvShowModuleManager.getInstance().getSettings().isUpdateOnStart()) {
-                  TmmThreadPool task = new TvShowUpdateDatasourceTask();
+                  TmmThreadPool task = TvShowUpdateDatasourceTask.forAllDataSources();
                   TmmTaskManager.getInstance().addMainTask(task);
                 }
               });

@@ -15,13 +15,6 @@
  */
 package org.tinymediamanager.ui.movies.actions;
 
-import java.awt.event.ActionEvent;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.swing.JOptionPane;
-
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
@@ -31,6 +24,12 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.movies.MovieUIModule;
+
+import javax.swing.JOptionPane;
+import java.awt.event.ActionEvent;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * MovieUpdateSingleDatasourceAction - update all movies from a single data source
@@ -60,7 +59,12 @@ public class MovieUpdateAction extends TmmAction {
       }
     }
 
-    TmmThreadPool task = new MovieUpdateDatasourceTask(foldersToUpdate);
+    if (foldersToUpdate.isEmpty()) {
+      JOptionPane.showMessageDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tmm.nothingselected"));
+      return;
+    }
+
+    TmmThreadPool task = MovieUpdateDatasourceTask.forMovies(foldersToUpdate);
     TmmTaskManager.getInstance().addMainTask(task);
   }
 }

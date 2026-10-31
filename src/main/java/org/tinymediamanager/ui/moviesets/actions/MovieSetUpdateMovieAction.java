@@ -15,19 +15,21 @@
  */
 package org.tinymediamanager.ui.moviesets.actions;
 
-import java.awt.event.ActionEvent;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.moviesets.MovieSetUIModule;
+
+import javax.swing.JOptionPane;
+import java.awt.event.ActionEvent;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * {@link MovieSetUpdateMovieAction} - update all selected movies
@@ -46,6 +48,7 @@ public class MovieSetUpdateMovieAction extends TmmAction {
     List<Movie> selectedMovies = MovieSetUIModule.getInstance().getSelectionModel().getSelectedMovies();
 
     if (selectedMovies.isEmpty()) {
+      JOptionPane.showMessageDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tmm.nothingselected"));
       return;
     }
 
@@ -56,7 +59,12 @@ public class MovieSetUpdateMovieAction extends TmmAction {
       }
     }
 
-    TmmThreadPool task = new MovieUpdateDatasourceTask(foldersToUpdate);
+    if (foldersToUpdate.isEmpty()) {
+      JOptionPane.showMessageDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tmm.nothingselected"));
+      return;
+    }
+
+    TmmThreadPool task = MovieUpdateDatasourceTask.forMovies(foldersToUpdate);
     TmmTaskManager.getInstance().addMainTask(task);
   }
 }

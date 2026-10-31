@@ -15,14 +15,6 @@
  */
 package org.tinymediamanager.core.tvshow.tasks;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +26,14 @@ import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.tvshow.BasicTvShowTest;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The class {@link TvShowUpdateDatasourceTaskMessageTest} checks that every data source which gets skipped during "update data sources" is pushed to
@@ -69,7 +69,7 @@ public class TvShowUpdateDatasourceTaskMessageTest extends BasicTvShowTest {
     TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
     settings.setTvShowDataSources(List.of(missingDatasource.toString()));
 
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     List<Message> messages = findMessages("update.datasource.unavailable");
     assertThat(messages).hasSize(1);
@@ -85,7 +85,7 @@ public class TvShowUpdateDatasourceTaskMessageTest extends BasicTvShowTest {
     settings.setSkipFolder(List.of("skipme"));
     settings.setTvShowDataSources(List.of(skipFolderDatasource.toString()));
 
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     List<Message> messages = findMessages("update.datasource.skipfolder");
     assertThat(messages).hasSize(1);
@@ -102,10 +102,14 @@ public class TvShowUpdateDatasourceTaskMessageTest extends BasicTvShowTest {
     // nested data sources are allowed now - they must not be reported as skipped/removed
     settings.setTvShowDataSources(List.of(parentDatasource.toString(), nestedDatasource.toString()));
 
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     assertThat(findMessages("update.datasource.nested.skipped")).isEmpty();
     assertThat(findMessages("update.datasource.nested.removed")).isEmpty();
+  }
+
+  private TvShowUpdateDatasourceTask updateAllDataSources() {
+    return TvShowUpdateDatasourceTask.forAllDataSources();
   }
 
   private List<Message> findMessages(String messageId) {

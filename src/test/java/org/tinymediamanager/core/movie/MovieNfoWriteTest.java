@@ -15,18 +15,19 @@
  */
 package org.tinymediamanager.core.movie;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class MovieNfoWriteTest extends BasicMovieTest {
 
@@ -51,7 +52,8 @@ public class MovieNfoWriteTest extends BasicMovieTest {
   }
 
   private void loadMovies() throws Exception {
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+      MovieUpdateDatasourceTask task = MovieUpdateDatasourceTask
+              .forDataSources(List.of(getWorkFolder().resolve("testmovies_nfo").toAbsolutePath()));
     task.run();
 
     // let the propertychangeevents finish

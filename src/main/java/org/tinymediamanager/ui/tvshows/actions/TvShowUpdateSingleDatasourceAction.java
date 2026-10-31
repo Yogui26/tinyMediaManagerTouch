@@ -15,15 +15,15 @@
  */
 package org.tinymediamanager.ui.tvshows.actions;
 
-import java.awt.event.ActionEvent;
-import java.nio.file.Paths;
-import java.util.List;
-
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.tasks.TvShowUpdateDatasourceTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.actions.TmmAction;
+
+import java.awt.event.ActionEvent;
+import java.nio.file.Paths;
+import java.util.List;
 
 /**
  * The class TvShowUpdateSingleDatasourceAction. Update a single data source
@@ -42,7 +42,7 @@ public class TvShowUpdateSingleDatasourceAction extends TmmAction {
 
   @Override
   protected void processAction(ActionEvent e) {
-    TmmThreadPool task = new TvShowUpdateDatasourceTask(List.of(Paths.get(datasource)));
+    TmmThreadPool task = TvShowUpdateDatasourceTask.forDataSources(List.of(Paths.get(datasource)));
     TmmTaskManager.getInstance().addMainTask(task);
   }
 }

@@ -16,13 +16,6 @@
 
 package org.tinymediamanager.core.movie.tasks;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +29,13 @@ import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This class cannot run, since Settings() is STATIC<br>
@@ -72,7 +72,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
 
   @Test
   public void udsNew() throws Exception {
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    MovieUpdateDatasourceTask task = updateAllDataSources();
     task.run();
 
     showEntries();
@@ -80,7 +80,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
 
   @Test
   public void udsFolder() throws Exception {
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask(List.of(getWorkFolder().resolve("testmovies").resolve("Harry Potter")));
+    MovieUpdateDatasourceTask task = MovieUpdateDatasourceTask.forPaths(List.of(getWorkFolder().resolve("testmovies").resolve("Harry Potter")));
     task.run();
 
     MovieList movieList = MovieModuleManager.getInstance().getMovieList();
@@ -99,7 +99,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     assertThat(settings.addMovieDataSources(nestedDs.toString())).isTrue();
     assertThat(settings.getMovieDataSource()).contains(nestedDs.toString());
 
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    MovieUpdateDatasourceTask task = updateAllDataSources();
     task.run();
 
     // the movies inside the nested data source must belong to the nested data source
@@ -130,7 +130,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Path nestedDs = parentDs.resolve("Harry Potter");
     assertThat(settings.addMovieDataSources(nestedDs.toString())).isTrue();
 
-    new MovieUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     Path removedMovie = nestedDs.resolve("HP7 Deathly Hallows Part 2");
     assertThat(movieList.findFirstByPath(removedMovie)).isNotNull();
@@ -138,7 +138,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     // remove the movie folder from disk and re-run -> the nested data source must clean up its own entry
     FileUtils.deleteDirectory(removedMovie.toFile());
 
-    new MovieUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     assertThat(movieList.findFirstByPath(removedMovie)).isNull();
     assertThat(movieList.getMovies()).noneMatch(movie -> movie.getPathNIO().equals(removedMovie));
@@ -153,7 +153,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     Path nestedDs = parentDs.resolve("Harry Potter");
 
     // first scan with only the parent data source - the HP movies are stored with the parent data source
-    new MovieUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     Path hpMovie = nestedDs.resolve("HP7 Deathly Hallows Part 1 (2010)");
     Movie hp1 = movieList.findFirstByPath(hpMovie);
@@ -164,11 +164,15 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
     assertThat(settings.addMovieDataSources(nestedDs.toString())).isTrue();
 
     // update only the parent data source - the cleanup must update the data source field and keep the movie
-    new MovieUpdateDatasourceTask(List.of(parentDs)).run();
+    MovieUpdateDatasourceTask.forDataSources(List.of(parentDs)).run();
 
     hp1 = movieList.findFirstByPath(hpMovie);
     assertThat(hp1).isNotNull();
     assertThat(Paths.get(hp1.getDataSource())).isEqualTo(nestedDs);
+  }
+
+  private MovieUpdateDatasourceTask updateAllDataSources() {
+    return MovieUpdateDatasourceTask.forAllDataSources();
   }
 
   private void showEntries() throws Exception {
@@ -308,7 +312,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
 
     MovieModuleManager.getInstance().getSettings().addMovieDataSources(skiptroDs.toString());
 
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    MovieUpdateDatasourceTask task = updateAllDataSources();
     task.run();
 
     Movie movie = getMovieByFolder(skiptroDs, "Test Movie (2020)");
@@ -334,7 +338,7 @@ public class MovieUpdateDatasourceTaskTest extends BasicMovieTest {
 
     MovieModuleManager.getInstance().getSettings().addMovieDataSources(scenePassDs.toString());
 
-    MovieUpdateDatasourceTask task = new MovieUpdateDatasourceTask();
+    MovieUpdateDatasourceTask task = updateAllDataSources();
     task.run();
 
     Movie movie = getMovieByFolder(scenePassDs, "Test Movie (2020)");

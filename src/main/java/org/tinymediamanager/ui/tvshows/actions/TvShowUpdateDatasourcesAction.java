@@ -15,19 +15,18 @@
  */
 package org.tinymediamanager.ui.tvshows.actions;
 
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
-
-import javax.swing.KeyStroke;
-
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.tasks.TvShowUpdateDatasourceTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.actions.TmmAction;
+
+import javax.swing.KeyStroke;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 
 /**
  * The Class TvShowUpdateDatasourcesAction. Update all data sources
@@ -46,7 +45,7 @@ public class TvShowUpdateDatasourcesAction extends TmmAction {
 
   @Override
   protected void processAction(ActionEvent e) {
-    TmmThreadPool task = new TvShowUpdateDatasourceTask();
+    TmmThreadPool task = TvShowUpdateDatasourceTask.forAllDataSources();
     TmmTaskManager.getInstance().addMainTask(task);
   }
 }

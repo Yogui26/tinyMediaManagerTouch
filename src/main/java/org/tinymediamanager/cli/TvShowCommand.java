@@ -15,17 +15,6 @@
  */
 package org.tinymediamanager.cli;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,8 +47,18 @@ import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
-
 import picocli.CommandLine;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 // @formatter:off
 @CommandLine.Command(
@@ -165,7 +164,7 @@ class TvShowCommand implements Runnable {
   private void updateDataSources() {
     LOGGER.info("updating TV show data sources...");
     if (datasource.updateAll) {
-      Runnable task = new TvShowUpdateDatasourceTask();
+      Runnable task = TvShowUpdateDatasourceTask.forAllDataSources();
       task.run(); // blocking
     }
     else {
@@ -173,7 +172,7 @@ class TvShowCommand implements Runnable {
       if (ListUtils.isNotEmpty(dataSources)) {
         for (Integer i : datasource.indices) {
           if (dataSources.size() >= i - 1) {
-            Runnable task = new TvShowUpdateDatasourceTask(List.of(Paths.get(dataSources.get(i - 1))));
+            Runnable task = TvShowUpdateDatasourceTask.forDataSources(List.of(Paths.get(dataSources.get(i - 1))));
             task.run(); // blocking
           }
         }

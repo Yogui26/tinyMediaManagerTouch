@@ -15,41 +15,6 @@
  */
 package org.tinymediamanager.core.tvshow.tasks;
 
-import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
-import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
-import static java.nio.file.FileVisitResult.TERMINATE;
-import static org.tinymediamanager.core.Utils.DISC_FOLDER_REGEX;
-import static org.tinymediamanager.core.Utils.SEASON_NFO_PATTERN;
-import static org.tinymediamanager.core.Utils.SKIP_FILES;
-
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
@@ -104,6 +69,41 @@ import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.thirdparty.VSMeta;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
+import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
+import static java.nio.file.FileVisitResult.TERMINATE;
+import static org.tinymediamanager.core.Utils.DISC_FOLDER_REGEX;
+import static org.tinymediamanager.core.Utils.SEASON_NFO_PATTERN;
+import static org.tinymediamanager.core.Utils.SKIP_FILES;
+
 /**
  * The Class TvShowUpdateDataSourcesTask.
  * 
@@ -141,30 +141,54 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private final ReentrantReadWriteLock           fileLock          = new ReentrantReadWriteLock();
 
   /**
-   * Instantiates a new scrape task - to update a single datasource
+   * Creates a task which updates all data sources from the current settings.
+   *
+   * @return the task
    */
-  public TvShowUpdateDatasourceTask() {
-    super(TmmResourceBundle.getString("update.datasource"));
-    tvShowList = TvShowModuleManager.getInstance().getTvShowList();
-    settings = TvShowModuleManager.getInstance().getSettings();
-
-    List<Path> foldersToUpdate = new ArrayList<>();
-    for (String ds : settings.getTvShowDataSource()) {
+  public static TvShowUpdateDatasourceTask forAllDataSources() {
+    List<Path> dataSources = new ArrayList<>();
+    for (String ds : TvShowModuleManager.getInstance().getSettings().getTvShowDataSource()) {
       if (StringUtils.isNotBlank(ds)) {
-        foldersToUpdate.add(Paths.get(ds));
+        dataSources.add(Paths.get(ds));
       }
     }
 
-    init(foldersToUpdate);
+    return forDataSources(dataSources);
   }
 
   /**
-   * Instantiates a new scrape task - to update a single datasource
+   * Creates a task which updates the given configured data sources.
    *
-   * @param folders
-   *          the data sources to start the task for
+   * @param dataSources the data sources to update
+   * @return the task
    */
-  public TvShowUpdateDatasourceTask(@NotNull Collection<Path> folders) {
+  public static TvShowUpdateDatasourceTask forDataSources(Collection<Path> dataSources) {
+    return new TvShowUpdateDatasourceTask(dataSources);
+  }
+
+  /**
+   * Creates a task which updates the given TV show folders.
+   *
+   * @param tvShowFolders
+   *          the TV show folders to update
+   * @return the task
+   */
+  public static TvShowUpdateDatasourceTask forTvShows(Collection<Path> tvShowFolders) {
+    return new TvShowUpdateDatasourceTask(tvShowFolders);
+  }
+
+  /**
+   * Creates a task which scans the given paths and all their sub-paths.
+   *
+   * @param paths
+   *          the paths to scan
+   * @return the task
+   */
+  public static TvShowUpdateDatasourceTask forPaths(Collection<Path> paths) {
+    return new TvShowUpdateDatasourceTask(paths);
+  }
+
+  private TvShowUpdateDatasourceTask(Collection<Path> folders) {
     super(TmmResourceBundle.getString("update.datasource"));
     tvShowList = TvShowModuleManager.getInstance().getTvShowList();
     settings = TvShowModuleManager.getInstance().getSettings();

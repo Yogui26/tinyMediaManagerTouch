@@ -16,17 +16,6 @@
 
 package org.tinymediamanager.core.tvshow.tasks;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -40,6 +29,17 @@ import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
   private static final int NUMBER_OF_EXPECTED_SHOWS      = 20;
@@ -71,7 +71,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
         .getSettings()
         .addTvShowDataSources(getWorkFolder().resolve("testtvshows").resolve("nested").toAbsolutePath().toString());
 
-    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask();
+    TvShowUpdateDatasourceTask task = updateAllDataSources();
 
     task.run();
 
@@ -85,7 +85,8 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
         .getSettings()
         .addTvShowDataSources(getWorkFolder().resolve("testtvshows").resolve("nested").toAbsolutePath().toString());
 
-    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask(List.of(getWorkFolder().resolve("testtvshows").toAbsolutePath()));
+    TvShowUpdateDatasourceTask task = TvShowUpdateDatasourceTask
+            .forDataSources(List.of(getWorkFolder().resolve("testtvshows").toAbsolutePath()));
 
     task.run();
 
@@ -94,7 +95,8 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
 
   @Test
   public void udsFolder() throws Exception {
-    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask(List.of(getWorkFolder().resolve("testtvshows").resolve("Breaking Bad")));
+    TvShowUpdateDatasourceTask task = TvShowUpdateDatasourceTask
+            .forTvShows(List.of(getWorkFolder().resolve("testtvshows").resolve("Breaking Bad")));
     task.run();
 
     TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
@@ -119,7 +121,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     assertThat(settings.addTvShowDataSources(nestedDs.toString())).isTrue();
     assertThat(settings.getTvShowDataSource()).contains(nestedDs.toString());
 
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     // the show inside the nested data source must belong to the nested data source
     TvShow show = tvShowList.getTvShowByPath(nestedShow);
@@ -157,7 +159,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     settings.addTvShowDataSources(nestedDs.toString());
 
     // first do a full scan to populate the TV show list
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     TvShow show = tvShowList.getTvShowByPath(nestedShow);
     assertThat(show).isNotNull();
@@ -165,7 +167,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     assertThat(Paths.get(show.getDataSource())).isEqualTo(nestedDs);
 
     // now update only the single TV show (like TvShowUpdateAction would)
-    new TvShowUpdateDatasourceTask(List.of(nestedShow)).run();
+    TvShowUpdateDatasourceTask.forTvShows(List.of(nestedShow)).run();
 
     // the show must still exist exactly once - no duplication
     long count = tvShowList.getTvShows().stream().filter(s -> s.getPathNIO().equals(nestedShow)).count();
@@ -193,14 +195,14 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     Files.move(parentDs.resolve("Firefly"), nestedDs.resolve("Firefly"));
     assertThat(settings.addTvShowDataSources(nestedDs.toString())).isTrue();
 
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     assertThat(tvShowList.getTvShowByPath(nestedShow)).isNotNull();
 
     // remove the show folder from disk and re-run -> the nested data source must clean up its own entry
     FileUtils.deleteDirectory(nestedShow.toFile());
 
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     assertThat(tvShowList.getTvShowByPath(nestedShow)).isNull();
     assertThat(tvShowList.getTvShows()).noneMatch(s -> s.getPathNIO().equals(nestedShow));
@@ -227,7 +229,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     tvShowList.addTvShow(staleShow);
 
     // update only the parent data source - the cleanup must update the data source field and keep the show
-    new TvShowUpdateDatasourceTask(List.of(parentDs)).run();
+    TvShowUpdateDatasourceTask.forDataSources(List.of(parentDs)).run();
 
     assertThat(tvShowList.getTvShows()).contains(staleShow);
     assertThat(Paths.get(staleShow.getDataSource())).isEqualTo(nestedDs);
@@ -244,7 +246,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     Files.writeString(seasonFolder.resolve("ScenePass Show - S01E01 - Pilot.sp.hash.json"), "{}");
 
     TvShowModuleManager.getInstance().getSettings().addTvShowDataSources(scenePassDs.toString());
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     TvShow show = TvShowModuleManager.getInstance().getTvShowList().getTvShowByPath(showFolder);
     assertThat(show).isNotNull();
@@ -265,7 +267,7 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     Files.writeString(seasonFolder.resolve("Skiptro Show - S01E01 - Pilot.mkv.skiptro.json"), "{}");
 
     TvShowModuleManager.getInstance().getSettings().addTvShowDataSources(skiptroDs.toString());
-    new TvShowUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     TvShow show = TvShowModuleManager.getInstance().getTvShowList().getTvShowByPath(showFolder);
     assertThat(show).isNotNull();
@@ -277,7 +279,8 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
 
   @Test
   public void udsXmlDateAdded() throws Exception {
-    TvShowUpdateDatasourceTask task = new TvShowUpdateDatasourceTask(List.of(getWorkFolder().resolve("testtvshows").resolve("XmlDateAdded")));
+    TvShowUpdateDatasourceTask task = TvShowUpdateDatasourceTask
+            .forTvShows(List.of(getWorkFolder().resolve("testtvshows").resolve("XmlDateAdded")));
     task.run();
 
     TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
@@ -289,6 +292,10 @@ public class TvShowUpdateDatasourceTaskTest extends BasicTvShowTest {
     // the NFO has no <dateadded>, but the .xml file does - must be adopted instead of now()
     Date expectedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2019-01-02 03:04:05");
     assertThat(episode.getDateAdded()).isEqualTo(expectedDate);
+  }
+
+  private TvShowUpdateDatasourceTask updateAllDataSources() {
+    return TvShowUpdateDatasourceTask.forAllDataSources();
   }
 
   private void check(int numberOfExpectedShows, int numberOfExpectedEpisodes, int numberOfExpectedMediaFiles) throws Exception {

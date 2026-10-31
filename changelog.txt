@@ -1,5 +1,6 @@
 Version 5.3.6
 =======================
+x [Movies] enhanced the update datasource logic to cover more edge cases #3391
 
 
 Version 5.3.5

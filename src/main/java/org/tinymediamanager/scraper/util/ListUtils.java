@@ -42,7 +42,7 @@ public class ListUtils {
    * @return the same iterable collection (if <i>it</i> was not null) or an empty iterable collection of the same type
    */
   public static <T> Iterable<T> nullSafe(Iterable<T> it) {
-    return it != null ? it : Collections.emptySet();
+    return it != null ? it : Collections.emptyList();
   }
 
   /**

@@ -15,33 +15,40 @@
  */
 package org.tinymediamanager.ui.movies.actions;
 
-import java.awt.event.ActionEvent;
-
+import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.actions.TmmAction;
 
+import java.awt.event.ActionEvent;
+import java.nio.file.Paths;
+import java.util.List;
+
 /**
  * MovieUpdateSingleDatasourceAction - update all movies from a single data source
- * 
+ *
  * @author Manuel Laggner
  */
 public class MovieUpdateSingleDatasourceAction extends TmmAction {
-  private final String datasource;
+    private final String datasource;
 
-  public MovieUpdateSingleDatasourceAction(String datasource) {
-    this.datasource = datasource;
+    public MovieUpdateSingleDatasourceAction(String datasource) {
+        this.datasource = datasource;
 
-    putValue(NAME, datasource);
-    putValue(SMALL_ICON, IconManager.REFRESH);
-    putValue(LARGE_ICON_KEY, IconManager.REFRESH);
-  }
+        putValue(NAME, datasource);
+        putValue(SMALL_ICON, IconManager.REFRESH);
+        putValue(LARGE_ICON_KEY, IconManager.REFRESH);
+    }
 
-  @Override
-  protected void processAction(ActionEvent e) {
-    TmmThreadPool task = new MovieUpdateDatasourceTask(datasource);
-    TmmTaskManager.getInstance().addMainTask(task);
-  }
+    @Override
+    protected void processAction(ActionEvent e) {
+        if (StringUtils.isBlank(datasource)) {
+            return;
+        }
+
+        TmmThreadPool task = MovieUpdateDatasourceTask.forDataSources(List.of(Paths.get(datasource)));
+        TmmTaskManager.getInstance().addMainTask(task);
+    }
 }

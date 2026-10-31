@@ -15,14 +15,6 @@
  */
 package org.tinymediamanager.core.movie.tasks;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +26,14 @@ import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.movie.BasicMovieTest;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The class {@link MovieUpdateDatasourceTaskMessageTest} checks that every data source which gets skipped during "update data sources" is pushed to
@@ -69,7 +69,7 @@ public class MovieUpdateDatasourceTaskMessageTest extends BasicMovieTest {
     MovieSettings settings = MovieModuleManager.getInstance().getSettings();
     settings.setMovieDataSources(List.of(missingDatasource.toString()));
 
-    new MovieUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     List<Message> messages = findMessages("update.datasource.unavailable");
     assertThat(messages).hasSize(1);
@@ -85,7 +85,7 @@ public class MovieUpdateDatasourceTaskMessageTest extends BasicMovieTest {
     settings.setSkipFolder(List.of("skipme"));
     settings.setMovieDataSources(List.of(skipFolderDatasource.toString()));
 
-    new MovieUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     List<Message> messages = findMessages("update.datasource.skipfolder");
     assertThat(messages).hasSize(1);
@@ -102,10 +102,14 @@ public class MovieUpdateDatasourceTaskMessageTest extends BasicMovieTest {
     // nested data sources are allowed now - they must not be reported as skipped/removed
     settings.setMovieDataSources(List.of(parentDatasource.toString(), nestedDatasource.toString()));
 
-    new MovieUpdateDatasourceTask().run();
+    updateAllDataSources().run();
 
     assertThat(findMessages("update.datasource.nested.skipped")).isEmpty();
     assertThat(findMessages("update.datasource.nested.removed")).isEmpty();
+  }
+
+  private MovieUpdateDatasourceTask updateAllDataSources() {
+    return MovieUpdateDatasourceTask.forAllDataSources();
   }
 
   private List<Message> findMessages(String messageId) {
