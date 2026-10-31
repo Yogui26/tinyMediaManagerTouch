@@ -110,6 +110,12 @@ public class MediaInfoTimeoutWrapper {
       return Map.of();
     }
 
+    // the analysis of this file already timed out earlier (and the file did not change since) - a repeated native call would hang again
+    if (MediaInfoTimeoutRegistry.shouldSkip(file)) {
+      LOGGER.warn("MediaInfo skipped for '{}': the analysis timed out earlier and the file has not changed", file);
+      return Map.of();
+    }
+
     try {
       Callable<Map<StreamKind, List<Map<String, String>>>> task = () -> {
         try (MediaInfo mediaInfo = new MediaInfo()) {
@@ -130,6 +136,7 @@ public class MediaInfoTimeoutWrapper {
       catch (TimeoutException e) {
         LOGGER.error("MediaInfo operation timed out after {} seconds for file '{}'", timeoutSeconds, file);
         future.cancel(true);
+        MediaInfoTimeoutRegistry.recordTimeout(file);
         return Map.of();
       }
     }
@@ -174,6 +181,12 @@ public class MediaInfoTimeoutWrapper {
       return null;
     }
 
+    // the analysis of this file already timed out earlier (and the file did not change since) - a repeated native call would hang again
+    if (MediaInfoTimeoutRegistry.shouldSkip(file)) {
+      LOGGER.warn("MediaInfo buffer processing skipped for '{}': the analysis timed out earlier and the file has not changed", file);
+      return null;
+    }
+
     try {
       Callable<MediaInfo> task = () -> {
         MediaInfo mediaInfo = new MediaInfo();
@@ -194,6 +207,7 @@ public class MediaInfoTimeoutWrapper {
       catch (TimeoutException e) {
         LOGGER.warn("MediaInfo buffer initialization timed out after {} seconds for file '{}'", timeoutSeconds, file);
         future.cancel(true);
+        MediaInfoTimeoutRegistry.recordTimeout(file);
         return null;
       }
     }
@@ -238,14 +252,54 @@ public class MediaInfoTimeoutWrapper {
    */
   public static Map<StreamKind, List<Map<String, String>>> executeBufferOperation(Callable<Map<StreamKind, List<Map<String, String>>>> operation,
       int timeoutSeconds) {
+    return executeBufferOperation(null, operation, timeoutSeconds);
+  }
+
+  /**
+   * Executes a buffer-based MediaInfo processing operation with the default timeout, tied to the file the operation reads from.
+   *
+   * @param file
+   *          the media file the operation reads from (used for the timeout registry; may be null)
+   * @param operation
+   *          a callable that performs the complete buffer-based operation
+   * @return the snapshot from the operation, or an empty map if operation times out or fails
+   */
+  public static Map<StreamKind, List<Map<String, String>>> executeBufferOperation(Path file,
+      Callable<Map<StreamKind, List<Map<String, String>>>> operation) {
+    return executeBufferOperation(file, operation, TIMEOUT_SECONDS);
+  }
+
+  /**
+   * Executes a buffer-based MediaInfo processing operation with a custom timeout, tied to the file the operation reads from.
+   * <p>
+   * When the file's analysis already timed out earlier (and the file did not change since), the operation is skipped entirely - a repeated native
+   * call would hang again. On a timeout, the file is remembered so later runs do not re-pay the full timeout.
+   * </p>
+   *
+   * @param file
+   *          the media file the operation reads from (used for the timeout registry; may be null for anonymous operations, which are neither skipped
+   *          nor recorded)
+   * @param operation
+   *          a callable that performs the complete buffer-based operation
+   * @param timeoutSeconds
+   *          the timeout in seconds
+   * @return the snapshot from the operation, or an empty map if operation times out or fails
+   */
+  public static Map<StreamKind, List<Map<String, String>>> executeBufferOperation(Path file,
+      Callable<Map<StreamKind, List<Map<String, String>>>> operation, int timeoutSeconds) {
     if (operation == null) {
       LOGGER.warn("Cannot execute buffer operation: operation is null");
       return Map.of();
     }
 
+    if (file != null && MediaInfoTimeoutRegistry.shouldSkip(file)) {
+      LOGGER.warn("MediaInfo buffer operation skipped for '{}': the analysis timed out earlier and the file has not changed", file);
+      return Map.of();
+    }
+
     if (timeoutSeconds <= 0) {
       LOGGER.warn("Invalid timeout value: {}, using default timeout", timeoutSeconds);
-      return executeBufferOperation(operation);
+      return executeBufferOperation(file, operation);
     }
 
     try {
@@ -258,6 +312,9 @@ public class MediaInfoTimeoutWrapper {
       catch (TimeoutException e) {
         LOGGER.warn("Buffer-based MediaInfo operation timed out after {} seconds", timeoutSeconds);
         future.cancel(true);
+        if (file != null) {
+          MediaInfoTimeoutRegistry.recordTimeout(file);
+        }
         return Map.of();
       }
     }

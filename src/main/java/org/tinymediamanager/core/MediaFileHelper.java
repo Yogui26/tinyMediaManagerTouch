@@ -1408,7 +1408,7 @@ public class MediaFileHelper {
 
           try {
             // Wrap the entire buffer processing with timeout protection
-            Map<MediaInfo.StreamKind, List<Map<String, String>>> snapshot = MediaInfoTimeoutWrapper.executeBufferOperation(() -> {
+            Map<MediaInfo.StreamKind, List<Map<String, String>>> snapshot = MediaInfoTimeoutWrapper.executeBufferOperation(mediaFile.getFileAsPath(), () -> {
               try (MediaInfo fileMI = new MediaInfo()) {
                 byte[] fromBuffer = new byte[bufferSize];
                 int fromBufferSize; // The size of the read file buffer
@@ -1518,7 +1518,7 @@ public class MediaFileHelper {
 
         try {
           // Wrap the entire buffer processing with timeout protection
-          Map<MediaInfo.StreamKind, List<Map<String, String>>> snapshot = MediaInfoTimeoutWrapper.executeBufferOperation(() -> {
+          Map<MediaInfo.StreamKind, List<Map<String, String>>> snapshot = MediaInfoTimeoutWrapper.executeBufferOperation(mediaFile.getFileAsPath(), () -> {
             try (MediaInfo fileMI = new MediaInfo()) {
               byte[] fromBuffer = new byte[bufferSize];
               int fromBufferSize; // The size of the read file buffer
