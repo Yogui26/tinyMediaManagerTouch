@@ -15,8 +15,29 @@
  */
 package org.tinymediamanager.core;
 
-import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.io.FileExistsException;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.LocaleUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.text.translate.UnicodeUnescaper;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tinymediamanager.Globals;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.scraper.http.Url;
+import org.tinymediamanager.scraper.util.DateUtils;
+import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.scraper.util.UrlUtil;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -90,29 +111,8 @@ import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
-import org.apache.commons.io.FileExistsException;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.LocaleUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.text.StringEscapeUtils;
-import org.apache.commons.text.translate.UnicodeUnescaper;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.tinymediamanager.Globals;
-import org.tinymediamanager.core.Message.MessageLevel;
-import org.tinymediamanager.core.entities.MediaEntity;
-import org.tinymediamanager.core.entities.MediaFile;
-import org.tinymediamanager.core.movie.MovieModuleManager;
-import org.tinymediamanager.core.tvshow.TvShowModuleManager;
-import org.tinymediamanager.scraper.http.Url;
-import org.tinymediamanager.scraper.util.DateUtils;
-import org.tinymediamanager.scraper.util.StrgUtils;
-import org.tinymediamanager.scraper.util.UrlUtil;
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
 
 /**
  * The Class Utils.
@@ -1751,17 +1751,17 @@ public class Utils {
    * <b>does overwrite already existing file from today!</b>
    *
    * @param file
-   *          the file to backup
+   *          the file to back up
    */
   public static void createBackupFile(Path file) {
-    createBackupFile(file, true);
+    createBackupFile(file, false);
   }
 
   /**
    * creates a zipped backup of file in backup folder with yyyy-MM-dd timestamp
    *
    * @param file
-   *          the file to backup
+   *          the file to back up
    * @param overwrite
    *          if file is already there, ignore that and overwrite with new copy
    */

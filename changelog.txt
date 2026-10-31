@@ -1,5 +1,6 @@
 Version 5.3.6
 =======================
+x [Core] only create backups once a day #3396
 x [Movies] enhanced the update datasource logic to cover more edge cases #3391
 
 
