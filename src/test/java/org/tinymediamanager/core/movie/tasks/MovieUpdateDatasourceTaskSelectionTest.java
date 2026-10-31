@@ -18,6 +18,7 @@
  */
 package org.tinymediamanager.core.movie.tasks;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.core.read.ListAppender;
 import org.junit.After;
@@ -33,7 +34,6 @@ import org.tinymediamanager.core.movie.entities.Movie;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,7 +44,6 @@ public class MovieUpdateDatasourceTaskSelectionTest extends BasicMovieTest {
     private Path otherMovieFolder;
     private Path rootMovieFolder;
 
-    private final List<Integer> filesFoundCounts = new CopyOnWriteArrayList<>();
     private final ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> logAppender = new ListAppender<>();
 
     @Before
@@ -75,6 +74,7 @@ public class MovieUpdateDatasourceTaskSelectionTest extends BasicMovieTest {
         assertThat(MovieModuleManager.getInstance().getMovieList().getMovies()).hasSize(3);
 
         Logger taskLogger = (Logger) org.slf4j.LoggerFactory.getLogger(MovieUpdateDatasourceTask.class);
+      taskLogger.setLevel(Level.DEBUG); // in CI everything is INFO, so we need to force DEBUG to see the "Files found" log line
         logAppender.start();
         taskLogger.addAppender(logAppender);
     }
