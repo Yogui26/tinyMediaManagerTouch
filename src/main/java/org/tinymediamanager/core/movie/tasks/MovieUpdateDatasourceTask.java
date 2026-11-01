@@ -15,6 +15,56 @@
  */
 package org.tinymediamanager.core.movie.tasks;
 
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
+import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
+import static java.nio.file.FileVisitResult.TERMINATE;
+import static org.tinymediamanager.core.MediaFileHelper.BDMV;
+import static org.tinymediamanager.core.MediaFileHelper.HVDVD_TS;
+import static org.tinymediamanager.core.MediaFileHelper.VIDEO_TS;
+import static org.tinymediamanager.core.MediaFileType.BANNER;
+import static org.tinymediamanager.core.MediaFileType.CLEARART;
+import static org.tinymediamanager.core.MediaFileType.CLEARLOGO;
+import static org.tinymediamanager.core.MediaFileType.DISC;
+import static org.tinymediamanager.core.MediaFileType.FANART;
+import static org.tinymediamanager.core.MediaFileType.GRAPHIC;
+import static org.tinymediamanager.core.MediaFileType.KEYART;
+import static org.tinymediamanager.core.MediaFileType.LOGO;
+import static org.tinymediamanager.core.MediaFileType.POSTER;
+import static org.tinymediamanager.core.MediaFileType.VIDEO;
+import static org.tinymediamanager.core.Utils.DISC_FOLDER_REGEX;
+import static org.tinymediamanager.core.Utils.containsSkipFile;
+
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -63,56 +113,6 @@ import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.thirdparty.VSMeta;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
-import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
-import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
-import static java.nio.file.FileVisitResult.TERMINATE;
-import static org.tinymediamanager.core.MediaFileHelper.BDMV;
-import static org.tinymediamanager.core.MediaFileHelper.HVDVD_TS;
-import static org.tinymediamanager.core.MediaFileHelper.VIDEO_TS;
-import static org.tinymediamanager.core.MediaFileType.BANNER;
-import static org.tinymediamanager.core.MediaFileType.CLEARART;
-import static org.tinymediamanager.core.MediaFileType.CLEARLOGO;
-import static org.tinymediamanager.core.MediaFileType.DISC;
-import static org.tinymediamanager.core.MediaFileType.FANART;
-import static org.tinymediamanager.core.MediaFileType.GRAPHIC;
-import static org.tinymediamanager.core.MediaFileType.KEYART;
-import static org.tinymediamanager.core.MediaFileType.LOGO;
-import static org.tinymediamanager.core.MediaFileType.POSTER;
-import static org.tinymediamanager.core.MediaFileType.VIDEO;
-import static org.tinymediamanager.core.Utils.DISC_FOLDER_REGEX;
-import static org.tinymediamanager.core.Utils.containsSkipFile;
-
 /**
  * Updates movie data sources. Depending on the entry point it either scans complete data sources, the selected movie folders only, or the selected
  * paths including their sub-paths.
@@ -120,7 +120,7 @@ import static org.tinymediamanager.core.Utils.containsSkipFile;
  * @author Myron Boyle
  */
 public class MovieUpdateDatasourceTask extends TmmThreadPool {
-  private static final Logger                              LOGGER            = LoggerFactory.getLogger(MovieUpdateDatasourceTask.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(MovieUpdateDatasourceTask.class);
 
   /**
    * The intent of an update run. It controls which paths are scanned and which movies are passed to cleanup/MediaInfo.
@@ -140,50 +140,50 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     PATHS
   }
 
-  private static long                                      preDir            = 0;
-  private static long                                      postDir           = 0;
-  private static long                                      visFile           = 0;
-  private static long                                      preDirAll         = 0;
-  private static long                                      postDirAll        = 0;
-  private static long                                      visFileAll        = 0;
+  private static long                                      preDir                 = 0;
+  private static long                                      postDir                = 0;
+  private static long                                      visFile                = 0;
+  private static long                                      preDirAll              = 0;
+  private static long                                      postDirAll             = 0;
+  private static long                                      visFileAll             = 0;
 
   // skip well-known, but unneeded folders (UPPERCASE)
-  private static final List<String>                        SKIP_FOLDERS      = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
-      "SYSTEM VOLUME INFORMATION", "@EADIR", "ADV_OBJ", "PLEX VERSIONS", "LOST.DIR");
+  private static final List<String>                        SKIP_FOLDERS           = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN",
+      "RECYCLER", "SYSTEM VOLUME INFORMATION", "@EADIR", "ADV_OBJ", "PLEX VERSIONS", "LOST.DIR");
 
   // skip folders starting with a SINGLE "." or "._" (exception for movie ".45")
-  private static final String                              SKIP_REGEX        = "(?i)^[.@](?!45|buelos)[\\w@]+.*";
+  private static final String                              SKIP_REGEX             = "(?i)^[.@](?!45|buelos)[\\w@]+.*";
   // MMD detected as single movie in a structured folder such as /A/, /2010/ or decade
-  public static final String                               FOLDER_STRUCTURE  = "(?i)^(\\w|\\d{4}|\\d{4}s|\\d{4}\\-\\d{4})$";
-  private static final Pattern                             VIDEO_3D_PATTERN  = Pattern.compile("(?i)[ .,_\\(\\[-]3D[ .,_\\)\\]-]?");
+  public static final String                               FOLDER_STRUCTURE       = "(?i)^(\\w|\\d{4}|\\d{4}s|\\d{4}\\-\\d{4})$";
+  private static final Pattern                             VIDEO_3D_PATTERN       = Pattern.compile("(?i)[ .,_\\(\\[-]3D[ .,_\\)\\]-]?");
 
   private final MovieList                                  movieList;
-  private final MovieSettings settings;
+  private final MovieSettings                              settings;
   private final UpdateMode                                 updateMode;
 
-  private final List<Path>                                 dataSources       = new ArrayList<>();
-  private final List<Path>                                 foldersToUpdate   = new ArrayList<>();
-  private final Set<Path>                                  nestedDataSources = new HashSet<>();
+  private final List<Path>                                 dataSources            = new ArrayList<>();
+  private final List<Path>                                 foldersToUpdate        = new ArrayList<>();
+  private final Set<Path>                                  nestedDataSources      = new HashSet<>();
   /**
    * all configured data sources (normalized) - used to resolve which data source owns a given entity
    */
-  private final Set<Path>                                  allDataSources    = new LinkedHashSet<>();
+  private final Set<Path>                                  allDataSources         = new LinkedHashSet<>();
 
-  private final List<Pattern>                              skipFolders       = new ArrayList<>();
-  private final Set<Path>                                  filesFound        = new HashSet<>();
-  private final ReentrantReadWriteLock                     fileLock          = new ReentrantReadWriteLock();
-  private final List<Runnable>                             miTasks           = Collections.synchronizedList(new ArrayList<>());
-  private final List<Path>                                 existingMovies    = new ArrayList<>();
-  private final List<MediaFile>                            imageFiles        = new ArrayList<>();
+  private final List<Pattern>                              skipFolders            = new ArrayList<>();
+  private final Set<Path>                                  filesFound             = new HashSet<>();
+  private final ReentrantReadWriteLock                     fileLock               = new ReentrantReadWriteLock();
+  private final List<Runnable>                             miTasks                = Collections.synchronizedList(new ArrayList<>());
+  private final List<Path>                                 existingMovies         = new ArrayList<>();
+  private final List<MediaFile>                            imageFiles             = new ArrayList<>();
   /**
    * Lightweight filesystem attribute cache collected during recursive walks to reduce repeated network I/O on remote datasources.
    */
-  private final ConcurrentMap<String, BasicFileAttributes> fsAttrCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, BasicFileAttributes> fsAttrCache            = new ConcurrentHashMap<>();
   /**
    * Availability and root listing per data source - checked once per task to avoid repeated file system access for every selected path.
    */
-  private final Map<Path, Boolean> dataSourceAvailability = new HashMap<>();
-  private final Map<Path, List<Path>> dataSourceRootLists = new HashMap<>();
+  private final Map<Path, Boolean>                         dataSourceAvailability = new HashMap<>();
+  private final Map<Path, List<Path>>                      dataSourceRootLists    = new HashMap<>();
 
   /**
    * Creates a task which updates all data sources from the current settings.
@@ -204,34 +204,34 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   /**
    * Creates a task which updates the given configured data sources.
    *
-   * @param dataSources the data sources to update
+   * @param dataSources
+   *          the data sources to update
    * @return the task
    */
   public static MovieUpdateDatasourceTask forDataSources(Collection<Path> dataSources) {
-    return new MovieUpdateDatasourceTask(UpdateMode.DATASOURCES, dataSources,
-            TmmResourceBundle.getString("update.datasource"));
+    return new MovieUpdateDatasourceTask(UpdateMode.DATASOURCES, dataSources, TmmResourceBundle.getString("update.datasource"));
   }
 
   /**
    * Creates a task which updates the given movie folders only. The folders are not widened to their parent folder/category.
    *
-   * @param movieFolders the movie folders to update
+   * @param movieFolders
+   *          the movie folders to update
    * @return the task
    */
   public static MovieUpdateDatasourceTask forMovies(Collection<Path> movieFolders) {
-    return new MovieUpdateDatasourceTask(UpdateMode.MOVIES, movieFolders,
-            TmmResourceBundle.getString("update.datasource"));
+    return new MovieUpdateDatasourceTask(UpdateMode.MOVIES, movieFolders, TmmResourceBundle.getString("update.datasource"));
   }
 
   /**
    * Creates a task which scans the given paths and all their sub-paths.
    *
-   * @param paths the paths to scan
+   * @param paths
+   *          the paths to scan
    * @return the task
    */
   public static MovieUpdateDatasourceTask forPaths(Collection<Path> paths) {
-    return new MovieUpdateDatasourceTask(UpdateMode.PATHS, paths,
-            TmmResourceBundle.getString("update.datasource"));
+    return new MovieUpdateDatasourceTask(UpdateMode.PATHS, paths, TmmResourceBundle.getString("update.datasource"));
   }
 
   private MovieUpdateDatasourceTask(UpdateMode updateMode, Collection<Path> paths, String taskName) {
@@ -297,7 +297,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         if (!dataSources.contains(normalizedPath)) {
           dataSources.add(normalizedPath);
         }
-      } else {
+      }
+      else {
         LOGGER.debug("'{}' is not a configured data source - skipping", normalizedPath);
       }
     }
@@ -327,8 +328,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   }
 
   /**
-   * Collects the paths to scan. A path which is exactly a configured data source is updated as a complete data source; any other path is scanned
-   * from the selected path downwards.
+   * Collects the paths to scan. A path which is exactly a configured data source is updated as a complete data source; any other path is scanned from
+   * the selected path downwards.
    */
   private void initPaths(Collection<Path> paths) {
     List<Path> normalizedPaths = new ArrayList<>();
@@ -516,15 +517,26 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       LOGGER.debug("Processing '{}' existing, '{}' new movies and '{}' root files", existingMovieDirs.size(), newMovieDirs.size(), rootFiles.size());
 
+      // the recursive walk does not know the number of movies in advance - use the known root entries as a coarse progress
+      int scanProgress = 0;
+      int scanWorkUnits = newMovieDirs.size() + existingMovieDirs.size() + (rootFiles.isEmpty() ? 0 : 1);
+      if (scanWorkUnits > 0) {
+        setWorkUnits(scanWorkUnits);
+        publishState(scanProgress);
+      }
+
       for (Path path : newMovieDirs) {
         // populate cache via recursive walk once per folder
         searchAndParse(dsAsPath.toAbsolutePath(), path);
+        publishState(path.toString(), ++scanProgress);
       }
       for (Path path : existingMovieDirs) {
         searchAndParse(dsAsPath.toAbsolutePath(), path);
+        publishState(path.toString(), ++scanProgress);
       }
       if (!rootFiles.isEmpty()) {
         submitTask(new ParseMultiMovieDirTask(dsAsPath.toAbsolutePath(), dsAsPath.toAbsolutePath(), new ArrayList<>(rootFiles)));
+        publishState(dsAsPath.toString(), ++scanProgress);
       }
 
       waitForCompletionOrCancel();
@@ -737,13 +749,16 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   /**
    * Collects the movies which are affected by the given scan target.
    * <p>
-   * A selected movie is matched exactly, so updating it does not pull in unrelated movies from its parent category. A selected path covers all
-   * movies below it.
+   * A selected movie is matched exactly, so updating it does not pull in unrelated movies from its parent category. A selected path covers all movies
+   * below it.
    * </p>
    *
-   * @param dataSource      the owning data source of the scan target
-   * @param folder          the scan target
-   * @param moviesToCleanup the list to add the affected movies to
+   * @param dataSource
+   *          the owning data source of the scan target
+   * @param folder
+   *          the scan target
+   * @param moviesToCleanup
+   *          the list to add the affected movies to
    */
   private void addMoviesForUpdate(Path dataSource, Path folder, List<Movie> moviesToCleanup) {
     if (updateMode == UpdateMode.MOVIES) {
@@ -777,7 +792,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
    * Checks whether the given data source is available. The result is cached per data source, so scanning multiple paths below the same data source
    * does not repeat the file system access.
    *
-   * @param dataSource the data source to check
+   * @param dataSource
+   *          the data source to check
    * @return true if the data source can be scanned
    */
   private boolean isDatasourceAvailable(Path dataSource) {
@@ -790,7 +806,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     if (!Files.exists(normalizedPath)) {
       LOGGER.warn("Data source '{}' is not available - skipping", normalizedPath);
       MessageManager.getInstance()
-              .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[]{normalizedPath.toString()}));
+          .pushMessage(
+              new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { normalizedPath.toString() }));
       dataSourceAvailability.put(normalizedPath, false);
       return false;
     }
@@ -804,14 +821,16 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       boolean isEmpty = true;
       try {
         isEmpty = Utils.isFolderEmpty(normalizedPath);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         LOGGER.warn("Could not check folder '{}' for emptiness - '{}'", normalizedPath, e.getMessage());
       }
 
       if (isEmpty) {
         LOGGER.warn("Data source '{}' is not available - skipping", normalizedPath);
         MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[]{normalizedPath.toString()}));
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { normalizedPath.toString() }));
         dataSourceAvailability.put(normalizedPath, false);
         return false;
       }
@@ -824,7 +843,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   /**
    * Gets the (cached) root listing of the given data source.
    *
-   * @param dataSource the data source to list
+   * @param dataSource
+   *          the data source to list
    * @return the files and folders in the data source root
    */
   private List<Path> getDataSourceRootList(Path dataSource) {
@@ -2576,7 +2596,6 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
               // ka-ching! parse this now as MMD and return
               List<Path> rootFiles = listFilesOnly(dir); // get all files and dirs
               submitTask(new ParseMultiMovieDirTask(datasource.toAbsolutePath(), dir, rootFiles));
-              publishState();
               return CONTINUE;
             }
           }
