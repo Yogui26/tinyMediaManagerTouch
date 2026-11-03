@@ -16,7 +16,6 @@
 package org.tinymediamanager.thirdparty;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -607,26 +606,6 @@ public class MediaInfo implements Closeable {
     catch (Error e) {
       LOGGER.error("Failed to load mediainfo - '{}'", e.getMessage());
       return "";
-    }
-  }
-
-  /**
-   * Helper for easy usage.
-   * 
-   * @param file
-   *          the file
-   * @return the map
-   * @throws IOException
-   *           Signals that an I/O exception has occurred.
-   */
-  public static Map<StreamKind, List<Map<String, String>>> snapshot(Path file) throws IOException {
-    try (MediaInfo mi = new MediaInfo()) {
-      if (mi.open(file)) {
-        return mi.snapshot();
-      }
-      else {
-        throw new IOException("Failed to open file: " + file);
-      }
     }
   }
 }

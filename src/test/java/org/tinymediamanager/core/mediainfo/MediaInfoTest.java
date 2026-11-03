@@ -727,6 +727,23 @@ public class MediaInfoTest extends BasicTest {
   // }
 
   @Test
+  public void testChunkedVideoContainers() throws Exception {
+    copyResourceFolderToWorkFolder("samples");
+    Path samplesFolder = getWorkFolder().resolve("samples");
+
+    for (String filename : new String[] { "chunked-test.mp4", "chunked-test.mkv" }) {
+      MediaFile mf = new MediaFile(samplesFolder.resolve(filename));
+      MediaFileHelper.gatherMediaInformation(mf, false);
+
+      assertThat(mf.getVideoWidth()).as(filename).isEqualTo(160);
+      assertThat(mf.getVideoHeight()).as(filename).isEqualTo(120);
+      assertThat(mf.getDuration()).as(filename).isGreaterThan(0);
+      assertThat(mf.getVideoCodec()).as(filename).isNotEmpty();
+      assertThat(mf.getAudioCodec()).as(filename).isNotEmpty();
+    }
+  }
+
+  @Test
   public void testHdrDetection() throws Exception {
     copyResourceFolderToWorkFolder("mediainfo");
     Path mediainfoFolder = getWorkFolder().resolve("mediainfo");

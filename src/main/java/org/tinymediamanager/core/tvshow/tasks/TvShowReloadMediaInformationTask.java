@@ -30,6 +30,7 @@ import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
+import org.tinymediamanager.thirdparty.MediaInfoTimeoutWrapper;
 
 /**
  * The Class TvShowReloadMediaInformationTask, to explicit reload mediainformation.
@@ -63,7 +64,7 @@ public class TvShowReloadMediaInformationTask extends TmmThreadPool {
       LOGGER.info("Getting MediaInfo for '{}' movies", tvShows.size());
       // update MediaInfo
 
-      initThreadPool(1, "reloadMI");
+      initThreadPool(MediaInfoTimeoutWrapper.getMaxThreads(), "reloadMI");
       for (TvShow show : tvShows) {
         if (cancel) {
           break;

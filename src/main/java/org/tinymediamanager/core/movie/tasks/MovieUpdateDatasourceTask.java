@@ -110,6 +110,7 @@ import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.thirdparty.KodiRPC;
+import org.tinymediamanager.thirdparty.MediaInfoTimeoutWrapper;
 import org.tinymediamanager.thirdparty.VSMeta;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 
@@ -2059,7 +2060,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     setTaskName(TmmResourceBundle.getString("update.mediainfo"));
     publishState();
 
-    initThreadPool(1, "mediainfo");
+    initThreadPool(MediaInfoTimeoutWrapper.getMaxThreads(), "mediainfo");
 
     LOGGER.info("Getting Mediainfo...");
 
@@ -2106,7 +2107,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     setTaskName(TmmResourceBundle.getString("update.mediainfo"));
     publishState();
 
-    initThreadPool(1, "mediainfo");
+    initThreadPool(MediaInfoTimeoutWrapper.getMaxThreads(), "mediainfo");
 
     LOGGER.info("Getting Mediainfo...");
     for (Movie movie : movies) {

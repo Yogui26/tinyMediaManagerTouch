@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,17 +46,32 @@ import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
  * mechanism provides application-level protection by returning control to the caller, while the underlying native operation may continue running in
  * the background until it completes naturally.
  * </p>
+ * <p>
+ * The maximum number of concurrent MediaInfo operations can be configured with the JVM property {@value #MAX_THREADS_PROPERTY} (default
+ * {@value #DEFAULT_MAX_THREADS}, maximum {@value #HARD_MAX_THREADS}). The property is read once at startup.
+ * </p>
  *
  * @author Manuel Laggner
  * @since v5
  */
 public class MediaInfoTimeoutWrapper {
 
-  private static final Logger          LOGGER           = LoggerFactory.getLogger(MediaInfoTimeoutWrapper.class);
+  /** JVM property for the maximum number of concurrent MediaInfo operations. */
+  public static final String           MAX_THREADS_PROPERTY = "tmm.mediainfo.threads";
 
-  private static final ExecutorService EXECUTOR_SERVICE = createExecutorService();
+  /** Default maximum number of concurrent MediaInfo operations. */
+  public static final int              DEFAULT_MAX_THREADS  = 4;
 
-  private static final int             TIMEOUT_SECONDS  = Constants.MI_TIMEOUT_SECONDS;
+  /** Upper bound for the number of concurrent MediaInfo operations. */
+  public static final int              HARD_MAX_THREADS     = 16;
+
+  private static final Logger          LOGGER               = LoggerFactory.getLogger(MediaInfoTimeoutWrapper.class);
+
+  private static final int             MAX_THREADS          = parseMaxThreads(System.getProperty(MAX_THREADS_PROPERTY));
+
+  private static final ExecutorService EXECUTOR_SERVICE     = createExecutorService();
+
+  private static final int             TIMEOUT_SECONDS      = Constants.MI_TIMEOUT_SECONDS;
 
   /**
    * Creates a daemon thread pool for MediaInfo operations.
@@ -67,7 +83,8 @@ public class MediaInfoTimeoutWrapper {
    * @return the executor service
    */
   private static ExecutorService createExecutorService() {
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new ThreadFactory() {
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(MAX_THREADS, MAX_THREADS, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+        new ThreadFactory() {
       private final AtomicInteger count = new AtomicInteger(0);
 
       @Override
@@ -111,14 +128,10 @@ public class MediaInfoTimeoutWrapper {
     }
 
     try {
+      final long submittedAt = System.nanoTime();
       Callable<Map<StreamKind, List<Map<String, String>>>> task = () -> {
-        try (MediaInfo mediaInfo = new MediaInfo()) {
-          if (!mediaInfo.open(file)) {
-            LOGGER.error("MediaInfo could not open file '{}'", file);
-            return Map.of();
-          }
-          return mediaInfo.snapshot();
-        }
+        logQueueWait(submittedAt, file);
+        return MediaInfoBufferReader.read(file);
       };
 
       Future<Map<StreamKind, List<Map<String, String>>>> future = EXECUTOR_SERVICE.submit(task);
@@ -141,70 +154,6 @@ public class MediaInfoTimeoutWrapper {
     catch (Exception e) {
       LOGGER.error("Error getting MediaInfo snapshot for file '{}': {}", file, e.getMessage());
       return Map.of();
-    }
-  }
-
-  /**
-   * Opens a media file with buffer-based processing and timeout protection (for streaming/ISO files).
-   * <p>
-   * This method initializes the buffer for streaming operations.
-   *
-   * @param file
-   *          the path to the media file
-   * @return a MediaInfo instance ready for buffer operations, or null if operation times out
-   */
-  public static MediaInfo openForBufferProcessing(Path file) {
-    return openForBufferProcessing(file, TIMEOUT_SECONDS);
-  }
-
-  /**
-   * Opens a media file with buffer-based processing and timeout protection (for streaming/ISO files).
-   * <p>
-   * This method initializes the buffer for streaming operations.
-   *
-   * @param file
-   *          the path to the media file
-   * @param timeoutSeconds
-   *          the timeout in seconds
-   * @return a MediaInfo instance ready for buffer operations, or null if operation times out
-   */
-  public static MediaInfo openForBufferProcessing(Path file, int timeoutSeconds) {
-    if (file == null) {
-      LOGGER.warn("Cannot open file for buffer processing: file path is null");
-      return null;
-    }
-
-    try {
-      Callable<MediaInfo> task = () -> {
-        MediaInfo mediaInfo = new MediaInfo();
-        if (!mediaInfo.open(file)) {
-          LOGGER.warn("MediaInfo could not open file '{}' for buffer processing", file);
-          mediaInfo.close();
-          return null;
-        }
-        return mediaInfo;
-      };
-
-      Future<MediaInfo> future = EXECUTOR_SERVICE.submit(task);
-
-      try {
-        LOGGER.trace("Opening MediaInfo for buffer processing of '{}' with timeout of {} seconds", file, timeoutSeconds);
-        return future.get(timeoutSeconds, TimeUnit.SECONDS);
-      }
-      catch (TimeoutException e) {
-        LOGGER.warn("MediaInfo buffer initialization timed out after {} seconds for file '{}'", timeoutSeconds, file);
-        future.cancel(true);
-        return null;
-      }
-    }
-    catch (InterruptedException e) {
-      LOGGER.warn("MediaInfo buffer operation was interrupted for file '{}'", file);
-      Thread.currentThread().interrupt();
-      return null;
-    }
-    catch (Exception e) {
-      LOGGER.error("Error opening MediaInfo for buffer processing of file '{}': {}", file, e.getMessage());
-      return null;
     }
   }
 
@@ -249,7 +198,13 @@ public class MediaInfoTimeoutWrapper {
     }
 
     try {
-      Future<Map<StreamKind, List<Map<String, String>>>> future = EXECUTOR_SERVICE.submit(operation);
+      final long submittedAt = System.nanoTime();
+      Callable<Map<StreamKind, List<Map<String, String>>>> trackedOperation = () -> {
+        logQueueWait(submittedAt, null);
+        return operation.call();
+      };
+
+      Future<Map<StreamKind, List<Map<String, String>>>> future = EXECUTOR_SERVICE.submit(trackedOperation);
 
       try {
         LOGGER.trace("Executing buffer-based MediaInfo operation with custom timeout of {} seconds", timeoutSeconds);
@@ -269,6 +224,52 @@ public class MediaInfoTimeoutWrapper {
     catch (Exception e) {
       LOGGER.error("Error executing buffer-based MediaInfo operation: {}", e.getMessage());
       return Map.of();
+    }
+  }
+
+  private static void logQueueWait(long submittedAt, Object source) {
+    long waitMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - submittedAt);
+    if (waitMillis < 1000) {
+      return;
+    }
+
+    if (source == null) {
+      LOGGER.trace("MediaInfo buffer operation waited {} ms for a free worker", waitMillis);
+    }
+    else {
+      LOGGER.trace("MediaInfo operation for '{}' waited {} ms for a free worker", source, waitMillis);
+    }
+  }
+
+  /**
+   * Gets the maximum number of concurrent MediaInfo operations.
+   *
+   * @return the maximum number of concurrent operations
+   */
+  public static int getMaxThreads() {
+    return MAX_THREADS;
+  }
+
+  static int parseMaxThreads(String configuredValue) {
+    if (StringUtils.isBlank(configuredValue)) {
+      return DEFAULT_MAX_THREADS;
+    }
+
+    try {
+      int threads = Integer.parseInt(configuredValue.trim());
+      if (threads <= 0) {
+        LOGGER.warn("Invalid value '{}' for '{}'; using default of {}", configuredValue, MAX_THREADS_PROPERTY, DEFAULT_MAX_THREADS);
+        return DEFAULT_MAX_THREADS;
+      }
+      if (threads > HARD_MAX_THREADS) {
+        LOGGER.warn("Value '{}' for '{}' exceeds the maximum; using {}", configuredValue, MAX_THREADS_PROPERTY, HARD_MAX_THREADS);
+        return HARD_MAX_THREADS;
+      }
+      return threads;
+    }
+    catch (NumberFormatException e) {
+      LOGGER.warn("Invalid value '{}' for '{}'; using default of {}", configuredValue, MAX_THREADS_PROPERTY, DEFAULT_MAX_THREADS);
+      return DEFAULT_MAX_THREADS;
     }
   }
 

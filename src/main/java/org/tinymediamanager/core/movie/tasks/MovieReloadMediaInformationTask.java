@@ -28,6 +28,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.tasks.MediaFileInformationFetcherTask;
 import org.tinymediamanager.core.threading.TmmThreadPool;
+import org.tinymediamanager.thirdparty.MediaInfoTimeoutWrapper;
 
 /**
  * The Class MovieReloadMediaInformationTask, to explicit reload mediainformation.
@@ -42,7 +43,7 @@ public class MovieReloadMediaInformationTask extends TmmThreadPool {
   public MovieReloadMediaInformationTask(List<Movie> movies) {
     super(TmmResourceBundle.getString("movie.updatemediainfo"));
     moviesToReload = new ArrayList<>(movies);
-    initThreadPool(1, "reloadMI");
+    initThreadPool(MediaInfoTimeoutWrapper.getMaxThreads(), "reloadMI");
   }
 
   @Override

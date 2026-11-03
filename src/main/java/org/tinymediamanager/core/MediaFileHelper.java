@@ -16,41 +16,7 @@
 
 package org.tinymediamanager.core;
 
-import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileEntry;
-import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileSystem;
-import com.github.stephenc.javaisotools.loopfs.udf.UDFFileEntry;
-import com.github.stephenc.javaisotools.loopfs.udf.UDFFileSystem;
-import org.apache.commons.compress.utils.FileNameUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.tinymediamanager.core.entities.MediaEntity;
-import org.tinymediamanager.core.entities.MediaFile;
-import org.tinymediamanager.core.entities.MediaFileAudioStream;
-import org.tinymediamanager.core.entities.MediaFileSubtitle;
-import org.tinymediamanager.core.entities.MediaStreamInfo;
-import org.tinymediamanager.core.entities.MediaStreamInfo.Flags;
-import org.tinymediamanager.core.mediainfo.MediaInfo3D;
-import org.tinymediamanager.core.mediainfo.MediaInfoFile;
-import org.tinymediamanager.core.mediainfo.MediaInfoUtils;
-import org.tinymediamanager.core.mediainfo.MediaInfoXMLParser;
-import org.tinymediamanager.core.mediainfo.MediaInfoXmlCreator;
-import org.tinymediamanager.core.tasks.MediaFileARDetectorTask;
-import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.library.bluray.playlist.MPLSObject;
-import org.tinymediamanager.library.bluray.playlist.MPLSReader;
-import org.tinymediamanager.library.bluray.playlist.PlayItem;
-import org.tinymediamanager.library.dvd.DvdTitle;
-import org.tinymediamanager.library.dvd.IfoReader;
-import org.tinymediamanager.scraper.util.DateUtils;
-import org.tinymediamanager.scraper.util.LanguageUtils;
-import org.tinymediamanager.scraper.util.MediaIdUtil;
-import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.scraper.util.ParserUtils;
-import org.tinymediamanager.scraper.util.StrgUtils;
-import org.tinymediamanager.thirdparty.MediaInfo;
-import org.tinymediamanager.thirdparty.MediaInfoTimeoutWrapper;
+import static org.tinymediamanager.scraper.util.LanguageUtils.parseLanguageFromString;
 
 import java.awt.Dimension;
 import java.io.BufferedInputStream;
@@ -81,7 +47,43 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.tinymediamanager.scraper.util.LanguageUtils.parseLanguageFromString;
+import org.apache.commons.compress.utils.FileNameUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.entities.MediaFileAudioStream;
+import org.tinymediamanager.core.entities.MediaFileSubtitle;
+import org.tinymediamanager.core.entities.MediaStreamInfo;
+import org.tinymediamanager.core.entities.MediaStreamInfo.Flags;
+import org.tinymediamanager.core.mediainfo.MediaInfo3D;
+import org.tinymediamanager.core.mediainfo.MediaInfoFile;
+import org.tinymediamanager.core.mediainfo.MediaInfoUtils;
+import org.tinymediamanager.core.mediainfo.MediaInfoXMLParser;
+import org.tinymediamanager.core.mediainfo.MediaInfoXmlCreator;
+import org.tinymediamanager.core.tasks.MediaFileARDetectorTask;
+import org.tinymediamanager.core.threading.TmmTask;
+import org.tinymediamanager.library.bluray.playlist.MPLSObject;
+import org.tinymediamanager.library.bluray.playlist.MPLSReader;
+import org.tinymediamanager.library.bluray.playlist.PlayItem;
+import org.tinymediamanager.library.dvd.DvdTitle;
+import org.tinymediamanager.library.dvd.IfoReader;
+import org.tinymediamanager.scraper.util.DateUtils;
+import org.tinymediamanager.scraper.util.LanguageUtils;
+import org.tinymediamanager.scraper.util.MediaIdUtil;
+import org.tinymediamanager.scraper.util.MetadataUtil;
+import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.thirdparty.MediaInfo;
+import org.tinymediamanager.thirdparty.MediaInfoBufferReader;
+import org.tinymediamanager.thirdparty.MediaInfoTimeoutWrapper;
+
+import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileEntry;
+import com.github.stephenc.javaisotools.loopfs.iso9660.Iso9660FileSystem;
+import com.github.stephenc.javaisotools.loopfs.udf.UDFFileEntry;
+import com.github.stephenc.javaisotools.loopfs.udf.UDFFileSystem;
 
 /**
  * the class {@link MediaFileHelper} is used to extract all unneeded logic/variables from the media file (for lower memory consumption)
@@ -1362,7 +1364,6 @@ public class MediaFileHelper {
   static List<MediaInfoFile> parseIso9660(MediaFile mediaFile) {
     List<MediaInfoFile> miFiles = new ArrayList<>();
 
-    int bufferSize = 64 * 1024;
     try (Iso9660FileSystem image = new Iso9660FileSystem(mediaFile.getFileAsPath().toFile(), true)) {
       LOGGER.trace("ISO: Open");
 
@@ -1410,44 +1411,8 @@ public class MediaFileHelper {
             // Wrap the entire buffer processing with timeout protection
             Map<MediaInfo.StreamKind, List<Map<String, String>>> snapshot = MediaInfoTimeoutWrapper.executeBufferOperation(() -> {
               try (MediaInfo fileMI = new MediaInfo()) {
-                byte[] fromBuffer = new byte[bufferSize];
-                int fromBufferSize; // The size of the read file buffer
-                long fileSize = entry.getSize();
-
-                // Preparing to fill MediaInfo with a buffer
-                fileMI.openBufferInit(fileSize, 0);
-
-                long pos = 0L;
-                // The parsing loop
-                do {
-                  // limit read to maxBuffer, or to end of file size (cannot determine file end in stream!!)
-                  long toread = pos + bufferSize > fileSize ? fileSize - pos : bufferSize;
-
-                  // Reading data somewhere, do what you want for this.
-                  fromBufferSize = image.readBytes(entry, pos, fromBuffer, 0, (int) toread);
-                  if (fromBufferSize > 0) {
-                    pos += fromBufferSize; // add bytes read to file position
-
-                    // Sending the buffer to MediaInfo
-                    int result = fileMI.openBufferContinue(fromBuffer, fromBufferSize);
-                    if ((result & 8) == 8) { // Status.Finalized
-                      break;
-                    }
-
-                    // Testing if MediaInfo request to go elsewhere
-                    if (fileMI.openBufferContinueGoToGet() != -1) {
-                      pos = fileMI.openBufferContinueGoToGet();
-                      LOGGER.trace("ISO: Seek to {}", pos);
-                      fileMI.openBufferInit(fileSize, pos); // Informing MediaInfo we have seek
-                    }
-                  }
-                } while (fromBufferSize > 0);
-
-                // Finalizing
-                LOGGER.trace("ISO: finalize entry");
-                fileMI.openBufferFinalize(); // This is the end of the stream, MediaInfo must finish some work
-
-                return fileMI.snapshot();
+                return MediaInfoBufferReader.read(fileMI, entry.getSize(),
+                    (position, buffer, offset, length) -> image.readBytes(entry, position, buffer, offset, length), entry.getPath());
               }
             });
 
@@ -1474,8 +1439,6 @@ public class MediaFileHelper {
     List<MediaInfoFile> miFiles = new ArrayList<>();
 
     try (UDFFileSystem image = new UDFFileSystem(mediaFile.getFileAsPath().toFile(), true)) {
-      int bufferSize = 64 * 1024;
-
       // find all relevant files to parse at the beginning to avoid unnecessary IO
       List<MediaInfoFile> allFiles = new ArrayList<>();
       List<UDFFileEntry> fileEntries = new ArrayList<>();
@@ -1520,44 +1483,8 @@ public class MediaFileHelper {
           // Wrap the entire buffer processing with timeout protection
           Map<MediaInfo.StreamKind, List<Map<String, String>>> snapshot = MediaInfoTimeoutWrapper.executeBufferOperation(() -> {
             try (MediaInfo fileMI = new MediaInfo()) {
-              byte[] fromBuffer = new byte[bufferSize];
-              int fromBufferSize; // The size of the read file buffer
-              long fileSize = entry.getSize();
-
-              // Preparing to fill MediaInfo with a buffer
-              fileMI.openBufferInit(fileSize, 0);
-
-              long pos = 0L;
-              // The parsing loop
-              do {
-                // limit read to maxBuffer, or to end of file size (cannot determine file end in stream!!)
-                long toread = pos + bufferSize > fileSize ? fileSize - pos : bufferSize;
-
-                // Reading data somewhere, do what you want for this.
-                fromBufferSize = image.readFileContent(entry, pos, fromBuffer, 0, (int) toread);
-                if (fromBufferSize > 0) {
-                  pos += fromBufferSize; // add bytes read to file position
-
-                  // Sending the buffer to MediaInfo
-                  int result = fileMI.openBufferContinue(fromBuffer, fromBufferSize);
-                  if ((result & 8) == 8) { // Status.Finalized
-                    break;
-                  }
-
-                  // Testing if MediaInfo request to go elsewhere
-                  if (fileMI.openBufferContinueGoToGet() != -1) {
-                    pos = fileMI.openBufferContinueGoToGet();
-                    LOGGER.trace("ISO: Seek to {}", pos);
-                    fileMI.openBufferInit(fileSize, pos); // Informing MediaInfo we have seek
-                  }
-                }
-              } while (fromBufferSize > 0);
-
-              // Finalizing
-              LOGGER.trace("ISO: finalize entry");
-              fileMI.openBufferFinalize(); // This is the end of the stream, MediaInfo must finish some work
-
-              return fileMI.snapshot();
+              return MediaInfoBufferReader.read(fileMI, entry.getSize(),
+                  (position, buffer, offset, length) -> image.readFileContent(entry, position, buffer, offset, length), entry.getPath());
             }
           });
 
