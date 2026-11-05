@@ -562,14 +562,14 @@
                 <version>${surefire.version}</version>
                 <configuration>
                     <skip>${skipTests}</skip>
-                    <!-- spawn one jvm per test class per cpu core -->
+                    <!-- Run up to two test classes in parallel, each in its own JVM -->
                     <!-- needed for static settings per test -->
                     <parallel>classes</parallel>
-                    <forkCount>1</forkCount>
+                    <forkCount>2</forkCount>
                     <threadCount>1</threadCount>
                     <reuseForks>false</reuseForks>
                     <!-- prevent the annoying ForkedBooter process from stealing window focus on macOS -->
-                    <argLine>-Xmx1024m -Djava.awt.headless=true</argLine>
+                    <argLine>-Xmx256m -Djava.awt.headless=true</argLine>
                     <includes>
                         <include>**/*.java</include>
                     </includes>
