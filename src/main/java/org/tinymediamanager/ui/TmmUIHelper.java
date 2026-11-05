@@ -89,6 +89,7 @@ public class TmmUIHelper {
       LOGGER.trace("load theme");
 
       TmmUIHelper.setTheme();
+      UIManager.put("SystemFileChooser.preferredAppearance", "system");
       // decrease the tooltip timeout
       ToolTipManager.sharedInstance().setInitialDelay(300);
     }
