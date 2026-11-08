@@ -34,17 +34,12 @@ public class MovieMediaFileComparator implements Comparator<MediaFile> {
 
     // starting from here we have the same MediaFileType
     // sort according to different criteria based on the type
-    switch (mf1.getType()) {
+    return switch (mf1.getType()) {
       // sort all video files / extra artwork and by name
-      case VIDEO:
-      case TRAILER:
-      case EXTRAFANART:
-      case EXTRATHUMB:
-        return mf1.getFilename().compareTo(mf2.getFilename());
+      case VIDEO, TRAILER, EXTRAFANART, EXTRATHUMB, EXTRA, SUBTITLE, DOUBLE_EXT, AUDIO -> mf1.getFilename().compareTo(mf2.getFilename());
 
       // sort the rest by filename length (descending) - assume that the kodi standard -poster, -fanart is always on top in this case
-      default:
-        return Integer.compare(mf2.getFilename().length(), mf1.getFilename().length());
-    }
+      default -> Integer.compare(mf2.getFilename().length(), mf1.getFilename().length());
+    };
   }
 }

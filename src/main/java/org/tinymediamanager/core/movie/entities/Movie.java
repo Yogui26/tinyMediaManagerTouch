@@ -139,7 +139,6 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 public class Movie extends MediaEntity implements IMediaInformation {
   private static final Logger                   LOGGER                     = LoggerFactory.getLogger(Movie.class);
   private static final Comparator<MediaFile>    MEDIA_FILE_COMPARATOR      = new MovieMediaFileComparator();
-  private static final Comparator<MediaTrailer> TRAILER_QUALITY_COMPARATOR = new MediaTrailer.QualityComparator();
 
   @JsonProperty
   private String                                englishTitle               = "";

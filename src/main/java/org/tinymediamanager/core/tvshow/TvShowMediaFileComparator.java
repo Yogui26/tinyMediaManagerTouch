@@ -34,20 +34,13 @@ public class TvShowMediaFileComparator implements Comparator<MediaFile> {
 
     // starting from here we have the same MediaFileType
     // sort according to different criteria based on the type
-    switch (mf1.getType()) {
+    return switch (mf1.getType()) {
       // sort all video files / season/extra artwork and by name
-      case VIDEO:
-      case SEASON_POSTER:
-      case SEASON_FANART:
-      case SEASON_BANNER:
-      case SEASON_THUMB:
-      case EXTRAFANART:
-      case EXTRATHUMB:
-        return mf1.getFilename().compareTo(mf2.getFilename());
+      case VIDEO, SEASON_POSTER, SEASON_FANART, SEASON_BANNER, SEASON_THUMB, EXTRAFANART, EXTRATHUMB, EXTRA, SUBTITLE, DOUBLE_EXT, AUDIO ->
+        mf1.getFilename().compareTo(mf2.getFilename());
 
       // sort the rest by filesize (descending)
-      default:
-        return Long.compare(mf2.getFilesize(), mf1.getFilesize());
-    }
+      default -> Long.compare(mf2.getFilesize(), mf1.getFilesize());
+    };
   }
 }
