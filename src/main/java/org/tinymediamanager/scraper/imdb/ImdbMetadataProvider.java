@@ -53,7 +53,7 @@ abstract class ImdbMetadataProvider implements IMediaProvider {
         "<html><h3>Internet Movie Database (IMDb)</h3><br />The most used database for movies all over the world.<br />Does not contain plot/title/tagline in every language. You may choose to download these texts from other scrapers<br /><br />Available languages: multiple</html>",
         ImdbMetadataProvider.class.getResource("/org/tinymediamanager/scraper/imdb_com.svg"), 10);
 
-    info.getConfig().addBoolean(ImdbParser.BROWSER_FALLBACK, Boolean.FALSE);
+    info.getConfig().addBoolean(ImdbParser.BROWSER_FALLBACK, Boolean.TRUE);
 
     return info;
   }
