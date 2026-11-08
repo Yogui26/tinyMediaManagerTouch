@@ -285,7 +285,7 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
     // speedup things by parallelizing
     scrapeOptions.getArtworkScrapers().parallelStream().forEach(artworkScraper -> {
       if (TvShowModuleManager.getInstance().getSettings().isImageEpisodeScrapeAllSources()
-          || artworkScraper.getId().equals(scrapeOptions.getMetadataScraper().getId())) {
+          || episode.getIds().containsKey(artworkScraper.getId())) {
         ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
         try {
           lock.writeLock().lock();
