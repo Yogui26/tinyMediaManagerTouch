@@ -16,7 +16,10 @@
 
 package org.tinymediamanager.ui.images;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.kitfox.svg.SVGDiagram;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
@@ -29,11 +32,8 @@ import java.nio.file.Path;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
-import com.kitfox.svg.SVGDiagram;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
  * The class {@link TmmSvgIconTest} tests the loading of SVG documents from URLs which contain characters that are illegal in a URI (e.g. square
@@ -115,6 +115,19 @@ public class TmmSvgIconTest {
     // and the URI based loading reloads via the universe as before
     TmmSvgIcon fromPlain = new TmmSvgIcon(svgFile.toUri().toURL(), "t.svg");
     assertThat(fromPlain.reloadDiagram()).isNotNull();
+  }
+
+  @Test
+  public void paintDoesNotThrowOnInvalidColor() throws Exception {
+    // svgSalamander's ColorTable.parseHex throws a RuntimeException while painting an invalid color
+    String svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\"><rect width=\"24\" height=\"24\" fill=\"#ff00-ff\"/></svg>";
+    Path svgFile = Files.createDirectories(tempFolder.getRoot().toPath().resolve("broken")).resolve("broken.svg");
+    Files.write(svgFile, svg.getBytes(StandardCharsets.UTF_8));
+
+    TmmSvgIcon icon = new TmmSvgIcon(svgFile.toUri().toURL(), "broken.svg");
+
+    BufferedImage img = new BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB);
+    assertThatCode(() -> icon.paintIcon(null, img.createGraphics(), 0, 0)).doesNotThrowAnyException();
   }
 
   private String readBundledIcon(String name) throws Exception {

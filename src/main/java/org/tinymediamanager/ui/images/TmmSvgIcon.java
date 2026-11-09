@@ -15,11 +15,17 @@
  */
 package org.tinymediamanager.ui.images;
 
-import static org.tinymediamanager.ui.images.SvgIconHelper.getHexString;
-import static org.tinymediamanager.ui.images.SvgIconHelper.setFill;
+import com.kitfox.svg.SVGDiagram;
+import com.kitfox.svg.SVGElement;
+import com.kitfox.svg.SVGUniverse;
+import com.kitfox.svg.app.beans.SVGIcon;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -27,13 +33,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.kitfox.svg.SVGDiagram;
-import com.kitfox.svg.SVGElement;
-import com.kitfox.svg.SVGUniverse;
-import com.kitfox.svg.app.beans.SVGIcon;
+import static org.tinymediamanager.ui.images.SvgIconHelper.getHexString;
+import static org.tinymediamanager.ui.images.SvgIconHelper.setFill;
 
 /**
  * basically a clone of {@link SVGIcon}, but with support of loading the same SVG several times with different settings (color, sizes, ...)
@@ -175,6 +176,24 @@ public class TmmSvgIcon extends SVGIcon {
    */
   public SVGElement getElement(String id) {
     return getSvgUniverse().getElement(getSvgURI().resolve("#" + id));
+  }
+
+  /**
+   * Paints the icon and suppresses any exception thrown by the SVG renderer, so a broken SVG cannot break the whole UI painting. The failing icon is
+   * logged at debug level.
+   *
+   * @param comp the component to paint on
+   * @param g    the graphics context
+   * @param x    the x coordinate
+   * @param y    the y coordinate
+   */
+  @Override
+  public void paintIcon(Component comp, Graphics g, int x, int y) {
+    try {
+      super.paintIcon(comp, g, x, y);
+    } catch (Exception e) {
+      LOGGER.debug("Could not paint SVG icon '{}'", getSvgURI(), e);
+    }
   }
 
   /**
