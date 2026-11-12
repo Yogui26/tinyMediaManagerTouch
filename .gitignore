@@ -76,3 +76,6 @@ launcher-extra.yml
 /src/test/resources/tmm_build_license
 /dependency-reduced-pom.xml
 /code-sign-cert.p12
+
+# web UI build output (built from src/main/webapp)
+src/main/resources/webapp/

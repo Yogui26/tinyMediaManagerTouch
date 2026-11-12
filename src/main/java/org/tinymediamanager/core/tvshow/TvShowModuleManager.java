@@ -53,6 +53,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.http.TvShowCommandHandler;
+import org.tinymediamanager.core.tvshow.http.TvShowRestHandler;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -188,6 +189,7 @@ public final class TvShowModuleManager implements ITmmModule {
 
     try {
       TmmHttpServer.getInstance().createContext("tvshow", new TvShowCommandHandler());
+      TmmHttpServer.getInstance().createContext(TvShowRestHandler.CONTEXT, new TvShowRestHandler());
     }
     catch (Exception e) {
       LOGGER.warn("Could not register TV show API - '{}'", e.getMessage());

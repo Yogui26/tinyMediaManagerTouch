@@ -79,6 +79,9 @@ public class TmmHttpServer {
     createContext("system", new SystemCommandHandler(), false);
     createContext("docs", new ApiDocsHandler());
 
+    // the bundled web UI (static files only - all data is fetched via the API key protected API)
+    createWebContext("/", new WebAppHandler());
+
     updateConfiguration(Settings.getInstance().isEnableHttpServer(), Settings.getInstance().getHttpServerPort(),
         Settings.getInstance().getHttpApiKey());
   }
@@ -176,6 +179,20 @@ public class TmmHttpServer {
 
     httpServer.createContext(CONTEXT_PREFIX + contextPath, httpHandler);
     contextMap.put(CONTEXT_PREFIX + contextPath, httpHandler);
+  }
+
+  /**
+   * Creates a context outside of the {@code /api/} prefix which is <b>not</b> protected by the API key. This must only be used for static, public
+   * content like the files of the web UI - never for anything exposing or changing data.
+   *
+   * @param path
+   *          the full context path (e.g. {@code /})
+   * @param handler
+   *          the handler to delegate to
+   */
+  public void createWebContext(String path, HttpHandler handler) {
+    httpServer.createContext(path, handler);
+    contextMap.put(path, handler);
   }
 
   private void sendResponse(int responseCode, String responseMessage, Object payload, HttpExchange httpExchange) {
