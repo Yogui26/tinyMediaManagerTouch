@@ -1,0 +1,26 @@
+name: Docker image
+
+on:
+  push:
+    branches: ['feature/**']
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - run: mkdir -p src/main/resources/webapp && echo probe > src/main/resources/webapp/index.html
+      - run: sh ./mvnw -B -ntp package
+      - run: ls -la target | head -60
+      - run: |
+          docker pull -q tinymediamanager/tinymediamanager:latest
+          docker inspect tinymediamanager/tinymediamanager:latest --format '{{json .Config.Labels}} {{json .Config.Entrypoint}} {{json .Config.Cmd}} {{json .Config.ExposedPorts}} {{json .Config.Env}}'
+          docker run --rm --entrypoint sh tinymediamanager/tinymediamanager:latest -c 'ls -la /app; ls /app/lib | head -400 | tr "\n" " "; echo; cat /app/getdown.txt 2>/dev/null | head -80; cat /app/version 2>/dev/null; ls /app/*.yml /app/*.json 2>/dev/null; unzip -p /app/tmm.jar META-INF/MANIFEST.MF 2>/dev/null | head -30'
