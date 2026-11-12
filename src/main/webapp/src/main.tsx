@@ -1,4 +1,4 @@
-import { ConfigProvider, theme } from 'antd';
+import { App as AntApp, ConfigProvider, theme } from 'antd';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -13,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
         token: { colorPrimary: '#e8a33d', colorBgBase: '#141414', borderRadius: 10, fontSize: 16, controlHeightLG: 48 },
       }}
     >
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <AntApp>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AntApp>
     </ConfigProvider>
   </StrictMode>,
 );

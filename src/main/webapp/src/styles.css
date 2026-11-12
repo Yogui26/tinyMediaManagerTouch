@@ -554,3 +554,34 @@ h2 {
 .login-problem {
   margin-bottom: 16px;
 }
+
+.settings-section {
+  margin-top: 32px;
+}
+
+.settings-section h2 {
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+.settings-help {
+  margin: 6px 0 16px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tasks li {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.task-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

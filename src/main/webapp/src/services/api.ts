@@ -153,10 +153,20 @@ export interface Episode {
   videoFormat: string;
 }
 
+export interface RunningTask {
+  name: string;
+  type: string;
+  state: string;
+  workUnits: number;
+  progressDone: number;
+  description?: string;
+}
+
 export interface SystemStatus {
   version: string;
   state: string;
   busy: boolean;
+  runningTasks: RunningTask[];
 }
 
 export type SortField = 'title' | 'year' | 'rating' | 'dateAdded';
@@ -187,6 +197,19 @@ export const fetchTvShow = (id: string, signal?: AbortSignal) => get<TvShowDetai
 
 export const fetchEpisodes = (id: string, season: number, signal?: AbortSignal) =>
   get<Episode[]>(`/v2/tvshows/${id}/seasons/${season}/episodes`, undefined, signal);
+
+export type LibraryModule = 'movie' | 'tvshow';
+
+/** Queues a library command (legacy command API); it is processed in the background. */
+async function sendCommand(module: LibraryModule, action: string, scope: string): Promise<void> {
+  await api.post(`/${module}`, [{ action, scope: { name: scope } }]);
+}
+
+/** Looks for new, changed and removed files in all data sources. */
+export const updateDataSources = (module: LibraryModule) => sendCommand(module, 'update', 'all');
+
+/** Downloads the metadata for everything that has been newly found. */
+export const scrapeNew = (module: LibraryModule) => sendCommand(module, 'scrape', 'new');
 
 /** Loads an artwork with the API key and returns it as an image blob. */
 export async function fetchArtwork(path: string, signal?: AbortSignal): Promise<Blob> {

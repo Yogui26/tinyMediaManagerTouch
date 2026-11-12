@@ -2,25 +2,97 @@ name: Docker image
 
 on:
   push:
-    branches: ['feature/**']
+    branches: [devel, 'feature/**']
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/yogui26/tinymediamanagertouch
 
 jobs:
-  probe:
+  image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/main/webapp/package-lock.json
+
+      - name: Build web UI
+        working-directory: src/main/webapp
+        run: |
+          npm ci
+          npm run build
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
           cache: maven
-      - run: mkdir -p src/main/resources/webapp && echo probe > src/main/resources/webapp/index.html
-      - run: sh ./mvnw -B -ntp package
-      - run: ls -la target | head -60
-      - run: |
-          docker pull -q tinymediamanager/tinymediamanager:latest
-          docker inspect tinymediamanager/tinymediamanager:latest --format '{{json .Config.Labels}} {{json .Config.Entrypoint}} {{json .Config.Cmd}} {{json .Config.ExposedPorts}} {{json .Config.Env}}'
-          docker run --rm --entrypoint sh tinymediamanager/tinymediamanager:latest -c 'ls -la /app; ls /app/lib | head -400 | tr "\n" " "; echo; cat /app/getdown.txt 2>/dev/null | head -80; cat /app/version 2>/dev/null; ls /app/*.yml /app/*.json 2>/dev/null; unzip -p /app/tmm.jar META-INF/MANIFEST.MF 2>/dev/null | head -30'
+
+      - name: Build application
+        run: |
+          sh ./mvnw -B -ntp package
+          sh ./mvnw -B -ntp dependency:copy-dependencies -DincludeScope=runtime -DstripVersion=true \
+            -DexcludeArtifactIds=yt,kodi-json-rpc,libdvd,libbluray,loop-fs-iso-impl,loop-fs-udf-impl \
+            -DoutputDirectory=target/docker-web/lib
+
+      - name: Prepare image content
+        run: |
+          cp "$(ls target/tinyMediaManager-*.jar | grep -v original | head -1)" target/docker-web/tmm.jar
+          unzip -l target/docker-web/tmm.jar | grep -q 'webapp/index.html'
+          cp -r templates external-tools.json docker/web/Dockerfile docker/web/entrypoint.sh target/docker-web/
+
+      - name: Build image
+        run: docker build -t "$IMAGE:test" target/docker-web
+
+      - name: Smoke test
+        run: |
+          mkdir -p smoke/data "smoke/movies/Smoke Test (2020)"
+          head -c 4096 /dev/urandom > "smoke/movies/Smoke Test (2020)/Smoke Test (2020).mkv"
+          chmod -R a+rwX smoke
+          docker run -d --name tmm --user 99:100 -p 7878:7878 \
+            -e TMM_API_KEY=smoke-key -e TMM_MOVIE_DATASOURCES=/media/movies \
+            -v "$PWD/smoke/data:/data" -v "$PWD/smoke/movies:/media/movies:ro" "$IMAGE:test"
+          trap 'docker logs tmm 2>&1 | tail -80' EXIT
+
+          echo "waiting for the web UI"
+          for i in $(seq 1 60); do curl -fs http://localhost:7878/ -o index.html && break; sleep 2; done
+          grep -q 'id="root"' index.html
+
+          echo "the API rejects requests without the key"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7878/api/v2/movies)" = 403
+
+          echo "the API answers with the key"
+          curl -fs -H 'api-key: smoke-key' http://localhost:7878/api/v2/movies | jq -e '.data.total == 0'
+          curl -fs -H 'api-key: smoke-key' http://localhost:7878/api/v2/tvshows | jq -e '.data.total == 0'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7878/movies/some-id)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7878/api/unknown)" = 404
+
+          echo "updating the data sources finds the movie"
+          curl -fs -H 'api-key: smoke-key' -H 'Content-Type: application/json' \
+            -d '[{"action":"update","scope":{"name":"all"}}]' http://localhost:7878/api/movie
+          for i in $(seq 1 60); do
+            total=$(curl -fs -H 'api-key: smoke-key' http://localhost:7878/api/v2/movies | jq '.data.total')
+            [ "$total" -ge 1 ] && break; sleep 2
+          done
+          id=$(curl -fs -H 'api-key: smoke-key' http://localhost:7878/api/v2/movies | jq -er '.data.items[0].id')
+          curl -fs -H 'api-key: smoke-key' "http://localhost:7878/api/v2/movies/$id" | jq -e '.data.title | length > 0'
+
+          echo "a restart keeps the configuration"
+          docker restart tmm
+          for i in $(seq 1 60); do curl -fs -H 'api-key: smoke-key' http://localhost:7878/api/v2/movies -o movies.json && break; sleep 2; done
+          jq -e '.data.total >= 1' movies.json
+
+      - name: Push image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag "$IMAGE:test" "$IMAGE:latest"
+          docker tag "$IMAGE:test" "$IMAGE:sha-${GITHUB_SHA::7}"
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:sha-${GITHUB_SHA::7}"

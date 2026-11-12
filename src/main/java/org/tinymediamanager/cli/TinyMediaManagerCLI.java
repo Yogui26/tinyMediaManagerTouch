@@ -169,6 +169,14 @@ public class TinyMediaManagerCLI implements Runnable {
     }
 
     if (startApi) {
+      // configuration by environment variables (needed where no GUI is available to change the settings)
+      try {
+        ServerEnvironment.apply(System.getenv());
+      }
+      catch (Exception e) {
+        LOGGER.error("Could not apply the configuration from the environment - '{}'", e.getMessage());
+      }
+
       // init http server
       if (Settings.getInstance().isEnableHttpServer()) {
         // register the shutdown handler

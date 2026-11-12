@@ -52,6 +52,14 @@ const en = {
   notReachable: 'tinyMediaManager is not reachable',
   busy: 'Working…',
   idle: 'Idle',
+  library: 'Library',
+  updateLibrary: 'Update library',
+  updateLibraryHelp: 'Looks for new, changed and removed files in the data sources.',
+  scrapeNew: 'Scrape new items',
+  scrapeNewHelp: 'Downloads metadata and artwork for newly found items. This writes files into your media folders.',
+  commandQueued: 'Started',
+  runningTasks: 'Running tasks',
+  noTasks: 'No task is running.',
 };
 
 type Messages = typeof en;
@@ -110,6 +118,14 @@ const fr: Messages = {
   notReachable: "tinyMediaManager n'est pas joignable",
   busy: 'En cours…',
   idle: 'Au repos',
+  library: 'Bibliothèque',
+  updateLibrary: 'Mettre à jour la bibliothèque',
+  updateLibraryHelp: 'Recherche les fichiers nouveaux, modifiés et supprimés dans les sources de données.',
+  scrapeNew: 'Scraper les nouveautés',
+  scrapeNewHelp: 'Télécharge métadonnées et images des nouveaux éléments. Cette action écrit des fichiers dans vos dossiers multimédias.',
+  commandQueued: 'Lancé',
+  runningTasks: 'Tâches en cours',
+  noTasks: 'Aucune tâche en cours.',
 };
 
 const messages: Messages = navigator.language.toLowerCase().startsWith('fr') ? fr : en;

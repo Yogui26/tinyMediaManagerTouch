@@ -37,4 +37,4 @@ jobs:
         run: sh ./mvnw -B -ntp compile
 
       - name: HTTP API tests
-        run: sh ./mvnw -B -ntp test -DskipTests=false -Dtest='AbstractRestHandlerTest,WebAppHandlerTest,TmmHttpServerTest' -Dsurefire.failIfNoSpecifiedTests=false
+        run: sh ./mvnw -B -ntp test -DskipTests=false -Dtest='AbstractRestHandlerTest,WebAppHandlerTest,TmmHttpServerTest,ServerEnvironmentTest' -Dsurefire.failIfNoSpecifiedTests=false
