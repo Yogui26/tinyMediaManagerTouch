@@ -34,7 +34,7 @@ jobs:
           cache: maven
 
       - name: Compile
-        run: ./mvnw -B -ntp compile
+        run: sh ./mvnw -B -ntp compile
 
       - name: HTTP API tests
-        run: ./mvnw -B -ntp test -DskipTests=false -Dtest='AbstractRestHandlerTest,WebAppHandlerTest,TmmHttpServerTest' -Dsurefire.failIfNoSpecifiedTests=false
+        run: sh ./mvnw -B -ntp test -DskipTests=false -Dtest='AbstractRestHandlerTest,WebAppHandlerTest,TmmHttpServerTest' -Dsurefire.failIfNoSpecifiedTests=false

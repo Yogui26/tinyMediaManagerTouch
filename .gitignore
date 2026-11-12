@@ -79,3 +79,4 @@ launcher-extra.yml
 
 # web UI build output (built from src/main/webapp)
 src/main/resources/webapp/
+*.tsbuildinfo
