@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>tinyMediaManagerTouch</Name>
+  <Repository>ghcr.io/yogui26/tinymediamanagertouch:latest</Repository>
+  <Registry>https://github.com/Yogui26/tinyMediaManagerTouch/pkgs/container/tinymediamanagertouch</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Yogui26/tinyMediaManagerTouch/issues</Support>
+  <Project>https://github.com/Yogui26/tinyMediaManagerTouch</Project>
+  <Overview>tinyMediaManager without desktop GUI: only the HTTP API and the touch-friendly web UI (phone, tablet, PC). Experimental build.</Overview>
+  <Category>MediaApp:Video MediaApp:Other Status:Beta</Category>
+  <WebUI>http://[IP]:[PORT:7878]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Yogui26/tinyMediaManagerTouch/feature/touch-web-ui/unraid/tinyMediaManagerTouch.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Yogui26/tinyMediaManagerTouch/feature/touch-web-ui/AppBundler/tmm.png</Icon>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web UI port" Target="7878" Default="7878" Mode="tcp" Description="Port of the web UI and the HTTP API." Type="Port" Display="always" Required="true" Mask="false">7878</Config>
+  <Config Name="API key" Target="TMM_API_KEY" Default="" Mode="" Description="Password asked by the web UI (and API key of the HTTP API). Choose a long random value." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/tinymediamanager-touch" Mode="rw" Description="Settings, database, image cache and logs." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/tinymediamanager-touch</Config>
+  <Config Name="Movies" Target="/media/movies" Default="" Mode="ro" Description="Your movie folder. Read-only is the safe choice for a first test; switch to read/write to let tinyMediaManager write NFO files and artwork." Type="Path" Display="always" Required="false" Mask="false"/>
+  <Config Name="TV shows" Target="/media/tvshows" Default="" Mode="ro" Description="Your TV show folder. Read-only is the safe choice for a first test; switch to read/write to let tinyMediaManager write NFO files and artwork." Type="Path" Display="always" Required="false" Mask="false"/>
+  <Config Name="Movie data sources" Target="TMM_MOVIE_DATASOURCES" Default="/media/movies" Mode="" Description="Movie folders inside the container, separated by ; - added to the settings on start. Clear it if you do not map a movie folder." Type="Variable" Display="advanced" Required="false" Mask="false">/media/movies</Config>
+  <Config Name="TV show data sources" Target="TMM_TVSHOW_DATASOURCES" Default="/media/tvshows" Mode="" Description="TV show folders inside the container, separated by ; - added to the settings on start. Clear it if you do not map a TV show folder." Type="Variable" Display="advanced" Required="false" Mask="false">/media/tvshows</Config>
+  <Config Name="Java options" Target="JAVA_OPTS" Default="-Xms64m -Xmx1g" Mode="" Description="JVM options; raise -Xmx for very large libraries." Type="Variable" Display="advanced" Required="false" Mask="false">-Xms64m -Xmx1g</Config>
+  <Config Name="Time zone" Target="TZ" Default="Europe/Paris" Mode="" Description="Time zone of the container." Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Paris</Config>
+</Container>

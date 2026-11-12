@@ -2,6 +2,10 @@
 # The build context is prepared by the CI: tmm.jar, lib/, templates/ and external-tools.json.
 FROM eclipse-temurin:21-jre-noble
 
+LABEL org.opencontainers.image.source="https://github.com/Yogui26/tinyMediaManagerTouch" \
+      org.opencontainers.image.description="tinyMediaManager web UI (headless, experimental)" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libmediainfo0v5 \
     && rm -rf /var/lib/apt/lists/*
